@@ -1,0 +1,62 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { ShoppingCart, Check } from 'lucide-react'
+import { addToCart } from '@/lib/cart'
+import { dovizToTL, type KurData } from '@/lib/kur'
+
+interface Props {
+  urun: {
+    id: string
+    ad: string
+    kategori: string
+    fotograflar: string[]
+    fiyat: number
+    bayi_fiyati?: number | null
+    para_birimi?: string
+    bayi_para_birimi?: string
+  }
+}
+
+export default function AddToCartButton({ urun }: Props) {
+  const [added, setAdded] = useState(false)
+  const [kur, setKur] = useState<KurData>({ USD: 32.5, EUR: 35.2, guncelleme: null })
+
+  useEffect(() => {
+    fetch('/api/kur').then(r => r.json()).then(setKur).catch(() => {})
+  }, [])
+
+  const handleAdd = () => {
+    const pb = urun.para_birimi || 'TRY'
+    const bayiPb = urun.bayi_para_birimi || pb
+
+    // Sepette TL cinsinden tutuyoruz (ödeme TL ile)
+    const fiyatTL = dovizToTL(urun.fiyat, pb, kur)
+    const bayiFiyatTL = urun.bayi_fiyati ? dovizToTL(urun.bayi_fiyati, bayiPb, kur) : null
+
+    addToCart({
+      id: urun.id,
+      ad: urun.ad,
+      kategori: urun.kategori,
+      fotograf: urun.fotograflar?.[0] || '',
+      fiyat: fiyatTL,                    // TL karşılığı
+      fiyat_doviz: urun.fiyat,           // Orijinal döviz fiyatı
+      para_birimi: pb,
+      bayi_fiyati: bayiFiyatTL,          // TL karşılığı
+      bayi_fiyat_doviz: urun.bayi_fiyati || null,
+      bayi_para_birimi: bayiPb,
+    })
+    setAdded(true)
+    setTimeout(() => setAdded(false), 2000)
+  }
+
+  return (
+    <button
+      onClick={handleAdd}
+      className={`btn-primary text-sm w-full justify-center transition-all duration-300 ${added ? '!bg-green-600' : ''}`}
+    >
+      {added ? <Check size={15} /> : <ShoppingCart size={15} />}
+      {added ? 'Sepete Eklendi!' : 'Sepete Ekle'}
+    </button>
+  )
+}
