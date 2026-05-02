@@ -8,7 +8,11 @@ import AdminLoginForm from './AdminLoginForm'
 import AdminBayiYonetim from './AdminBayiYonetim'
 import AdminSiparisler from './AdminSiparisler'
 import { LogOut, Package, Users, FileText, ShoppingBag } from 'lucide-react'
-import type { User } from '@supabase/supabase-js'
+import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
+
+interface AdminClientProps {
+  onSuccess?: () => void
+}
 
 interface Product {
   id: string
@@ -24,7 +28,7 @@ interface Product {
 
 type Tab = 'siparisler' | 'urunler' | 'bayiler' | 'basvurular'
 
-export default function AdminClient() {
+export default function AdminClient({ onSuccess }: AdminClientProps) {
   const [user, setUser] = useState<User | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -33,20 +37,26 @@ export default function AdminClient() {
   const supabase = useRef(createClient()).current
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // BURASI DÜZELTİLDİ: response yanına : any eklendi
+    supabase.auth.getSession().then((response: any) => {
+      const session = response.data.session
       setUser(session?.user ?? null)
       setLoading(false)
       if (session) { loadProducts(); loadBekleyenSiparis() }
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setUser(session?.user ?? null)
-      if (session) { loadProducts(); loadBekleyenSiparis() }
+      if (session) { 
+        loadProducts(); 
+        loadBekleyenSiparis()
+        if (onSuccess) onSuccess() 
+      }
       else setLoading(false)
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [onSuccess])
 
   const loadProducts = async () => {
     const { data } = await supabase.from('urunler').select('*').order('created_at', { ascending: false })
@@ -92,8 +102,15 @@ export default function AdminClient() {
           </div>
           <div className="bg-[#141414] border border-white/8 p-8">
             <AdminLoginForm onSuccess={() => {
-              supabase.auth.getSession().then(({ data: { session } }) => {
-                if (session) { setUser(session.user); loadProducts(); loadBekleyenSiparis() }
+              // BURASI DÜZELTİLDİ: response yanına : any eklendi
+              supabase.auth.getSession().then((response: any) => {
+                const session = response.data.session;
+                if (session) { 
+                  setUser(session.user); 
+                  loadProducts(); 
+                  loadBekleyenSiparis()
+                  if (onSuccess) onSuccess()
+                }
               })
             }} />
           </div>

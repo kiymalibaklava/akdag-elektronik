@@ -61,14 +61,18 @@ export default function AdminBayiYonetim({ activeTab }: Props) {
     setLoading(false)
   }
 
-  const loadUrunFiyatlari = async () => {
+ const loadUrunFiyatlari = async () => {
+    // Verileri çekerken tip belirtiyoruz
     const { data: urunler } = await supabase.from('urunler').select('id, ad')
     const { data: fiyatlar } = await supabase.from('urun_fiyatlari').select('*')
-    const merged = (urunler || []).map((u) => ({
+    
+    // (u) yerine (u: { id: string; ad: string }) yazarak tipi açıkça belirtiyoruz
+    const merged = (urunler || []).map((u: { id: string; ad: string }) => ({
       urun_id: u.id,
       ad: u.ad,
       bayi_fiyati: fiyatlar?.find((f: { urun_id: string; bayi_fiyati: number }) => f.urun_id === u.id)?.bayi_fiyati ?? null,
     }))
+    
     setUrunFiyatlari(merged)
   }
 

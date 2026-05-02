@@ -73,7 +73,7 @@ export default function AdminNotification() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'siparisler' },
-        (payload) => {
+        (payload: { new: Bildirim }) => { // HATA BURADA DÜZELTİLDİ: payload tipi belirtildi
           if (ilkYukleme.current) return // İlk yükleme sonrasındakileri dinle
 
           const yeni = payload.new as Bildirim
@@ -91,7 +91,7 @@ export default function AdminNotification() {
       clearTimeout(t)
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [supabase])
 
   const kapat = (id: string) => setBildirimler(prev => prev.filter(b => b.id !== id))
 

@@ -12,17 +12,21 @@ export default function BayiPage() {
   const supabase = useRef(createClient()).current
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // 1. DÜZELTME: getSession için response tipini any belirledik
+    supabase.auth.getSession().then((response: any) => {
+      const session = response.data.session
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    // 2. DÜZELTME: onAuthStateChange parametreleri için any tipi belirttik
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e: any, session: any) => {
       setUser(session?.user ?? null)
       if (loading) setLoading(false)
     })
 
     return () => subscription.unsubscribe()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (loading) {
@@ -58,7 +62,9 @@ export default function BayiPage() {
           <div className="bg-[#141414] border border-white/8 p-8"
             style={{ clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%)' }}>
             <BayiLoginForm onSuccess={() => {
-              supabase.auth.getSession().then(({ data: { session } }) => {
+              // 3. DÜZELTME: Buradaki getSession için de aynı yapıyı kullandık
+              supabase.auth.getSession().then((response: any) => {
+                const session = response.data.session
                 setUser(session?.user ?? null)
               })
             }} />

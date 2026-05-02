@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
+// HATA BURADAYDI: 'lucide-center' yerine 'lucide-react' olmalı
 import { LogOut, Package, Phone, Clock, CheckCircle, XCircle, Search, X } from 'lucide-react'
 import { ProductCard } from './ProductGrid'
 import type { User } from '@supabase/supabase-js'
@@ -51,7 +52,7 @@ export default function BayiPanel({ user }: { user: User }) {
       setLoading(false)
     }
     load()
-  }, [user.id])
+  }, [user.id, supabase])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -107,7 +108,6 @@ export default function BayiPanel({ user }: { user: User }) {
     )
   }
 
-  // Filtreleme
   const filtered = urunler.filter(u => {
     const katMatch = kategori === 'Tümü' || u.kategori === kategori
     const searchMatch = !search || u.ad.toLowerCase().includes(search.toLowerCase())
@@ -156,7 +156,6 @@ export default function BayiPanel({ user }: { user: User }) {
 
         {/* Arama + Filtre */}
         <div className="flex flex-col md:flex-row gap-3 mb-6">
-          {/* Arama */}
           <div className="relative flex-1">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-red" />
             <input
@@ -173,7 +172,6 @@ export default function BayiPanel({ user }: { user: User }) {
             )}
           </div>
 
-          {/* Kategori filtresi */}
           <div className="flex flex-wrap gap-1.5">
             {KATEGORILER.map(k => (
               <button key={k} onClick={() => setKategori(k)}
@@ -200,7 +198,17 @@ export default function BayiPanel({ user }: { user: User }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1">
-            {filtered.map(u => <ProductCard key={u.id} product={u} isBayi={true} />)}
+            {filtered.map(u => (
+              <ProductCard 
+                key={u.id} 
+                product={{ 
+                  ...u, 
+                  bayi_fiyati: u.bayi_fiyati ?? undefined,
+                  fiyat_guncelleme: u.fiyat_guncelleme ?? undefined 
+                }} 
+                isBayi={true} 
+              />
+            ))}
           </div>
         )}
 
