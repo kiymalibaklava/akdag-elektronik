@@ -1,4 +1,5 @@
 import { MapPin, Phone, Mail, Clock } from 'lucide-react'
+import IletisimForm from '@/components/IletisimForm'
 
 export const metadata = {
   title: 'İletişim | Akdağ Elektronik',
@@ -120,66 +121,10 @@ export default function IletisimPage() {
             <h2 className="font-display font-bold text-2xl uppercase text-white tracking-wide mb-10 red-line">
               Mesaj Gönderin
             </h2>
-            <ContactForm />
+            <IletisimForm />
           </div>
         </div>
       </div>
     </div>
-  )
-}
-
-function ContactForm() {
-  return (
-    <form className="space-y-5" action="mailto:info@akdagelektronik.com" method="post" encType="text/plain">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Ad</label>
-          <input name="ad" type="text" className="input-dark" placeholder="Adınız" required />
-        </div>
-        <div>
-          <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Soyad</label>
-          <input name="soyad" type="text" className="input-dark" placeholder="Soyadınız" />
-        </div>
-      </div>
-      <div>
-        <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Telefon</label>
-        <input name="telefon" type="tel" className="input-dark" placeholder="+90 5xx xxx xx xx" />
-      </div>
-      <div>
-        <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">E-posta</label>
-        <input name="email" type="email" className="input-dark" placeholder="email@ornek.com" />
-      </div>
-      <div>
-        <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Konu</label>
-        <select name="konu" className="input-dark appearance-none cursor-pointer">
-          <option value="">Konu seçin</option>
-          <option>Ses Sistemleri</option>
-          <option>Işık Sistemleri</option>
-          <option>Görüntü Sistemleri</option>
-          <option>AKUSTEK Okul Saati</option>
-          <option>Servis & Teknik Destek</option>
-          <option>Diğer</option>
-        </select>
-      </div>
-      <div>
-        <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Mesaj</label>
-        <textarea name="mesaj" rows={5} className="input-dark resize-none" placeholder="Mesajınızı buraya yazın..." required />
-      </div>
-      <button type="submit" className="btn-primary w-full justify-center text-sm">
-        Mesaj Gönder
-      </button>
-
-      {/* Direkt arama seçeneği */}
-      <div className="text-center pt-2">
-        <p className="text-white/20 text-xs mb-3">veya</p>
-        <a
-          href="tel:+903522316915"
-          className="btn-outline w-full justify-center text-sm"
-        >
-          <Phone size={14} />
-          Hemen Arayın: +90 352 231 69 15
-        </a>
-      </div>
-    </form>
   )
 }

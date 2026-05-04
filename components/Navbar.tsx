@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X, Search, Phone } from 'lucide-react'
+import { Menu, X, Search, Phone, Heart, GitCompare } from 'lucide-react'
 import AdLogo from './AdLogo'
 import CartIcon from './CartIcon'
 import KurGostergesi from './KurGostergesi'
@@ -85,6 +85,12 @@ export default function Navbar() {
 
           {/* Right: Ara + Bayi Girişi */}
           <div className="hidden md:flex items-center gap-4">
+            <Link href="/favoriler" className="text-white/50 hover:text-white transition-colors duration-200">
+              <Heart size={16} />
+            </Link>
+            <Link href="/karsilastir" className="text-white/50 hover:text-white transition-colors duration-200">
+              <GitCompare size={16} />
+            </Link>
             <Link
               href="/urunler"
               className="flex items-center gap-2 text-white/50 hover:text-white transition-colors duration-200 text-sm"
@@ -129,6 +135,20 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <Link
+              href="/favoriler"
+              onClick={() => setOpen(false)}
+              className="font-display font-semibold text-sm tracking-widest uppercase py-2 border-b border-white/5 text-white/70"
+            >
+              Favoriler
+            </Link>
+            <Link
+              href="/karsilastir"
+              onClick={() => setOpen(false)}
+              className="font-display font-semibold text-sm tracking-widest uppercase py-2 border-b border-white/5 text-white/70"
+            >
+              Karşılaştırma
+            </Link>
             <Link
               href="/bayi"
               onClick={() => setOpen(false)}

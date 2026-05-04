@@ -39,6 +39,21 @@ export function addToCart(item: Omit<CartItem, 'adet'>) {
   saveCart(cart)
 }
 
+export function addManyToCart(items: Array<Omit<CartItem, 'adet'> & { adet: number }>) {
+  const cart = getCart()
+  for (const incoming of items) {
+    const existing = cart.find(c => c.id === incoming.id)
+    if (existing) {
+      existing.adet += incoming.adet
+      existing.fiyat = incoming.fiyat
+      existing.bayi_fiyati = incoming.bayi_fiyati
+    } else {
+      cart.push({ ...incoming })
+    }
+  }
+  saveCart(cart)
+}
+
 export function removeFromCart(id: string) {
   saveCart(getCart().filter(c => c.id !== id))
 }

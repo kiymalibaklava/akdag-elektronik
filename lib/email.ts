@@ -25,6 +25,7 @@ interface SiparisEmailData {
 export function musterionayHTML(data: SiparisEmailData): string {
   const odemeLabel: Record<string, string> = {
     kredi_karti: 'Kredi / Banka Kartı',
+    kart: 'Kredi / Banka Kartı',
     havale: 'Havale / EFT',
     whatsapp: 'WhatsApp Siparişi',
   }
@@ -154,6 +155,35 @@ export function adminBildirimHTML(data: SiparisEmailData): string {
   <a href="${process.env.NEXT_PUBLIC_SITE_URL}/admin" style="display:block;background:#DA291C;color:#fff;text-align:center;padding:14px;font-weight:700;text-decoration:none;text-transform:uppercase;letter-spacing:0.15em;font-size:13px">
     Admin Paneline Git →
   </a>
+</div>
+</body>
+</html>`
+}
+
+export function iletisimAdminHTML(data: {
+  ad: string
+  soyad?: string | null
+  telefon?: string | null
+  email: string
+  konu?: string | null
+  mesaj: string
+}): string {
+  const adSoyad = [data.ad, data.soyad].filter(Boolean).join(' ')
+  return `
+<!DOCTYPE html>
+<html lang="tr">
+<body style="margin:0;padding:0;background:#0f0f0f;font-family:'Segoe UI',Arial,sans-serif">
+<div style="max-width:560px;margin:0 auto;padding:24px 16px">
+  <div style="background:#DA291C;padding:14px 20px;margin-bottom:16px">
+    <div style="color:#fff;font-size:16px;font-weight:900;text-transform:uppercase">Yeni iletişim mesajı</div>
+  </div>
+  <div style="background:#141414;border:1px solid #222;padding:20px;color:#ccc;font-size:14px;line-height:1.6">
+    <p style="margin:0 0 8px"><strong style="color:#fff">Gönderen:</strong> ${adSoyad}</p>
+    <p style="margin:0 0 8px"><strong style="color:#fff">E-posta:</strong> <a href="mailto:${data.email}" style="color:#DA291C">${data.email}</a></p>
+    ${data.telefon ? `<p style="margin:0 0 8px"><strong style="color:#fff">Telefon:</strong> ${data.telefon}</p>` : ''}
+    ${data.konu ? `<p style="margin:0 0 8px"><strong style="color:#fff">Konu:</strong> ${data.konu}</p>` : ''}
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid #2a2a2a;white-space:pre-wrap;color:#aaa">${data.mesaj}</div>
+  </div>
 </div>
 </body>
 </html>`

@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import WhatsAppButton from '@/components/WhatsAppButton'
 import KvkkBanner from '@/components/KvkkBanner'
+import { getSiteUrl } from '@/lib/site-url'
 
 export const metadata: Metadata = {
   title: 'Akdağ Elektronik | Ses, Işık & Görüntü Sistemleri – Kayseri',
@@ -19,10 +20,30 @@ export const metadata: Metadata = {
   },
 }
 
+const orgJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Akdağ Elektronik',
+  url: getSiteUrl(),
+  telephone: '+90-352-231-69-15',
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: 'Cumhuriyet Mah. Sur Cad. No:17/A',
+    addressLocality: 'Melikgazi',
+    addressRegion: 'Kayseri',
+    postalCode: '38040',
+    addressCountry: 'TR',
+  },
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="tr" suppressHydrationWarning>
       <body className="bg-[#0F0F0F] text-white antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
         <Navbar />
         <main>{children}</main>
         <Footer />

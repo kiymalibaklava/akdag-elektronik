@@ -1,13 +1,23 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { sifreSifirlaSchema } from '@/lib/api-schemas'
+import { rateLimit } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/request-ip'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, redirectTo } = await req.json()
-
-    if (!email) {
-      return NextResponse.json({ error: 'E-posta zorunlu' }, { status: 400 })
+    const ip = getClientIp(req)
+    if (!rateLimit(`sifre:${ip}`, 8, 60 * 60_000)) {
+      return NextResponse.json({ error: 'Çok fazla deneme. Daha sonra tekrar deneyin.' }, { status: 429 })
     }
+
+    const raw = await req.json()
+    const parsed = sifreSifirlaSchema.safeParse(raw)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Geçersiz e-posta' }, { status: 400 })
+    }
+
+    const { email, redirectTo } = parsed.data
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

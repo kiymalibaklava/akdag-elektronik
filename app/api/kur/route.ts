@@ -1,8 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { rateLimit } from '@/lib/rate-limit'
+import { getClientIp } from '@/lib/request-ip'
 
-export const revalidate = 300 // 5 dakikada bir yenile
+export const revalidate = 300
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const ip = getClientIp(req)
+  if (!rateLimit(`kur:${ip}`, 90, 60_000)) {
+    return NextResponse.json({ error: 'Çok fazla istek' }, { status: 429 })
+  }
+
   try {
     const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD', {
       next: { revalidate: 300 },
@@ -19,8 +26,10 @@ export async function GET() {
     })
   } catch {
     return NextResponse.json({
-      USD: 32.50, EUR: 35.20,
-      guncelleme: null, fallback: true,
+      USD: 32.5,
+      EUR: 35.2,
+      guncelleme: null,
+      fallback: true,
     })
   }
 }

@@ -41,6 +41,7 @@ const DURUM_CONFIG: Record<string, { label: string; color: string; bg: string; i
 
 const ODEME_TIPI: Record<string, string> = {
   kredi_karti: 'Kredi Kartı',
+  kart: 'Kredi Kartı',
   havale: 'Havale/EFT',
   whatsapp: 'WhatsApp',
 }

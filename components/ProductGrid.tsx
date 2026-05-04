@@ -3,8 +3,16 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, Package, Search, Tag } from 'lucide-react'
+import { ArrowRight, GitCompare, Heart, Package, Search, Tag } from 'lucide-react'
 import { dovizToTL, formatFiyat, type KurData } from '@/lib/kur'
+import {
+  getCompareList,
+  isCompared,
+  isFavorite,
+  toggleCompare,
+  toggleFavorite,
+  type SavedProduct,
+} from '@/lib/product-lists'
 
 interface Product {
   id: string
@@ -18,6 +26,10 @@ interface Product {
   bayi_para_birimi?: string
   stok_durumu?: string
   fiyat_guncelleme?: string
+  stok_adedi?: number | null
+  kritik_stok?: number | null
+  marka?: string | null
+  kullanim_alani?: string | null
 }
 
 interface Props {
@@ -37,10 +49,24 @@ function useKur() {
 
 export default function ProductGrid({ products, suggested, searchQuery, isBayi = false }: Props) {
   const kur = useKur()
+  const [compareCount, setCompareCount] = useState(0)
+
+  useEffect(() => {
+    const sync = () => setCompareCount(getCompareList().length)
+    sync()
+    window.addEventListener('product-lists-updated', sync)
+    return () => window.removeEventListener('product-lists-updated', sync)
+  }, [])
 
   if (products.length === 0) {
     return (
       <div>
+        {compareCount > 0 && (
+          <div className="mb-5 flex items-center justify-between border border-white/10 bg-[#141414] px-4 py-3">
+            <span className="font-body text-white/50 text-sm">{compareCount} ürün karşılaştırma listesinde</span>
+            <Link href="/karsilastir" className="btn-outline text-xs">Karşılaştırmaya Git</Link>
+          </div>
+        )}
         <div className="text-center py-20 border border-white/5 bg-[#141414] mb-12">
           <Search size={40} className="text-white/10 mx-auto mb-4" />
           <p className="font-display font-bold text-lg uppercase text-white/20 tracking-widest mb-2">Sonuç Bulunamadı</p>
@@ -70,9 +96,17 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1">
-      {products.map(p => <ProductCard key={p.id} product={p} isBayi={isBayi} kur={kur} />)}
-    </div>
+    <>
+      {compareCount > 0 && (
+        <div className="mb-5 flex items-center justify-between border border-white/10 bg-[#141414] px-4 py-3">
+          <span className="font-body text-white/50 text-sm">{compareCount} ürün karşılaştırma listesinde</span>
+          <Link href="/karsilastir" className="btn-outline text-xs">Karşılaştırmaya Git</Link>
+        </div>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1">
+        {products.map((p) => <ProductCard key={p.id} product={p} isBayi={isBayi} kur={kur} />)}
+      </div>
+    </>
   )
 }
 
@@ -95,10 +129,36 @@ export function ProductCard({ product, isBayi = false, kur }: { product: Product
   const indirimYuzde = hasBayiFiyat && normalFiyatTL && bayiFiyatTL
     ? Math.round((1 - bayiFiyatTL / normalFiyatTL) * 100)
     : 0
+  const [fav, setFav] = useState(false)
+  const [cmp, setCmp] = useState(false)
+  const stockCount = product.stok_adedi ?? null
+  const isCritical =
+    stockCount !== null &&
+    product.kritik_stok !== null &&
+    product.kritik_stok !== undefined &&
+    stockCount <= product.kritik_stok
+
+  useEffect(() => {
+    setFav(isFavorite(product.id))
+    setCmp(isCompared(product.id))
+  }, [product.id])
+
+  const asSaved = (): SavedProduct => ({
+    id: product.id,
+    ad: product.ad,
+    kategori: product.kategori,
+    fiyat: product.fiyat,
+    para_birimi: product.para_birimi,
+    stok_durumu: product.stok_durumu,
+    stok_adedi: product.stok_adedi ?? null,
+    kritik_stok: product.kritik_stok ?? null,
+    marka: product.marka ?? null,
+    kullanim_alani: product.kullanim_alani ?? null,
+  })
 
   return (
-    <Link href={`/urunler/${product.id}`}
-      className="product-card group relative bg-[#141414] border border-white/5 overflow-hidden hover:border-brand-red/30 flex flex-col">
+    <div className="product-card group relative bg-[#141414] border border-white/5 overflow-hidden hover:border-brand-red/30 flex flex-col">
+      <Link href={`/urunler/${product.id}`} className="contents">
       <div className="aspect-square bg-[#1A1A1A] relative overflow-hidden">
         {product.fotograflar?.[0] ? (
           <Image src={product.fotograflar[0]} alt={product.ad} fill
@@ -132,6 +192,13 @@ export function ProductCard({ product, isBayi = false, kur }: { product: Product
         <h3 className="font-display font-bold text-sm uppercase tracking-wide text-white group-hover:text-brand-red transition-colors leading-tight mb-3 flex-1">
           {product.ad}
         </h3>
+        {(product.marka || product.kullanim_alani) && (
+          <p className="font-body text-white/35 text-xs mb-3">
+            {product.marka ? `Marka: ${product.marka}` : ''}
+            {product.marka && product.kullanim_alani ? ' • ' : ''}
+            {product.kullanim_alani || ''}
+          </p>
+        )}
 
         <div className="mt-auto space-y-0.5">
           {hasBayiFiyat && bayiFiyatTL && normalFiyatTL ? (
@@ -172,10 +239,42 @@ export function ProductCard({ product, isBayi = false, kur }: { product: Product
               {new Date(product.fiyat_guncelleme).toLocaleDateString('tr-TR')}
             </div>
           )}
+          {stockCount !== null && (
+            <div className={`font-body text-[11px] ${isCritical ? 'text-yellow-400' : 'text-white/25'}`}>
+              Stok: {stockCount}{isCritical ? ' (Kritik)' : ''}
+            </div>
+          )}
         </div>
+      </div>
+      </Link>
+
+      <div className="grid grid-cols-2 gap-2 border-t border-white/5 p-2">
+        <button
+          type="button"
+          className={`btn-outline text-xs justify-center ${fav ? '!border-brand-red !text-brand-red' : ''}`}
+          onClick={() => setFav(toggleFavorite(asSaved()))}
+        >
+          <Heart size={13} />
+          {fav ? 'Favoride' : 'Favori'}
+        </button>
+        <button
+          type="button"
+          className={`btn-outline text-xs justify-center ${cmp ? '!border-brand-red !text-brand-red' : ''}`}
+          onClick={() => {
+            const next = toggleCompare(asSaved())
+            if (next.overflow) {
+              alert('Karşılaştırma listesi en fazla 4 ürün olabilir.')
+              return
+            }
+            setCmp(next.active)
+          }}
+        >
+          <GitCompare size={13} />
+          {cmp ? 'Eklendi' : 'Karşılaştır'}
+        </button>
       </div>
 
       <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-brand-red group-hover:w-full transition-all duration-500" />
-    </Link>
+    </div>
   )
 }

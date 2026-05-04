@@ -30,6 +30,10 @@ export default function AdminAddProduct({ onAdded }: Props) {
   const [stok, setStok] = useState('stokta')
   const [paraBirimi, setParaBirimi] = useState('USD')
   const [bayiParaBirimi, setBayiParaBirimi] = useState('USD')
+  const [marka, setMarka] = useState('')
+  const [kullanimAlani, setKullanimAlani] = useState('')
+  const [stokAdedi, setStokAdedi] = useState('0')
+  const [kritikStok, setKritikStok] = useState('5')
   const [entries, setEntries] = useState<FileEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -69,11 +73,21 @@ export default function AdminAddProduct({ onAdded }: Props) {
       }
     }
 
+    const stokAdetNum = Math.max(0, parseInt(stokAdedi || '0'))
+    const kritikStokNum = Math.max(0, parseInt(kritikStok || '0'))
+    const stokDurumu = stokAdetNum <= 0 ? 'tukendi' : stok
+
     const { error: insertErr } = await supabase.from('urunler').insert({
       ad: ad.trim(), aciklama: aciklama.trim(), kategori, fotograflar,
       fiyat: parseFloat(fiyat),
       bayi_fiyati: bayi_fiyati ? parseFloat(bayi_fiyati) : null,
-      stok_durumu: stok,
+      stok_durumu: stokDurumu,
+      stok_adedi: stokAdetNum,
+      kritik_stok: kritikStokNum,
+      para_birimi: paraBirimi,
+      bayi_para_birimi: bayiParaBirimi,
+      marka: marka.trim() || null,
+      kullanim_alani: kullanimAlani.trim() || null,
     })
 
     setLoading(false)
@@ -81,6 +95,7 @@ export default function AdminAddProduct({ onAdded }: Props) {
     setSuccess(true)
     setAd(''); setAciklama(''); setKategori(KATEGORILER[0])
     setFiyat(''); setBayiF(''); setStok('stokta'); setParaBirimi('USD'); setBayiParaBirimi('USD')
+    setMarka(''); setKullanimAlani(''); setStokAdedi('0'); setKritikStok('5')
     setEntries([])
     setTimeout(() => setSuccess(false), 3000)
     onAdded?.()
@@ -103,6 +118,17 @@ export default function AdminAddProduct({ onAdded }: Props) {
       <div>
         <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Açıklama *</label>
         <textarea value={aciklama} onChange={e => setAciklama(e.target.value)} rows={3} className="input-dark resize-none" placeholder="Ürün özellikleri..." />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Marka</label>
+          <input type="text" value={marka} onChange={(e) => setMarka(e.target.value)} className="input-dark" placeholder="JBL" />
+        </div>
+        <div>
+          <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Kullanım Alanı</label>
+          <input type="text" value={kullanimAlani} onChange={(e) => setKullanimAlani(e.target.value)} className="input-dark" placeholder="Konferans Salonu" />
+        </div>
       </div>
 
       {/* Fiyat bölümü */}
@@ -142,6 +168,16 @@ export default function AdminAddProduct({ onAdded }: Props) {
             <option value="tukendi">Tükendi</option>
             <option value="siparise_gore">Siparişe Göre</option>
           </select>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-1.5">Stok Adedi</label>
+            <input type="number" min="0" value={stokAdedi} onChange={(e) => setStokAdedi(e.target.value)} className="input-dark" />
+          </div>
+          <div>
+            <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-1.5">Kritik Seviye</label>
+            <input type="number" min="0" value={kritikStok} onChange={(e) => setKritikStok(e.target.value)} className="input-dark" />
+          </div>
         </div>
       </div>
 

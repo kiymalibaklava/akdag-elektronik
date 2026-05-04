@@ -24,12 +24,23 @@ const PER_PAGE = 16
 export default async function UrunlerPage({
   searchParams,
 }: {
-  searchParams: { q?: string; kategori?: string; sayfa?: string }
+  searchParams: {
+    q?: string
+    kategori?: string
+    sayfa?: string
+    min?: string
+    max?: string
+    stok?: string
+    marka?: string
+    kullanim?: string
+  }
 }) {
   const supabase = await createServerSupabaseClient()
   const sayfa = Math.max(1, parseInt(searchParams.sayfa || '1'))
   const from = (sayfa - 1) * PER_PAGE
   const to = from + PER_PAGE - 1
+  const min = searchParams.min ? Number(searchParams.min) : null
+  const max = searchParams.max ? Number(searchParams.max) : null
 
   let query = supabase
     .from('urunler')
@@ -42,6 +53,21 @@ export default async function UrunlerPage({
   }
   if (searchParams.kategori && searchParams.kategori !== 'Tümü') {
     query = query.eq('kategori', searchParams.kategori)
+  }
+  if (min !== null && !Number.isNaN(min)) {
+    query = query.gte('fiyat', min)
+  }
+  if (max !== null && !Number.isNaN(max)) {
+    query = query.lte('fiyat', max)
+  }
+  if (searchParams.stok && searchParams.stok !== 'tum') {
+    query = query.eq('stok_durumu', searchParams.stok)
+  }
+  if (searchParams.marka && searchParams.marka !== 'tum') {
+    query = query.eq('marka', searchParams.marka)
+  }
+  if (searchParams.kullanim && searchParams.kullanim !== 'tum') {
+    query = query.eq('kullanim_alani', searchParams.kullanim)
   }
 
   const { data: products, count } = await query
@@ -59,9 +85,23 @@ export default async function UrunlerPage({
   }
 
   const activeKategori = searchParams.kategori || 'Tümü'
+  const { data: filterRows } = await supabase
+    .from('urunler')
+    .select('marka, kullanim_alani')
+    .order('created_at', { ascending: false })
+    .limit(300)
+
+  const markalar = Array.from(new Set((filterRows || []).map((r) => r.marka).filter(Boolean))) as string[]
+  const kullanimAlanlari = Array.from(new Set((filterRows || []).map((r) => r.kullanim_alani).filter(Boolean))) as string[]
+
   const baseParams = new URLSearchParams()
   if (searchParams.q) baseParams.set('q', searchParams.q)
   if (searchParams.kategori) baseParams.set('kategori', searchParams.kategori)
+  if (searchParams.min) baseParams.set('min', searchParams.min)
+  if (searchParams.max) baseParams.set('max', searchParams.max)
+  if (searchParams.stok) baseParams.set('stok', searchParams.stok)
+  if (searchParams.marka) baseParams.set('marka', searchParams.marka)
+  if (searchParams.kullanim) baseParams.set('kullanim', searchParams.kullanim)
 
   return (
     <div className="min-h-screen pt-8 pb-24">
@@ -82,11 +122,39 @@ export default async function UrunlerPage({
       </div>
 
       <div className="max-w-7xl mx-auto px-6 pt-12">
+        <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2 mb-8">
+          <input name="q" defaultValue={searchParams.q || ''} className="input-dark" placeholder="Metin ara..." />
+          <input name="min" type="number" min="0" defaultValue={searchParams.min || ''} className="input-dark" placeholder="Min fiyat" />
+          <input name="max" type="number" min="0" defaultValue={searchParams.max || ''} className="input-dark" placeholder="Max fiyat" />
+          <select name="stok" defaultValue={searchParams.stok || 'tum'} className="input-dark appearance-none">
+            <option value="tum">Tüm stoklar</option>
+            <option value="stokta">Stokta</option>
+            <option value="siparise_gore">Siparişe Göre</option>
+            <option value="tukendi">Tükendi</option>
+          </select>
+          <select name="marka" defaultValue={searchParams.marka || 'tum'} className="input-dark appearance-none">
+            <option value="tum">Tüm markalar</option>
+            {markalar.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <select name="kullanim" defaultValue={searchParams.kullanim || 'tum'} className="input-dark appearance-none">
+            <option value="tum">Tüm kullanım alanları</option>
+            {kullanimAlanlari.map((k) => <option key={k} value={k}>{k}</option>)}
+          </select>
+          <input type="hidden" name="kategori" value={activeKategori} />
+          <button className="btn-primary text-xs lg:col-span-1" type="submit">Filtrele</button>
+          <a href="/urunler" className="btn-outline text-xs lg:col-span-1">Temizle</a>
+        </form>
+
         {/* Kategori filtresi */}
         <div className="flex flex-wrap gap-2 mb-8">
           {KATEGORILER.map((kat) => {
             const params = new URLSearchParams()
             if (searchParams.q) params.set('q', searchParams.q)
+            if (searchParams.min) params.set('min', searchParams.min)
+            if (searchParams.max) params.set('max', searchParams.max)
+            if (searchParams.stok) params.set('stok', searchParams.stok)
+            if (searchParams.marka) params.set('marka', searchParams.marka)
+            if (searchParams.kullanim) params.set('kullanim', searchParams.kullanim)
             params.set('kategori', kat)
             return (
               <a

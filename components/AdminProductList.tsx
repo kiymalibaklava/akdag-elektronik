@@ -18,6 +18,10 @@ interface Product {
   fiyat_guncelleme?: string
   para_birimi?: string
   bayi_para_birimi?: string
+  stok_adedi?: number | null
+  kritik_stok?: number | null
+  marka?: string | null
+  kullanim_alani?: string | null
 }
 
 interface Props {
@@ -39,6 +43,10 @@ export default function AdminProductList({ products, onDeleted }: Props) {
   const [editStok, setEditStok] = useState('stokta')
   const [editParaBirimi, setEditParaBirimi] = useState('USD')
   const [editBayiParaBirimi, setEditBayiParaBirimi] = useState('USD')
+  const [editStokAdedi, setEditStokAdedi] = useState('0')
+  const [editKritikStok, setEditKritikStok] = useState('5')
+  const [editMarka, setEditMarka] = useState('')
+  const [editKullanim, setEditKullanim] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
@@ -56,6 +64,10 @@ export default function AdminProductList({ products, onDeleted }: Props) {
     setEditStok(p.stok_durumu || 'stokta')
     setEditParaBirimi(p.para_birimi || 'USD')
     setEditBayiParaBirimi(p.bayi_para_birimi || 'USD')
+    setEditStokAdedi((p.stok_adedi ?? 0).toString())
+    setEditKritikStok((p.kritik_stok ?? 5).toString())
+    setEditMarka(p.marka || '')
+    setEditKullanim(p.kullanim_alani || '')
     setSaveSuccess(false)
   }
 
@@ -65,15 +77,23 @@ export default function AdminProductList({ products, onDeleted }: Props) {
     const supabase = createClient()
     const fiyatDegisti = editFiyat !== editProduct.fiyat?.toString() || editBayiF !== editProduct.bayi_fiyati?.toString()
 
+    const stokAdedi = Math.max(0, parseInt(editStokAdedi || '0'))
+    const kritikStok = Math.max(0, parseInt(editKritikStok || '0'))
+    const stokDurumu = stokAdedi <= 0 ? 'tukendi' : editStok
+
     await supabase.from('urunler').update({
       ad: editAd.trim(),
       aciklama: editAciklama.trim(),
       kategori: editKategori,
       fiyat: editFiyat ? parseFloat(editFiyat) : null,
       bayi_fiyati: editBayiF ? parseFloat(editBayiF) : null,
-      stok_durumu: editStok,
+      stok_durumu: stokDurumu,
+      stok_adedi: stokAdedi,
+      kritik_stok: kritikStok,
       para_birimi: editParaBirimi,
       bayi_para_birimi: editBayiParaBirimi,
+      marka: editMarka.trim() || null,
+      kullanim_alani: editKullanim.trim() || null,
       updated_at: new Date().toISOString(),
       ...(fiyatDegisti ? { fiyat_guncelleme: new Date().toISOString() } : {}),
     }).eq('id', editProduct.id)
@@ -155,6 +175,11 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                   {product.stok_durumu === 'tukendi' && (
                     <span className="font-display font-semibold text-xs text-red-400/60 uppercase tracking-widest">Tükendi</span>
                   )}
+                  {typeof product.stok_adedi === 'number' && (
+                    <span className={`font-body text-xs ${product.kritik_stok !== null && product.kritik_stok !== undefined && product.stok_adedi <= product.kritik_stok ? 'text-yellow-400' : 'text-white/30'}`}>
+                      Stok: {product.stok_adedi}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -209,6 +234,16 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                 <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Açıklama *</label>
                 <textarea value={editAciklama} onChange={e => setEditAciklama(e.target.value)} rows={4} className="input-dark resize-none" />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Marka</label>
+                  <input type="text" value={editMarka} onChange={e => setEditMarka(e.target.value)} className="input-dark" />
+                </div>
+                <div>
+                  <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Kullanım Alanı</label>
+                  <input type="text" value={editKullanim} onChange={e => setEditKullanim(e.target.value)} className="input-dark" />
+                </div>
+              </div>
 
               {/* Fiyat bölümü */}
               <div className="border border-white/5 bg-[#1A1A1A] p-4 space-y-3">
@@ -249,6 +284,16 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                   <option value="tukendi">Tükendi</option>
                   <option value="siparise_gore">Siparişe Göre</option>
                 </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Stok Adedi</label>
+                  <input type="number" min="0" value={editStokAdedi} onChange={(e) => setEditStokAdedi(e.target.value)} className="input-dark" />
+                </div>
+                <div>
+                  <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Kritik Seviye</label>
+                  <input type="number" min="0" value={editKritikStok} onChange={(e) => setEditKritikStok(e.target.value)} className="input-dark" />
+                </div>
               </div>
             </div>
 

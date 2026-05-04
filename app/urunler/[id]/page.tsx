@@ -2,11 +2,13 @@ import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Phone, Mail, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import ProductImageGallery from '@/components/ProductImageGallery'
 import ShareButtons from '@/components/ShareButtons'
 import AddToCartButton from '@/components/AddToCartButton'
 import UrunFiyatGosterge from '@/components/UrunFiyatGosterge'
 import type { Metadata } from 'next'
+import { getSiteUrl } from '@/lib/site-url'
 
 interface Props { params: { id: string } }
 
@@ -28,9 +30,32 @@ export default async function UrunDetayPage({ params }: Props) {
     .eq('kategori', product.kategori).neq('id', product.id).limit(4)
 
   const stok = product.stok_durumu || 'stokta'
+  const base = getSiteUrl()
+  const currency = product.para_birimi || 'TRY'
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.ad,
+    description: product.aciklama?.slice(0, 5000),
+    image: product.fotograflar?.length ? product.fotograflar : undefined,
+    sku: product.id,
+    offers: product.fiyat
+      ? {
+          '@type': 'Offer',
+          price: product.fiyat,
+          priceCurrency: currency,
+          availability:
+            stok === 'tukendi'
+              ? 'https://schema.org/OutOfStock'
+              : 'https://schema.org/InStock',
+          url: `${base}/urunler/${product.id}`,
+        }
+      : undefined,
+  }
 
   return (
     <div className="min-h-screen pt-8 pb-24">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
       <div className="max-w-7xl mx-auto px-6 py-12">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-white/30 text-sm font-body mb-10">
@@ -115,10 +140,17 @@ export default async function UrunDetayPage({ params }: Props) {
                 <Link key={r.id} href={`/urunler/${r.id}`}
                   className="product-card group bg-[#141414] border border-white/5 overflow-hidden hover:border-brand-red/30">
                   <div className="aspect-square bg-[#1A1A1A] relative overflow-hidden">
-                    {r.fotograflar?.[0]
-                      ? <img src={r.fotograflar[0]} alt={r.ad} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                      : <div className="w-full h-full flex items-center justify-center text-white/10 text-4xl">📦</div>
-                    }
+                    {r.fotograflar?.[0] ? (
+                      <Image
+                        src={r.fotograflar[0]}
+                        alt={r.ad}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        sizes="(max-width: 768px) 50vw, 25vw"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white/10 text-4xl">📦</div>
+                    )}
                   </div>
                   <div className="p-4">
                     <div className="font-display font-bold text-sm uppercase text-white group-hover:text-brand-red transition-colors truncate">{r.ad}</div>

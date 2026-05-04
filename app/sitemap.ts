@@ -1,8 +1,9 @@
 import { MetadataRoute } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getSiteUrl } from '@/lib/site-url'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://akdagelektronik.com'
+  const baseUrl = getSiteUrl()
 
   const supabase = await createServerSupabaseClient()
   const { data: products } = await supabase
@@ -34,6 +35,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/hakkimizda`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.55,
+    },
+    {
+      url: `${baseUrl}/bayi/basvuru`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/sepet`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.35,
+    },
+    {
+      url: `${baseUrl}/favoriler`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/karsilastir`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.3,
     },
     ...productUrls,
   ]

@@ -4,9 +4,10 @@ import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 // HATA BURADAYDI: 'lucide-center' yerine 'lucide-react' olmalı
-import { LogOut, Package, Phone, Clock, CheckCircle, XCircle, Search, X } from 'lucide-react'
+import { LogOut, Package, Phone, Clock, CheckCircle, XCircle, Search, X, RotateCcw } from 'lucide-react'
 import { ProductCard } from './ProductGrid'
 import type { User } from '@supabase/supabase-js'
+import { addManyToCart } from '@/lib/cart'
 
 const KATEGORILER = ['Tümü','Ses Sistemleri','Işık Sistemleri','Görüntü Sistemleri','Okul Saat Sistemleri','Simultune Sistemleri','Aksesuarlar']
 
@@ -28,6 +29,25 @@ interface Urun {
   bayi_fiyati: number | null
   stok_durumu: string
   fiyat_guncelleme: string | null
+  stok_adedi?: number | null
+  kritik_stok?: number | null
+  marka?: string | null
+  kullanim_alani?: string | null
+}
+
+interface Siparis {
+  id: string
+  siparis_no: string
+  created_at: string
+  toplam_tutar: number
+  durum: string
+  urunler: Array<{
+    urun_id?: string
+    ad: string
+    adet: number
+    fiyat: number
+    fotograf?: string
+  }>
 }
 
 export default function BayiPanel({ user }: { user: User }) {
@@ -36,6 +56,8 @@ export default function BayiPanel({ user }: { user: User }) {
   const [loading, setLoading] = useState(true)
   const [kategori, setKategori] = useState('Tümü')
   const [search, setSearch] = useState('')
+  const [siparisler, setSiparisler] = useState<Siparis[]>([])
+  const [repeatMsg, setRepeatMsg] = useState('')
   const supabase = useRef(createClient()).current
 
   useEffect(() => {
@@ -48,6 +70,14 @@ export default function BayiPanel({ user }: { user: User }) {
         const { data } = await supabase
           .from('urunler').select('*').order('created_at', { ascending: false })
         setUrunler(data || [])
+
+        const { data: siparisData } = await supabase
+          .from('siparisler')
+          .select('id, siparis_no, created_at, toplam_tutar, durum, urunler')
+          .eq('bayi_id', bayiData.id)
+          .order('created_at', { ascending: false })
+          .limit(25)
+        setSiparisler((siparisData || []) as Siparis[])
       }
       setLoading(false)
     }
@@ -117,6 +147,23 @@ export default function BayiPanel({ user }: { user: User }) {
   const recentCount = urunler.filter(u =>
     u.fiyat_guncelleme && (Date.now() - new Date(u.fiyat_guncelleme).getTime()) < 7 * 24 * 60 * 60 * 1000
   ).length
+
+  const handleRepeatOrder = (siparis: Siparis) => {
+    if (!Array.isArray(siparis.urunler) || siparis.urunler.length === 0) return
+    addManyToCart(
+      siparis.urunler.map((u, i) => ({
+        id: u.urun_id || `${siparis.id}-${i}`,
+        ad: u.ad,
+        kategori: 'Tekrar Sipariş',
+        fotograf: u.fotograf || '',
+        fiyat: u.fiyat,
+        bayi_fiyati: u.fiyat,
+        adet: Math.max(1, u.adet || 1),
+      }))
+    )
+    setRepeatMsg(`${siparis.siparis_no} sepete eklendi.`)
+    setTimeout(() => setRepeatMsg(''), 3000)
+  }
 
   return (
     <div className="min-h-screen pb-24">
@@ -189,6 +236,11 @@ export default function BayiPanel({ user }: { user: User }) {
           {filtered.length} ürün
           {search && <span> — "<span className="text-white">{search}</span>"</span>}
         </div>
+        {repeatMsg && (
+          <div className="mb-6 border border-green-500/30 bg-green-500/10 px-4 py-3 text-green-300 text-sm font-body">
+            {repeatMsg}
+          </div>
+        )}
 
         {/* Ürün grid */}
         {filtered.length === 0 ? (
@@ -221,6 +273,34 @@ export default function BayiPanel({ user }: { user: User }) {
           <a href="tel:+903522316915" className="btn-primary text-sm flex-shrink-0">
             <Phone size={15} />+90 352 231 69 15
           </a>
+        </div>
+
+        <div className="mt-10">
+          <h2 className="font-display font-bold text-xl uppercase tracking-wide text-white mb-4 red-line">Sipariş Geçmişi</h2>
+          {siparisler.length === 0 ? (
+            <div className="border border-white/5 bg-[#141414] p-6 text-white/35 text-sm">Henüz bayi siparişi bulunmuyor.</div>
+          ) : (
+            <div className="space-y-2">
+              {siparisler.map((s) => (
+                <div key={s.id} className="border border-white/5 bg-[#141414] p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <div className="font-display font-bold text-white">{s.siparis_no}</div>
+                    <div className="font-body text-xs text-white/35">
+                      {new Date(s.created_at).toLocaleDateString('tr-TR')} • {s.urunler?.length || 0} kalem • {s.toplam_tutar?.toLocaleString('tr-TR')} ₺
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-body text-xs text-white/35 uppercase">{s.durum}</span>
+                    <button type="button" className="btn-outline text-xs" onClick={() => handleRepeatOrder(s)}>
+                      <RotateCcw size={12} />
+                      Tekrar Sepete Ekle
+                    </button>
+                    <Link href="/sepet" className="btn-primary text-xs">Sepete Git</Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
