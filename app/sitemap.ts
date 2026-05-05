@@ -5,24 +5,13 @@ import { getSiteUrl } from '@/lib/site-url'
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getSiteUrl()
 
-  const supabase = await createServerSupabaseClient()
-  const { data: products } = await supabase
-    .from('urunler')
-    .select('id, updated_at')
-
-  const productUrls: MetadataRoute.Sitemap = (products || []).map((p) => ({
-    url: `${baseUrl}/urunler/${p.id}`,
-    lastModified: new Date(p.updated_at),
-    changeFrequency: 'weekly',
-    priority: 0.7,
-  }))
-
-  return [
+  // 1. Sabit (Statik) Sayfalar
+  const staticPages: MetadataRoute.Sitemap = [
     {
-      url: baseUrl,
+      url: `${baseUrl}`,
       lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 1,
+      changeFrequency: 'daily',
+      priority: 1.0,
     },
     {
       url: `${baseUrl}/urunler`,
@@ -31,41 +20,40 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/iletisim`,
+      url: `${baseUrl}/hakkimizda`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.6,
     },
     {
-      url: `${baseUrl}/hakkimizda`,
+      url: `${baseUrl}/iletisim`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
-      priority: 0.55,
+      priority: 0.6,
     },
-    {
-      url: `${baseUrl}/bayi/basvuru`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/sepet`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.35,
-    },
-    {
-      url: `${baseUrl}/favoriler`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/karsilastir`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.3,
-    },
-    ...productUrls,
   ]
+
+  try {
+    const supabase = await createServerSupabaseClient()
+    
+    // 2. Dinamik Ürün Sayfaları
+    const { data: urunler } = await supabase
+      .from('urunler')
+      .select('id, created_at')
+      .order('created_at', { ascending: false })
+      // Limit if too many, but standard sitemap handles 50,000 URLs
+      .limit(5000) 
+
+    const urunPages: MetadataRoute.Sitemap = (urunler || []).map((urun) => ({
+      url: `${baseUrl}/urunler/${urun.id}`,
+      lastModified: new Date(urun.created_at),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    }))
+
+    return [...staticPages, ...urunPages]
+  } catch (error) {
+    console.error('Sitemap generation error:', error)
+    return staticPages
+  }
 }

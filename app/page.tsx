@@ -13,7 +13,7 @@ const categories = [
 ]
 
 const stats = [
-  { value: '25+', label: 'Yıl Deneyim' },
+  { value: '50+', label: 'Yıl Deneyim' },
   { value: '500+', label: 'Tamamlanan Proje' },
   { value: '1000+', label: 'Mutlu Müşteri' },
   { value: '4', label: 'Hizmet Kategorisi' },
@@ -62,7 +62,7 @@ export default function HomePage() {
             {/* Alt yazı — body font, daha geniş satır aralığı (#6) */}
             <p className="font-body text-white/45 text-lg md:text-xl max-w-xl leading-relaxed mb-10 animate-fade-up stagger-2"
               style={{ animationFillMode: 'both' }}>
-              25 yılı aşkın deneyimimizle Kayseri ve çevresinde profesyonel ses, ışık ve görüntü sistemleri
+              1976'dan bugüne yarım asırlık (50+ yıl) deneyimimizle Türkiye genelinde profesyonel ses, ışık ve görüntü sistemleri
               <span className="silver-text font-medium"> kurulum, satış ve servis</span> hizmetleri sunuyoruz.
             </p>
 
@@ -284,15 +284,15 @@ export default function HomePage() {
                 <span className="font-display font-semibold text-xs tracking-[0.3em] uppercase text-brand-red">Neden Biz?</span>
               </div>
               <h2 className="font-display font-black text-5xl md:text-6xl uppercase tracking-tight leading-none text-white mb-8">
-                25 YILLIK<br />
+                YARIM ASIRLIK<br />
                 <span className="text-brand-red">GÜVEN VE</span><br />
                 DENEYİM
               </h2>
               {/* Body font (#6) */}
               <p className="font-body text-white/45 text-base leading-relaxed mb-8">
-                Kayseri'de profesyonel ses, ışık ve görüntü sistemleri alanında
-                <span className="silver-text font-medium"> 25 yılı aşkın deneyimimizle</span> sektörün
-                öncüsü olmaya devam ediyoruz.
+                1976 yılında Ahmet Akdağ tarafından temelleri atılan ve bugün Mustafa Akdağ liderliğinde büyüyen şirketimiz, profesyonel ses, ışık ve görüntü sistemleri alanında
+                <span className="silver-text font-medium"> 50 yılı aşkın deneyimiyle</span> sektörün
+                öncüsü olmaya devam ediyor.
               </p>
               <div className="grid grid-cols-2 gap-3 mb-8">
                 {[

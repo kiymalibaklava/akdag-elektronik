@@ -7,7 +7,8 @@ import AdminProductList from './AdminProductList'
 import AdminLoginForm from './AdminLoginForm'
 import AdminBayiYonetim from './AdminBayiYonetim'
 import AdminSiparisler from './AdminSiparisler'
-import { LogOut, Package, Users, FileText, ShoppingBag } from 'lucide-react'
+import AdminDashboard from './AdminDashboard'
+import { LogOut, Package, Users, FileText, ShoppingBag, LayoutDashboard } from 'lucide-react'
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 
 interface AdminClientProps {
@@ -26,13 +27,13 @@ interface Product {
   fiyat_guncelleme?: string
 }
 
-type Tab = 'siparisler' | 'urunler' | 'bayiler' | 'basvurular'
+type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'bayiler' | 'basvurular'
 
 export default function AdminClient({ onSuccess }: AdminClientProps) {
   const [user, setUser] = useState<User | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<Tab>('siparisler')
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard')
   const [bekleyenSiparis, setBekleyenSiparis] = useState(0)
   const supabase = useRef(createClient()).current
 
@@ -120,6 +121,7 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
   }
 
   const tabs = [
+    { id: 'dashboard' as Tab, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'siparisler' as Tab, label: 'Siparişler', icon: ShoppingBag, badge: bekleyenSiparis },
     { id: 'urunler'   as Tab, label: 'Ürünler',    icon: Package },
     { id: 'bayiler'   as Tab, label: 'Bayiler',     icon: Users },
@@ -171,6 +173,7 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
 
       {/* İçerik */}
       <div className="max-w-7xl mx-auto px-6 pt-10">
+        {activeTab === 'dashboard' && <AdminDashboard />}
         {activeTab === 'siparisler' && <AdminSiparisler />}
 
         {activeTab === 'urunler' && (

@@ -3,11 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X, Search, Phone, Heart, GitCompare, ChevronRight, ChevronDown, Speaker, Lightbulb, Monitor, Box } from 'lucide-react'
+import { Menu, X, Search, Phone, Heart, GitCompare, ChevronRight, ChevronDown, Speaker, Lightbulb, Monitor, Box, Plug, Briefcase } from 'lucide-react'
 import AdLogo from './AdLogo'
 import CartIcon from './CartIcon'
 import KurGostergesi from './KurGostergesi'
 import { KATEGORI_HIYERARSI, type AnaKategori } from '@/lib/categories'
+import { createClient } from '@/lib/supabase'
+import type { User } from '@supabase/supabase-js'
 
 const navLinks = [
   { href: '/', label: 'Ana Sayfa' },
@@ -17,7 +19,7 @@ const navLinks = [
 ]
 
 /** Ana kategori ikonları — sırası KATEGORI_HIYERARSI ile eşleşir */
-const KATEGORI_IKONLARI = [Speaker, Lightbulb, Monitor, Box]
+const KATEGORI_IKONLARI = [Speaker, Lightbulb, Monitor, Box, Plug, Briefcase]
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
@@ -28,9 +30,19 @@ export default function Navbar() {
   const [mobileKatOpen, setMobileKatOpen] = useState(false)
   const [mobileAnaIdx, setMobileAnaIdx] = useState<number | null>(null)
   const [mobileAltIdx, setMobileAltIdx] = useState<number | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const pathname = usePathname()
   const megaTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const megaRef = useRef<HTMLDivElement>(null)
+  const supabase = useRef(createClient()).current
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }: any) => setUser(data.session?.user ?? null))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e: any, session: any) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
@@ -141,7 +153,7 @@ export default function Navbar() {
             </Link>
             <CartIcon />
             <Link
-              href="/bayi"
+              href={user ? "/hesabim" : "/bayi"}
               className="font-display font-bold text-xs tracking-widest uppercase px-5 py-2.5 bg-brand-red text-white hover:bg-brand-red-dark transition-all duration-200 flex items-center gap-2"
               style={{ clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))' }}
             >
@@ -151,7 +163,7 @@ export default function Navbar() {
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
                 <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
               </svg>
-              Bayi Girişi
+              {user ? "Hesabım" : "Bayi Girişi"}
             </Link>
           </div>
 
@@ -304,7 +316,7 @@ export default function Navbar() {
                       {alt?.detaylar.map((detay) => (
                         <Link
                           key={detay}
-                          href={`/urunler?kategori=${encodeURIComponent(ana.label)}`}
+                          href={`/urunler?kategori=${encodeURIComponent(ana.label)}&alt=${encodeURIComponent(alt.label)}&urun_tipi=${encodeURIComponent(detay)}`}
                           onClick={() => setMegaOpen(false)}
                           className="flex items-center gap-3 px-4 py-2.5 text-white/45 hover:text-white hover:bg-white/[0.04] transition-all duration-200 group rounded-sm"
                         >
@@ -409,7 +421,7 @@ export default function Navbar() {
                                 {sub.detaylar.map((d) => (
                                   <Link
                                     key={d}
-                                    href={`/urunler?kategori=${encodeURIComponent(kat.label)}`}
+                                    href={`/urunler?kategori=${encodeURIComponent(kat.label)}&alt=${encodeURIComponent(sub.label)}&urun_tipi=${encodeURIComponent(d)}`}
                                     onClick={() => setOpen(false)}
                                     className="block pl-6 py-1.5 font-body text-xs text-white/30 hover:text-brand-red transition-colors"
                                   >
@@ -461,11 +473,11 @@ export default function Navbar() {
               Karşılaştırma
             </Link>
             <Link
-              href="/bayi"
+              href={user ? "/hesabim" : "/bayi"}
               onClick={() => setOpen(false)}
               className="font-display font-bold text-xs tracking-widest uppercase text-brand-red py-3 border-b border-white/5"
             >
-              Bayi Girişi
+              {user ? "Hesabım" : "Bayi Girişi"}
             </Link>
             <a
               href="tel:+903522316915"

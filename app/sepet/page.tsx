@@ -292,9 +292,9 @@ export default function SepetPage() {
 
             <div className="space-y-6">
               <div className="bg-[#141414] border border-white/5 p-6">
-                <div className="flex justify-between items-baseline mb-6">
-                  <span className="font-display text-xs tracking-widest uppercase text-white/40">Ara toplam</span>
-                  <span className="font-display font-black text-2xl text-white">{Math.ceil(total).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
+                <div className="flex justify-between items-baseline mb-6 border-b border-white/5 pb-4">
+                  <span className="font-display text-xs tracking-widest uppercase text-white/50">Toplam <span className="text-white/30">(KDV Dahil)</span></span>
+                  <span className="font-display font-black text-2xl text-brand-red">{Math.ceil(total).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
                 </div>
 
                 <div className="space-y-4">

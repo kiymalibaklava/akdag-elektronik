@@ -31,10 +31,13 @@ export async function POST(req: NextRequest) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
     const tutarKurus = Math.round(tutar * 100).toString()
 
+    // PayTR, sepet öğeleri için TL cinsinden string bekler (örn: "150.00")
     const sepetIcerik = JSON.stringify(
-      urunler.map((u) => [u.ad, (u.fiyat * 100).toFixed(0), u.adet.toString()])
+      urunler.map((u) => [u.ad, u.fiyat.toFixed(2), u.adet.toString()])
     )
     const sepetBase64 = Buffer.from(sepetIcerik).toString('base64')
+
+    const test_mode = process.env.PAYTR_TEST_MODE === '1' ? '1' : '0'
 
     const hashStr = [
       PAYTR_MERCHANT_ID,
@@ -43,10 +46,10 @@ export async function POST(req: NextRequest) {
       email,
       tutarKurus,
       sepetBase64,
-      '0',
-      '0',
+      '0', // no_installment
+      '0', // max_installment
       'TL',
-      '0',
+      test_mode,
       PAYTR_MERCHANT_SALT,
     ].join('')
 
@@ -69,7 +72,7 @@ export async function POST(req: NextRequest) {
       merchant_fail_url: `${siteUrl}/odeme/hata`,
       timeout_limit: '30',
       currency: 'TL',
-      test_mode: process.env.PAYTR_TEST_MODE === '1' ? '1' : '0',
+      test_mode,
       lang: 'tr',
     })
 

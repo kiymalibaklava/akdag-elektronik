@@ -28,6 +28,7 @@ interface Siparis {
   odeme_durumu: string
   notlar: string
   teslimat_tipi?: string
+  kargo_takip_no?: string
   created_at: string
   updated_at: string
 }
@@ -54,6 +55,8 @@ export default function AdminSiparisler() {
   const [filterDurum, setFilterDurum] = useState('hepsi')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [updatingKargo, setUpdatingKargo] = useState<string | null>(null)
+  const [kargoInputs, setKargoInputs] = useState<Record<string, string>>({})
   const supabase = useRef(createClient()).current
 
   useEffect(() => { loadSiparisler() }, [])
@@ -76,6 +79,16 @@ export default function AdminSiparisler() {
     }).eq('id', id)
     await loadSiparisler()
     setUpdatingId(null)
+  }
+
+  const kaydetKargoNo = async (id: string, no: string) => {
+    setUpdatingKargo(id)
+    await supabase.from('siparisler').update({
+      kargo_takip_no: no,
+      updated_at: new Date().toISOString(),
+    }).eq('id', id)
+    await loadSiparisler()
+    setUpdatingKargo(null)
   }
 
   const filtered = siparisler.filter(s => {
@@ -358,6 +371,34 @@ export default function AdminSiparisler() {
                           </a>
                         )}
                       </div>
+
+                      {/* Kargo Takip Girişi */}
+                      {siparis.teslimat_tipi !== 'depo' && (
+                        <div className="border-t border-white/5 pt-4 mt-4">
+                          <h4 className="font-display font-bold text-xs uppercase tracking-widest text-white/40 mb-3">Kargo Takip Bilgisi</h4>
+                          <div className="flex items-center gap-2 max-w-sm">
+                            <input 
+                              type="text" 
+                              className="input-dark text-xs flex-1" 
+                              placeholder="Örn: 1Z9999999999999999" 
+                              value={kargoInputs[siparis.id] !== undefined ? kargoInputs[siparis.id] : (siparis.kargo_takip_no || '')}
+                              onChange={(e) => setKargoInputs({...kargoInputs, [siparis.id]: e.target.value})}
+                            />
+                            <button 
+                              onClick={() => kaydetKargoNo(siparis.id, kargoInputs[siparis.id] !== undefined ? kargoInputs[siparis.id] : (siparis.kargo_takip_no || ''))}
+                              disabled={updatingKargo === siparis.id}
+                              className="btn-primary text-xs py-2 px-4"
+                            >
+                              {updatingKargo === siparis.id ? '...' : 'Kaydet'}
+                            </button>
+                          </div>
+                          {siparis.kargo_takip_no && (
+                            <p className="font-body text-green-400/80 text-[10px] mt-2 flex items-center gap-1">
+                              <CheckCircle size={10} /> Takip numarası müşteriye yansıtıldı.
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

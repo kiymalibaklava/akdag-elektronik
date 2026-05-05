@@ -136,6 +136,65 @@ export const KATEGORI_HIYERARSI: AnaKategori[] = [
       },
     ],
   },
+  {
+    label: 'Kablo, Stand ve Aksesuar',
+    labelEn: 'Accessories & Cables',
+    altKategoriler: [
+      {
+        label: 'Kablolar ve Konnektörler',
+        detaylar: [
+          'XLR ve Mikrofon Kabloları',
+          'DMX ve Sinyal Kabloları',
+          'Speakon ve Hoparlör Kabloları',
+          'Neutrik ve Çeşitli Konnektörler',
+        ],
+      },
+      {
+        label: 'Stand ve Sehpalar',
+        detaylar: [
+          'Mikrofon Standları',
+          'Hoparlör ve Işık Sehpaları',
+          'Müzik ve Notalık Standları',
+        ],
+      },
+      {
+        label: 'Sarf Malzemeler',
+        detaylar: [
+          'Gaffa ve Sahne Bantları',
+          'Sis, Haze ve Kar Likitleri',
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Taşıma ve Altyapı',
+    labelEn: 'Cases & Power',
+    altKategoriler: [
+      {
+        label: 'Flight Case (Hardcase)',
+        detaylar: [
+          'Mikser Çantaları ve Kasaları',
+          'Işık ve Robot Işık Taşıma Kasaları',
+          'Özel Üretim Case Sistemleri',
+        ],
+      },
+      {
+        label: 'Rack Kabinler',
+        detaylar: [
+          '19" Rack Kabin Çözümleri',
+          'Rack Çekmeceleri ve Paneller',
+        ],
+      },
+      {
+        label: 'Güç ve Elektrik',
+        detaylar: [
+          'Power Distro (Güç Dağıtım Panoları)',
+          'Çoklu Priz ve Şebeke Kabloları',
+          'Voltaj Regülatörleri',
+        ],
+      },
+    ],
+  },
 ]
 
 /**
@@ -164,4 +223,16 @@ export function getAltKategoriler(anaKategori: string): string[] {
  */
 export function tumAltKategoriler(): string[] {
   return KATEGORI_HIYERARSI.flatMap((k) => k.altKategoriler.map((a) => a.label))
+}
+
+/**
+ * Belirli bir ana ve alt kategoriye ait olan 3. seviye detayların (urun_tipi) listesi.
+ * Admin panelde ürün detaylarını seçtirmek için.
+ */
+export function getDetayKategoriler(anaKategori: string, altKategori: string): string[] {
+  const ana = KATEGORI_HIYERARSI.find((k) => k.label === anaKategori)
+  if (!ana) return []
+  const alt = ana.altKategoriler.find((a) => a.label === altKategori)
+  if (!alt) return []
+  return alt.detaylar
 }

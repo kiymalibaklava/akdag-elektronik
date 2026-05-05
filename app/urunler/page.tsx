@@ -55,6 +55,9 @@ export default async function UrunlerPage({
   if (searchParams.alt) {
     query = query.eq('alt_kategori', searchParams.alt)
   }
+  if (searchParams.urun_tipi) {
+    query = query.eq('urun_tipi', searchParams.urun_tipi)
+  }
   if (min !== null && !Number.isNaN(min)) {
     query = query.gte('fiyat', min)
   }
@@ -104,6 +107,7 @@ export default async function UrunlerPage({
   if (searchParams.marka) baseParams.set('marka', searchParams.marka)
   if (searchParams.kullanim) baseParams.set('kullanim', searchParams.kullanim)
   if (searchParams.alt) baseParams.set('alt', searchParams.alt)
+  if (searchParams.urun_tipi) baseParams.set('urun_tipi', searchParams.urun_tipi)
 
   // Alt kategori kırılımları
   const activeAna = KATEGORI_HIYERARSI.find(k => k.label === activeKategori)
