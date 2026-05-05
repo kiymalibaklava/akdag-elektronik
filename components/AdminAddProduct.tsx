@@ -2,14 +2,10 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import { Upload, Plus, X, Check, AlertCircle, Tag } from 'lucide-react'
+import { Upload, Plus, X, Check, AlertCircle, Tag, ChevronRight } from 'lucide-react'
 import { PARA_BIRIMLERI } from '@/lib/kur'
 import { compressImage, formatFileSize } from './ImageCompressor'
-
-const KATEGORILER = [
-  'Ses Sistemleri','Işık Sistemleri','Görüntü Sistemleri',
-  'Okul Saat Sistemleri','Simultune Sistemleri','Aksesuarlar',
-]
+import { KATEGORI_HIYERARSI } from '@/lib/categories'
 
 interface FileEntry {
   file: File
@@ -24,7 +20,10 @@ interface Props { onAdded?: () => void }
 export default function AdminAddProduct({ onAdded }: Props) {
   const [ad, setAd] = useState('')
   const [aciklama, setAciklama] = useState('')
-  const [kategori, setKategori] = useState(KATEGORILER[0])
+  // 3 seviyeli kategori state
+  const [anaIdx, setAnaIdx] = useState(0)
+  const [altIdx, setAltIdx] = useState(0)
+  const [detayIdx, setDetayIdx] = useState(0)
   const [fiyat, setFiyat] = useState('')
   const [bayi_fiyati, setBayiF] = useState('')
   const [stok, setStok] = useState('stokta')
@@ -38,6 +37,12 @@ export default function AdminAddProduct({ onAdded }: Props) {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+
+  // Hiyerarşi hesaplama
+  const ana = KATEGORI_HIYERARSI[anaIdx]
+  const altKategoriler = ana?.altKategoriler || []
+  const alt = altKategoriler[altIdx]
+  const detaylar = alt?.detaylar || []
 
   const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || [])
@@ -78,7 +83,11 @@ export default function AdminAddProduct({ onAdded }: Props) {
     const stokDurumu = stokAdetNum <= 0 ? 'tukendi' : stok
 
     const { error: insertErr } = await supabase.from('urunler').insert({
-      ad: ad.trim(), aciklama: aciklama.trim(), kategori, fotograflar,
+      ad: ad.trim(), aciklama: aciklama.trim(),
+      kategori: ana?.label || '',
+      alt_kategori: alt?.label || null,
+      urun_tipi: detaylar[detayIdx] || null,
+      fotograflar,
       fiyat: parseFloat(fiyat),
       bayi_fiyati: bayi_fiyati ? parseFloat(bayi_fiyati) : null,
       stok_durumu: stokDurumu,
@@ -93,7 +102,7 @@ export default function AdminAddProduct({ onAdded }: Props) {
     setLoading(false)
     if (insertErr) { setError(`Eklenemedi: ${insertErr.message}`); return }
     setSuccess(true)
-    setAd(''); setAciklama(''); setKategori(KATEGORILER[0])
+    setAd(''); setAciklama(''); setAnaIdx(0); setAltIdx(0); setDetayIdx(0)
     setFiyat(''); setBayiF(''); setStok('stokta'); setParaBirimi('USD'); setBayiParaBirimi('USD')
     setMarka(''); setKullanimAlani(''); setStokAdedi('0'); setKritikStok('5')
     setEntries([])
@@ -108,11 +117,67 @@ export default function AdminAddProduct({ onAdded }: Props) {
         <input type="text" value={ad} onChange={e => setAd(e.target.value)} className="input-dark" placeholder="JBL PRX915 Aktif Hoparlör" />
       </div>
 
-      <div>
-        <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Kategori</label>
-        <select value={kategori} onChange={e => setKategori(e.target.value)} className="input-dark appearance-none cursor-pointer">
-          {KATEGORILER.map(k => <option key={k} value={k}>{k}</option>)}
-        </select>
+      {/* ── Hiyerarşik Kategori Seçimi ───────────────── */}
+      <div className="border border-white/5 bg-[#1A1A1A] p-4 space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <ChevronRight size={13} className="text-brand-red" />
+          <span className="font-display font-semibold text-xs tracking-widest uppercase text-white/50">Kategori Hiyerarşisi</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Ana Kategori */}
+          <div>
+            <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1.5">Ana Kategori</label>
+            <select
+              value={anaIdx}
+              onChange={e => { setAnaIdx(Number(e.target.value)); setAltIdx(0); setDetayIdx(0) }}
+              className="input-dark appearance-none cursor-pointer text-sm"
+            >
+              {KATEGORI_HIYERARSI.map((k, i) => (
+                <option key={k.label} value={i}>{k.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Alt Kategori */}
+          <div>
+            <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1.5">Alt Kategori</label>
+            <select
+              value={altIdx}
+              onChange={e => { setAltIdx(Number(e.target.value)); setDetayIdx(0) }}
+              className="input-dark appearance-none cursor-pointer text-sm"
+              disabled={altKategoriler.length === 0}
+            >
+              {altKategoriler.map((a, i) => (
+                <option key={a.label} value={i}>{a.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Detay / Ürün Tipi */}
+          <div>
+            <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1.5">Ürün Tipi</label>
+            <select
+              value={detayIdx}
+              onChange={e => setDetayIdx(Number(e.target.value))}
+              className="input-dark appearance-none cursor-pointer text-sm"
+              disabled={detaylar.length === 0}
+            >
+              {detaylar.map((d, i) => (
+                <option key={d} value={i}>{d}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Seçim özeti */}
+        <div className="flex items-center gap-1.5 text-[10px] font-body text-white/25 pt-1">
+          <span className="text-brand-red/60">{ana?.label}</span>
+          <ChevronRight size={8} className="text-white/15" />
+          <span className="text-white/40">{alt?.label || '—'}</span>
+          <ChevronRight size={8} className="text-white/15" />
+          <span className="text-white/50">{detaylar[detayIdx] || '—'}</span>
+        </div>
       </div>
 
       <div>

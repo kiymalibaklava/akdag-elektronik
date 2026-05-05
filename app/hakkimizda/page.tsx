@@ -31,12 +31,12 @@ const hizmetler = [
 ]
 
 const referanslar = [
-  'Kayseri Büyükşehir Belediyesi',
-  'Erciyes Üniversitesi',
+  'Onlarca Farklı İl ve İlçe Belediyesi',
+  'Erciyes Üniversitesi ve Eğitim Kurumları',
   'Kayseri Organize Sanayi Bölgesi',
-  'Kayseri İl Milli Eğitim Müdürlüğü',
-  'Çeşitli Düğün Salonları ve Organizasyon Firmaları',
-  'Kayseri ve Çevre İllerdeki Okullar',
+  'İl Milli Eğitim Müdürlükleri',
+  'Yüzlerce Düğün Salonu ve Organizasyon Firması',
+  'Türkiye Genelinde Çeşitli Kurum ve Kuruluşlar',
 ]
 
 export default function HakkimizdaPage() {
@@ -51,13 +51,13 @@ export default function HakkimizdaPage() {
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-8 h-px bg-brand-red" />
-            <span className="font-display font-semibold text-xs tracking-[0.3em] uppercase text-brand-red">1999'dan Bu Yana</span>
+            <span className="font-display font-semibold text-xs tracking-[0.3em] uppercase text-brand-red">1976'dan Bu Yana</span>
           </div>
           <h1 className="font-display font-black text-5xl md:text-7xl uppercase text-white leading-none mb-6">
             HAKKIMIZDA
           </h1>
           <p className="font-body text-white/45 text-lg max-w-2xl leading-relaxed">
-            Kayseri'nin köklü elektronik firması olarak 25 yılı aşkın deneyimimizle
+            Kayseri'nin köklü elektronik firması olarak yarım asırlık deneyimimizle
             ses, ışık ve görüntü sistemleri alanında güvenilir çözümler üretiyoruz.
           </p>
         </div>
@@ -74,23 +74,21 @@ export default function HakkimizdaPage() {
                 <span className="font-display font-semibold text-xs tracking-[0.3em] uppercase text-brand-red">Hikayemiz</span>
               </div>
               <h2 className="font-display font-black text-4xl md:text-5xl uppercase text-white leading-none mb-8">
-                25 YILLIK<br /><span className="text-brand-red">YOLCULUK</span>
+                YARIM ASIRLIK<br /><span className="text-brand-red">YOLCULUK</span>
               </h2>
               <div className="font-body text-white/50 text-base leading-relaxed space-y-4">
                 <p>
-                  Akdağ Elektronik, 1999 yılında Mustafa Akdağ tarafından Kayseri'de kuruldu.
-                  Kuruluşumuzdan bu yana profesyonel ses, ışık ve görüntü sistemleri alanında
-                  bölgenin önde gelen firmaları arasında yer alıyoruz.
+                  Akdağ Elektronik, 1976 yılında Ahmet Akdağ tarafından Kayseri'de kuruldu.
+                  Yarım asırlık bu köklü mirası ve sektörel birikimi, bugün Mustafa Akdağ liderliğinde teknolojinin getirdiği yeniliklerle harmanlayarak başarıyla geleceğe taşıyoruz.
                 </p>
                 <p>
-                  Yıllar içinde büyüyen müşteri portföyümüz ve genişleyen ürün yelpazemizle
-                  Kayseri başta olmak üzere İç Anadolu genelinde yüzlerce projeye imza attık.
-                  Okullardan büyük organizasyon mekanlarına, camilerden sahne sistemlerine
-                  kadar geniş bir yelpazede hizmet vermekteyiz.
+                  Sadece ürün tedarik eden değil, aynı zamanda çözüm üreten bir yapıya dönüşerek insanların ve kurumların ihtiyaç duyduğu tüm kategorilerde inovasyonu merkezimize aldık. Müşterilerimizin değişen beklentilerine her zaman yenilikçi, güvenilir ve modern projelerle yanıt vermeye, sektördeki standartları belirlemeye devam ediyoruz.
                 </p>
                 <p>
+                  Yıllar içinde büyüyen müşteri portföyümüz ve genişleyen ürün yelpazemizle 
+                  Kayseri başta olmak üzere tüm Türkiye çapında yüzlerce projeye imza attık. 
                   Türkiye'nin yeni nesil akıllı okul çözümü <strong className="text-white">AKUSTEK</strong>'in
-                  Kayseri ana bayisi olarak eğitim kurumlarına modern teknoloji sunuyoruz.
+                  Kayseri ana bayisi olarak da eğitim kurumlarına yüksek teknoloji sunuyoruz.
                 </p>
               </div>
             </div>
@@ -98,8 +96,8 @@ export default function HakkimizdaPage() {
             {/* İstatistikler */}
             <div className="grid grid-cols-2 gap-3">
               {[
-                { val: '1999', label: 'Kuruluş Yılı',      color: 'border-l-brand-red' },
-                { val: '25+',  label: 'Yıl Deneyim',       color: 'border-l-brand-red' },
+                { val: '1976', label: 'Kuruluş Yılı',      color: 'border-l-brand-red' },
+                { val: '50+',  label: 'Yıl Deneyim',       color: 'border-l-brand-red' },
                 { val: '500+', label: 'Tamamlanan Proje',   color: 'border-l-white/20' },
                 { val: '1000+',label: 'Mutlu Müşteri',      color: 'border-l-white/20' },
                 { val: '10+',  label: 'Çalışan Marka',      color: 'border-l-white/20' },

@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Trash2, Package, Pencil, X, Check, Search } from 'lucide-react'
 import { PARA_BIRIMLERI } from '@/lib/kur'
 import { createClient } from '@/lib/supabase'
+import { KATEGORILER, KATEGORI_HIYERARSI } from '@/lib/categories'
 
 interface Product {
   id: string
@@ -29,8 +30,6 @@ interface Props {
   onDeleted?: () => void
 }
 
-const KATEGORILER = ['Ses Sistemleri','Işık Sistemleri','Görüntü Sistemleri','Okul Saat Sistemleri','Simultune Sistemleri','Aksesuarlar']
-
 export default function AdminProductList({ products, onDeleted }: Props) {
   const [search, setSearch] = useState('')
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -38,6 +37,8 @@ export default function AdminProductList({ products, onDeleted }: Props) {
   const [editAd, setEditAd] = useState('')
   const [editAciklama, setEditAciklama] = useState('')
   const [editKategori, setEditKategori] = useState('')
+  const [editAltKategori, setEditAltKategori] = useState('')
+  const [editUrunTipi, setEditUrunTipi] = useState('')
   const [editFiyat, setEditFiyat] = useState('')
   const [editBayiF, setEditBayiF] = useState('')
   const [editStok, setEditStok] = useState('stokta')
@@ -59,6 +60,8 @@ export default function AdminProductList({ products, onDeleted }: Props) {
     setEditAd(p.ad)
     setEditAciklama(p.aciklama)
     setEditKategori(p.kategori)
+    setEditAltKategori((p as any).alt_kategori || '')
+    setEditUrunTipi((p as any).urun_tipi || '')
     setEditFiyat(p.fiyat?.toString() || '')
     setEditBayiF(p.bayi_fiyati?.toString() || '')
     setEditStok(p.stok_durumu || 'stokta')
@@ -85,6 +88,8 @@ export default function AdminProductList({ products, onDeleted }: Props) {
       ad: editAd.trim(),
       aciklama: editAciklama.trim(),
       kategori: editKategori,
+      alt_kategori: editAltKategori || null,
+      urun_tipi: editUrunTipi || null,
       fiyat: editFiyat ? parseFloat(editFiyat) : null,
       bayi_fiyati: editBayiF ? parseFloat(editBayiF) : null,
       stok_durumu: stokDurumu,
@@ -223,11 +228,30 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                 <input type="text" value={editAd} onChange={e => setEditAd(e.target.value)} className="input-dark" />
               </div>
 
-              <div>
-                <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Kategori</label>
-                <select value={editKategori} onChange={e => setEditKategori(e.target.value)} className="input-dark appearance-none cursor-pointer">
-                  {KATEGORILER.map(k => <option key={k} value={k}>{k}</option>)}
-                </select>
+              <div className="border border-white/5 bg-[#1A1A1A] p-3 space-y-2">
+                <span className="font-display font-semibold text-xs tracking-widest uppercase text-white/40">Kategori Hiyerarşisi</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1">Ana</label>
+                    <select value={editKategori} onChange={e => { setEditKategori(e.target.value); setEditAltKategori(''); setEditUrunTipi('') }} className="input-dark appearance-none cursor-pointer text-sm">
+                      {KATEGORILER.map(k => <option key={k} value={k}>{k}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1">Alt</label>
+                    <select value={editAltKategori} onChange={e => { setEditAltKategori(e.target.value); setEditUrunTipi('') }} className="input-dark appearance-none cursor-pointer text-sm">
+                      <option value="">—</option>
+                      {(KATEGORI_HIYERARSI.find(k => k.label === editKategori)?.altKategoriler || []).map(a => <option key={a.label} value={a.label}>{a.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1">Tip</label>
+                    <select value={editUrunTipi} onChange={e => setEditUrunTipi(e.target.value)} className="input-dark appearance-none cursor-pointer text-sm">
+                      <option value="">—</option>
+                      {(KATEGORI_HIYERARSI.find(k => k.label === editKategori)?.altKategoriler.find(a => a.label === editAltKategori)?.detaylar || []).map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                </div>
               </div>
 
               <div>

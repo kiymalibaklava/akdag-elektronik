@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { MapPin, Phone, Mail, Facebook, Instagram } from 'lucide-react'
 import AdLogo from './AdLogo'
+import { KATEGORILER } from '@/lib/categories'
 
 export default function Footer() {
   return (
@@ -38,6 +39,9 @@ export default function Footer() {
               { label: 'Ürünler', href: '/urunler' },
               { label: 'Hakkımızda', href: '/hakkimizda' },
               { label: 'İletişim', href: '/iletisim' },
+              { label: 'Mesafeli Satış Sözleşmesi', href: '/mesafeli-satis-sozlesmesi' },
+              { label: 'İptal ve İade Koşulları', href: '/iptal-ve-iade' },
+              { label: 'Gizlilik Politikası', href: '/gizlilik-politikasi' },
             ].map((item) => (
               <li key={item.label}>
                 <Link
@@ -56,7 +60,7 @@ export default function Footer() {
         <div>
           <h4 className="font-display font-bold text-sm tracking-widest uppercase text-white mb-6">Ürün Kategorileri</h4>
           <ul className="space-y-3">
-            {['Ses Sistemleri', 'Işık Sistemleri', 'Görüntü Sistemleri', 'Simultune Sistemleri', 'Akıllı Okul Çözümleri'].map((item) => (
+            {KATEGORILER.map((item) => (
               <li key={item}>
                 <Link href="/urunler" className="text-white/40 hover:text-brand-red text-sm font-body transition-colors duration-200 flex items-center gap-2 group">
                   <span className="w-4 h-px bg-brand-red/0 group-hover:bg-brand-red/60 transition-all duration-200" />
@@ -94,7 +98,11 @@ export default function Footer() {
       <div className="border-t border-white/5">
         <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-white/20 font-body">
           <span>© {new Date().getFullYear()} Akdağ Elektronik. Tüm hakları saklıdır.</span>
-          <span>Cumhuriyet Mah. Sur Cad. No:17/A – Melikgazi / Kayseri</span>
+          <div className="flex gap-4">
+            <Link href="/mesafeli-satis-sozlesmesi" className="hover:text-white/50 transition-colors">Mesafeli Satış Sözleşmesi</Link>
+            <Link href="/iptal-ve-iade" className="hover:text-white/50 transition-colors">İptal ve İade</Link>
+            <Link href="/gizlilik-politikasi" className="hover:text-white/50 transition-colors">Gizlilik Politikası</Link>
+          </div>
         </div>
       </div>
     </footer>

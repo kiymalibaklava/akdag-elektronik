@@ -16,19 +16,19 @@ export async function getKur(): Promise<KurData> {
   }
 }
 
-// Döviz fiyatını TL'ye çevir
+// Döviz fiyatını TL'ye çevir — küsüratsız yuvarlama (her zaman yukarı)
 export function dovizToTL(fiyat: number, paraBirimi: string, kur: KurData): number {
-  if (paraBirimi === 'TRY') return fiyat
-  if (paraBirimi === 'USD') return fiyat * kur.USD
-  if (paraBirimi === 'EUR') return fiyat * kur.EUR
-  return fiyat
+  if (paraBirimi === 'TRY') return Math.ceil(fiyat)
+  if (paraBirimi === 'USD') return Math.ceil(fiyat * kur.USD)
+  if (paraBirimi === 'EUR') return Math.ceil(fiyat * kur.EUR)
+  return Math.ceil(fiyat)
 }
 
 // Fiyat formatla (döviz + TL karşılığı)
 export function formatFiyat(fiyat: number, paraBirimi: string): string {
   if (paraBirimi === 'USD') return `$${fiyat.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   if (paraBirimi === 'EUR') return `€${fiyat.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-  return `${fiyat.toLocaleString('tr-TR')} ₺`
+  return `${fiyat.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺`
 }
 
 export const PARA_BIRIMLERI = [

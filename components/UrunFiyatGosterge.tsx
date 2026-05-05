@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { dovizToTL, formatFiyat, type KurData } from '@/lib/kur'
-import { Clock } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
+import { Clock, MessageCircle } from 'lucide-react'
 
 interface Props {
   fiyat?: number
@@ -11,22 +12,65 @@ interface Props {
   bayiParaBirimi: string
   fiyatGuncelleme?: string
   isBayi?: boolean
+  urunAdi?: string
 }
 
 export default function UrunFiyatGosterge({
-  fiyat, bayiFiyati, paraBirimi, bayiParaBirimi, fiyatGuncelleme, isBayi = false
+  fiyat, bayiFiyati, paraBirimi, bayiParaBirimi, fiyatGuncelleme, isBayi = false, urunAdi = ''
 }: Props) {
   const [kur, setKur] = useState<KurData>({ USD: 32.5, EUR: 35.2, guncelleme: null })
+  const [isBayiUser, setIsBayiUser] = useState(isBayi)
+  const [showPrice, setShowPrice] = useState(isBayi)
 
   useEffect(() => {
     fetch('/api/kur').then(r => r.json()).then(setKur).catch(() => {})
   }, [])
 
+  useEffect(() => {
+    setIsBayiUser(isBayi)
+    setShowPrice(isBayi)
+    if (isBayi) return
+    
+    const supabase = createClient()
+    supabase.auth.getSession().then((res: any) => {
+      const session = res.data?.session
+      if (session?.user) {
+        supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
+          .then(({ data }: any) => {
+            const isApproved = !!data?.onaylandi
+            setShowPrice(isApproved)
+            setIsBayiUser(isApproved)
+          })
+      }
+    })
+  }, [isBayi])
+
   if (!fiyat) return null
 
   const fiyatTL = dovizToTL(fiyat, paraBirimi, kur)
   const bayiFiyatTL = bayiFiyati ? dovizToTL(bayiFiyati, bayiParaBirimi, kur) : null
-  const gosterBayiFiyat = isBayi && bayiFiyatTL && bayiFiyatTL < fiyatTL
+  const gosterBayiFiyat = showPrice && isBayiUser && bayiFiyatTL && bayiFiyatTL < fiyatTL
+
+  // Fiyat gizli — WhatsApp butonu
+  if (!showPrice) {
+    return (
+      <div className="mb-6 space-y-3">
+        <div className="bg-[#1A1A1A] border border-white/5 p-4">
+          <div className="font-display font-bold text-xs uppercase tracking-widest text-white/30 mb-3">Fiyat Bilgisi</div>
+          <p className="font-body text-white/40 text-sm mb-4">Fiyatlarımızı görmek için bayi girişi yapın veya WhatsApp üzerinden iletişime geçin.</p>
+          <a
+            href={`https://wa.me/905323934370?text=${encodeURIComponent(`Merhaba, ${urunAdi} ürünü hakkında fiyat bilgisi almak istiyorum.`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-3 font-display font-bold text-sm uppercase tracking-widest transition-colors w-full"
+          >
+            <MessageCircle size={16} />
+            Fiyat İçin İletişime Geçiniz
+          </a>
+        </div>
+      </div>
+    )
+  }
 
   const indirimYuzde = gosterBayiFiyat && bayiFiyatTL
     ? Math.round((1 - bayiFiyatTL / fiyatTL) * 100)
@@ -52,7 +96,7 @@ export default function UrunFiyatGosterge({
           {/* TL karşılığı */}
           {bayiParaBirimi !== 'TRY' && bayiFiyatTL && (
             <div className="font-body text-white/40 text-sm">
-              ≈ <span className="font-semibold">{bayiFiyatTL.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺</span>
+              ≈ <span className="font-semibold">{bayiFiyatTL.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
               <span className="text-white/20 text-xs ml-1">(güncel kur ile)</span>
             </div>
           )}
@@ -64,12 +108,17 @@ export default function UrunFiyatGosterge({
           </div>
           {paraBirimi !== 'TRY' && (
             <div className="font-body text-white/40 text-sm">
-              ≈ <span className="font-semibold">{fiyatTL.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺</span>
+              ≈ <span className="font-semibold">{fiyatTL.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
               <span className="text-white/20 text-xs ml-1">(güncel kur ile)</span>
             </div>
           )}
         </>
       )}
+
+      {/* KDV Bilgisi */}
+      <div className="font-body text-white/30 text-xs mt-1 mb-2">
+        * Fiyatlandırmalara KDV dahildir
+      </div>
 
       {/* Kur notu */}
       {paraBirimi !== 'TRY' && (

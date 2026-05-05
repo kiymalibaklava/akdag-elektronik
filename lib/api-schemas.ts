@@ -18,6 +18,7 @@ export const siparisOlusturSchema = z.object({
   telefon: z.string().max(50).optional().nullable(),
   notlar: z.string().max(2000).optional().nullable(),
   odeme_tipi: z.string().max(50).optional().nullable(),
+  teslimat_tipi: z.enum(['kargo', 'depo']).optional().default('kargo'),
   bayi_adi: z.string().max(200).optional().nullable(),
   is_bayi: z.boolean().optional(),
 })

@@ -6,10 +6,10 @@ import BrandMarquee from '@/components/BrandMarquee'
 import StatCounter from '@/components/StatCounter'
 
 const categories = [
-  { icon: Speaker, label: 'Ses Sistemleri', desc: 'Profesyonel amfi, hoparlör ve mikrofon sistemleri', count: '120+' },
-  { icon: Lightbulb, label: 'Işık Sistemleri', desc: 'Sahne, dekor ve aydınlatma çözümleri', count: '80+' },
-  { icon: Monitor, label: 'Görüntü Sistemleri', desc: 'LED ekran, projeksiyon ve video duvarı', count: '60+' },
-  { icon: Clock, label: 'Okul Saat Sistemleri', desc: 'AKUSTEK akıllı okul saati ve zil sistemleri', count: '40+' },
+  { icon: Speaker, label: 'Ses Sistemleri', desc: 'Hoparlör, mikser, mikrofon ve amfi sistemleri', count: '120+' },
+  { icon: Lightbulb, label: 'Işık Sistemleri', desc: 'Moving head, LED par, DMX kontrol ve efekt makineleri', count: '80+' },
+  { icon: Monitor, label: 'Görüntü Sistemleri', desc: 'LED ekran, projeksiyon ve video işleme', count: '60+' },
+  { icon: Award, label: 'Sahne ve Truss', desc: 'Truss konstrüksiyon, sahne platformları ve mekanik', count: '40+' },
 ]
 
 const stats = [

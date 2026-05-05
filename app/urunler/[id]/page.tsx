@@ -10,6 +10,9 @@ import UrunFiyatGosterge from '@/components/UrunFiyatGosterge'
 import type { Metadata } from 'next'
 import { getSiteUrl } from '@/lib/site-url'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 interface Props { params: { id: string } }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -83,6 +86,7 @@ export default async function UrunDetayPage({ params }: Props) {
               paraBirimi={product.para_birimi || 'TRY'}
               bayiParaBirimi={product.bayi_para_birimi || product.para_birimi || 'TRY'}
               fiyatGuncelleme={product.fiyat_guncelleme}
+              urunAdi={product.ad}
             />
 
             {/* Stok */}
@@ -154,11 +158,7 @@ export default async function UrunDetayPage({ params }: Props) {
                   </div>
                   <div className="p-4">
                     <div className="font-display font-bold text-sm uppercase text-white group-hover:text-brand-red transition-colors truncate">{r.ad}</div>
-                    {r.fiyat && (
-                      <div className="font-display font-black text-sm text-brand-red mt-1">
-                        {r.para_birimi === 'USD' ? '$' : r.para_birimi === 'EUR' ? '€' : '₺'}{r.fiyat.toLocaleString('tr-TR')}
-                      </div>
-                    )}
+                    <div className="font-body text-white/25 text-xs mt-1">Detay için tıklayın</div>
                   </div>
                   <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-brand-red group-hover:w-full transition-all duration-500" />
                 </Link>

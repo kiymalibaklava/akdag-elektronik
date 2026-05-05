@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
       telefon,
       notlar,
       odeme_tipi,
+      teslimat_tipi,
       bayi_adi,
       is_bayi,
     } = parsed.data
@@ -83,6 +84,7 @@ export async function POST(req: NextRequest) {
         telefon,
         notlar,
         odeme_tipi,
+        teslimat_tipi: teslimat_tipi || 'kargo',
         odeme_durumu: 'beklemede',
         durum: 'beklemede',
       })

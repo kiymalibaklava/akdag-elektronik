@@ -3,8 +3,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import {
-  Package, Clock, CheckCircle, XCircle, Truck,
-  RefreshCw, Search, X, ChevronDown, ChevronUp, Phone, Mail
+  Package, Clock, CheckCircle, XCircle, Truck, Store,
+  RefreshCw, Search, X, ChevronDown, ChevronUp, Phone, Mail, MapPin
 } from 'lucide-react'
 
 interface SiparisUrun {
@@ -27,6 +27,7 @@ interface Siparis {
   odeme_tipi: string
   odeme_durumu: string
   notlar: string
+  teslimat_tipi?: string
   created_at: string
   updated_at: string
 }
@@ -204,6 +205,18 @@ export default function AdminSiparisler() {
                           Ödendi
                         </span>
                       )}
+                      {/* Teslimat tipi etiketi */}
+                      {siparis.teslimat_tipi === 'depo' ? (
+                        <span className="font-display font-bold text-xs tracking-widest uppercase px-2 py-0.5 bg-orange-500/15 border border-orange-500/30 text-orange-400 flex items-center gap-1">
+                          <Store size={10} />
+                          DEPODAN AL
+                        </span>
+                      ) : (
+                        <span className="font-display font-semibold text-xs tracking-widest uppercase px-2 py-0.5 bg-white/3 border border-white/8 text-white/25 flex items-center gap-1">
+                          <Truck size={10} />
+                          KARGO
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 mt-0.5 flex-wrap">
                       <span className="font-body text-white/50 text-sm">
@@ -258,6 +271,21 @@ export default function AdminSiparisler() {
                             <div className="flex gap-2"><span className="text-white/30 w-16">Not:</span><span className="text-white/50 italic">{siparis.notlar}</span></div>
                           )}
                         </div>
+
+                        {/* Teslimat bilgisi */}
+                        {siparis.teslimat_tipi === 'depo' && (
+                          <div className="mt-3 bg-orange-500/10 border border-orange-500/20 p-3 space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              <Store size={13} className="text-orange-400" />
+                              <span className="font-display font-bold text-xs uppercase tracking-widest text-orange-400">Depodan Teslim Alınacak</span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <MapPin size={11} className="text-orange-300/50 shrink-0 mt-0.5" />
+                              <span className="font-body text-white/40 text-xs">Cumhuriyet Mah. Sur Cad. No:17/A, Melikgazi / Kayseri</span>
+                            </div>
+                            <div className="font-body text-orange-300/60 text-xs">Ürün 1 saat içinde depoda hazır edilmelidir.</div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Ürünler */}

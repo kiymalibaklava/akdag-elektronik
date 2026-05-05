@@ -72,8 +72,8 @@ export function getCartCount(): number {
 }
 
 export function getCartTotal(isBayi: boolean): number {
-  return getCart().reduce((sum, i) => {
+  return Math.ceil(getCart().reduce((sum, i) => {
     const price = isBayi && i.bayi_fiyati ? i.bayi_fiyati : i.fiyat
     return sum + price * i.adet
-  }, 0)
+  }, 0))
 }

@@ -4,20 +4,17 @@ import ProductSearch from '@/components/ProductSearch'
 import ProductGrid from '@/components/ProductGrid'
 import Pagination from '@/components/Pagination'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export const metadata = {
   title: 'Ürünler | Akdağ Elektronik',
   description: 'Ses, ışık ve görüntü sistemleri ürünleri. AKUSTEK okul saati ve otomasyon sistemleri.',
 }
 
-const KATEGORILER = [
-  'Tümü',
-  'Ses Sistemleri',
-  'Işık Sistemleri',
-  'Görüntü Sistemleri',
-  'Okul Saat Sistemleri',
-  'Simultune Sistemleri',
-  'Aksesuarlar',
-]
+import { TUM_KATEGORILER, KATEGORI_HIYERARSI } from '@/lib/categories'
+
+const KATEGORILER = TUM_KATEGORILER
 
 const PER_PAGE = 16
 
@@ -33,6 +30,7 @@ export default async function UrunlerPage({
     stok?: string
     marka?: string
     kullanim?: string
+    alt?: string
   }
 }) {
   const supabase = await createServerSupabaseClient()
@@ -53,6 +51,9 @@ export default async function UrunlerPage({
   }
   if (searchParams.kategori && searchParams.kategori !== 'Tümü') {
     query = query.eq('kategori', searchParams.kategori)
+  }
+  if (searchParams.alt) {
+    query = query.eq('alt_kategori', searchParams.alt)
   }
   if (min !== null && !Number.isNaN(min)) {
     query = query.gte('fiyat', min)
@@ -102,7 +103,12 @@ export default async function UrunlerPage({
   if (searchParams.stok) baseParams.set('stok', searchParams.stok)
   if (searchParams.marka) baseParams.set('marka', searchParams.marka)
   if (searchParams.kullanim) baseParams.set('kullanim', searchParams.kullanim)
+  if (searchParams.alt) baseParams.set('alt', searchParams.alt)
 
+  // Alt kategori kırılımları
+  const activeAna = KATEGORI_HIYERARSI.find(k => k.label === activeKategori)
+  const altKategoriler = activeAna?.altKategoriler || []
+  const activeAlt = searchParams.alt || ''
   return (
     <div className="min-h-screen pt-8 pb-24">
       {/* Header */}
@@ -171,6 +177,41 @@ export default async function UrunlerPage({
             )
           })}
         </div>
+
+        {/* Alt kategori filtreleri */}
+        {altKategoriler.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-8">
+            <span className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/25 self-center mr-2">Alt Filtre:</span>
+            {altKategoriler.map((alt) => {
+              const params = new URLSearchParams()
+              if (searchParams.q) params.set('q', searchParams.q)
+              if (searchParams.min) params.set('min', searchParams.min)
+              if (searchParams.max) params.set('max', searchParams.max)
+              if (searchParams.stok) params.set('stok', searchParams.stok)
+              if (searchParams.marka) params.set('marka', searchParams.marka)
+              if (searchParams.kullanim) params.set('kullanim', searchParams.kullanim)
+              params.set('kategori', activeKategori)
+              if (activeAlt === alt.label) {
+                // Tıklanmışsa kaldır
+              } else {
+                params.set('alt', alt.label)
+              }
+              return (
+                <a
+                  key={alt.label}
+                  href={`/urunler?${params.toString()}`}
+                  className={`font-body text-xs px-3 py-1.5 border transition-all duration-200 ${
+                    activeAlt === alt.label
+                      ? 'bg-brand-red/20 border-brand-red/40 text-brand-red'
+                      : 'border-white/5 text-white/30 hover:border-brand-red/20 hover:text-white/60'
+                  }`}
+                >
+                  {alt.label}
+                </a>
+              )
+            })}
+          </div>
+        )}
 
         {/* Sonuç sayısı */}
         <div className="font-body text-white/30 text-sm mb-8 flex items-center justify-between">

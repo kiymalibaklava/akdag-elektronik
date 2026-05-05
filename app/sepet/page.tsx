@@ -9,10 +9,10 @@ import {
   updateQty,
   removeFromCart,
   clearCart,
-  getCartTotal,
   type CartItem,
 } from '@/lib/cart'
-import { ArrowLeft, Trash2, Minus, Plus, CreditCard, Building2, Loader2 } from 'lucide-react'
+import { dovizToTL, type KurData } from '@/lib/kur'
+import { ArrowLeft, Trash2, Minus, Plus, CreditCard, Building2, Loader2, MapPin, Truck, Store } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 
 interface BayiRow {
@@ -29,10 +29,13 @@ export default function SepetPage() {
   const [email, setEmail] = useState('')
   const [telefon, setTelefon] = useState('')
   const [notlar, setNotlar] = useState('')
+  const [teslimat, setTeslimat] = useState<'kargo' | 'depo'>('kargo')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [doneNo, setDoneNo] = useState('')
   const [payToken, setPayToken] = useState<string | null>(null)
+  const [kur, setKur] = useState<KurData>({ USD: 32.5, EUR: 35.2, guncelleme: null })
+  const [kurLoaded, setKurLoaded] = useState(false)
   const supabase = useRef(createClient()).current
 
   const refreshCart = useCallback(() => {
@@ -45,6 +48,17 @@ export default function SepetPage() {
     window.addEventListener('cart-updated', onUpd)
     return () => window.removeEventListener('cart-updated', onUpd)
   }, [refreshCart])
+
+  // Anlık kur çek — sepetteki tüm fiyatlar buna göre hesaplanacak
+  useEffect(() => {
+    fetch('/api/kur')
+      .then(r => r.json())
+      .then((data: KurData) => {
+        setKur(data)
+        setKurLoaded(true)
+      })
+      .catch(() => setKurLoaded(true))
+  }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
@@ -62,9 +76,24 @@ export default function SepetPage() {
   }, [supabase])
 
   const isBayi = !!(bayi?.onaylandi)
-  const total = getCartTotal(isBayi)
 
-  const linePrice = (i: CartItem) => (isBayi && i.bayi_fiyati ? i.bayi_fiyati : i.fiyat)
+  // Anlık kur ile birim fiyat hesapla (döviz varsa dövizden, yoksa saklanan TL'den)
+  const livePrice = (i: CartItem): number => {
+    const pb = isBayi && i.bayi_fiyat_doviz ? (i.bayi_para_birimi || i.para_birimi || 'TRY') : (i.para_birimi || 'TRY')
+    const doviz = isBayi && i.bayi_fiyat_doviz ? i.bayi_fiyat_doviz : (i.fiyat_doviz || null)
+
+    if (doviz && pb !== 'TRY') {
+      return dovizToTL(doviz, pb, kur)
+    }
+    // Bayi TL fiyatı veya normal TL fiyatı
+    return Math.ceil(isBayi && i.bayi_fiyati ? i.bayi_fiyati : i.fiyat)
+  }
+
+  const liveTotal = (): number => {
+    return Math.ceil(items.reduce((sum, i) => sum + livePrice(i) * i.adet, 0))
+  }
+
+  const total = liveTotal()
 
   const submitOrder = async (odeme_tipi: 'havale' | 'kart') => {
     setError('')
@@ -81,7 +110,7 @@ export default function SepetPage() {
       urun_id: i.id,
       ad: i.ad,
       adet: i.adet,
-      fiyat: linePrice(i),
+      fiyat: livePrice(i),
       fotograf: i.fotograf,
     }))
 
@@ -100,6 +129,7 @@ export default function SepetPage() {
           telefon: telefon.trim() || null,
           notlar: notlar.trim() || null,
           odeme_tipi,
+          teslimat_tipi: teslimat,
           is_bayi: isBayi,
           bayi_adi: isBayi ? bayi?.firma_adi : null,
         }),
@@ -131,7 +161,7 @@ export default function SepetPage() {
           telefon: telefon.trim(),
           urunler: items.map((i) => ({
             ad: i.ad,
-            fiyat: linePrice(i),
+            fiyat: livePrice(i),
             adet: i.adet,
           })),
         }),
@@ -216,9 +246,9 @@ export default function SepetPage() {
                     <div className="font-display font-bold text-white text-sm uppercase tracking-wide truncate">{i.ad}</div>
                     <div className="font-body text-white/30 text-xs mt-1">{i.kategori}</div>
                     <div className="font-display text-brand-red text-sm mt-2">
-                      {(linePrice(i) * i.adet).toLocaleString('tr-TR')} ₺
+                      {Math.ceil(livePrice(i) * i.adet).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
                       <span className="text-white/25 font-body text-xs ml-2">
-                        ({linePrice(i).toLocaleString('tr-TR')} ₺ × {i.adet})
+                        ({Math.ceil(livePrice(i)).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺ × {i.adet})
                       </span>
                     </div>
                   </div>
@@ -264,7 +294,7 @@ export default function SepetPage() {
               <div className="bg-[#141414] border border-white/5 p-6">
                 <div className="flex justify-between items-baseline mb-6">
                   <span className="font-display text-xs tracking-widest uppercase text-white/40">Ara toplam</span>
-                  <span className="font-display font-black text-2xl text-white">{total.toLocaleString('tr-TR')} ₺</span>
+                  <span className="font-display font-black text-2xl text-white">{Math.ceil(total).toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
                 </div>
 
                 <div className="space-y-4">
@@ -291,6 +321,47 @@ export default function SepetPage() {
                       Sipariş notu
                     </label>
                     <textarea className="input-dark resize-none text-sm" rows={3} value={notlar} onChange={(e) => setNotlar(e.target.value)} />
+                  </div>
+
+                  {/* Teslimat Yöntemi */}
+                  <div className="border border-white/5 bg-[#0F0F0F] p-4 space-y-3">
+                    <div className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 mb-1">Teslimat Yöntemi</div>
+                    
+                    <label className={`flex items-start gap-3 p-3 border cursor-pointer transition-all duration-200 ${teslimat === 'kargo' ? 'border-brand-red/40 bg-brand-red/5' : 'border-white/5 hover:border-white/10'}`}>
+                      <input type="radio" name="teslimat" value="kargo" checked={teslimat === 'kargo'} onChange={() => setTeslimat('kargo')} className="mt-1 accent-[#DA291C]" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Truck size={14} className={teslimat === 'kargo' ? 'text-brand-red' : 'text-white/30'} />
+                          <span className="font-display font-bold text-sm uppercase text-white">Adrese Kargo</span>
+                        </div>
+                        <p className="font-body text-white/30 text-xs mt-1">Siparişiniz adresinize kargo ile gönderilir.</p>
+                      </div>
+                    </label>
+
+                    <label className={`flex items-start gap-3 p-3 border cursor-pointer transition-all duration-200 ${teslimat === 'depo' ? 'border-brand-red/40 bg-brand-red/5' : 'border-white/5 hover:border-white/10'}`}>
+                      <input type="radio" name="teslimat" value="depo" checked={teslimat === 'depo'} onChange={() => setTeslimat('depo')} className="mt-1 accent-[#DA291C]" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Store size={14} className={teslimat === 'depo' ? 'text-brand-red' : 'text-white/30'} />
+                          <span className="font-display font-bold text-sm uppercase text-white">Depodan Teslim Al</span>
+                          <span className="font-display font-black text-[10px] bg-green-600/20 text-green-400 px-1.5 py-0.5 tracking-wider uppercase">Ücretsiz</span>
+                        </div>
+                        <p className="font-body text-white/30 text-xs mt-1">Siparişinizi mağazamızdan teslim alın.</p>
+                      </div>
+                    </label>
+
+                    {teslimat === 'depo' && (
+                      <div className="bg-brand-red/5 border border-brand-red/20 p-3 space-y-2">
+                        <div className="flex items-start gap-2">
+                          <MapPin size={13} className="text-brand-red shrink-0 mt-0.5" />
+                          <span className="font-body text-white/50 text-xs">Cumhuriyet Mah. Sur Cad. No:17/A, Melikgazi / Kayseri</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Store size={13} className="text-green-400 shrink-0 mt-0.5" />
+                          <span className="font-body text-green-400/80 text-xs font-semibold">Ürününüz 1 saat içinde depoda hazır edilecektir.</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

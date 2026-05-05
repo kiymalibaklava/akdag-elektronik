@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, GitCompare, Heart, Package, Search, Tag } from 'lucide-react'
+import { ArrowRight, GitCompare, Heart, MessageCircle, Package, Search, ShoppingCart, Check, Tag } from 'lucide-react'
 import { dovizToTL, formatFiyat, type KurData } from '@/lib/kur'
+import { addToCart } from '@/lib/cart'
 import {
   getCompareList,
   isCompared,
@@ -13,6 +14,7 @@ import {
   toggleFavorite,
   type SavedProduct,
 } from '@/lib/product-lists'
+import { createClient } from '@/lib/supabase'
 
 interface Product {
   id: string
@@ -37,6 +39,7 @@ interface Props {
   suggested?: Product[] | null
   searchQuery?: string
   isBayi?: boolean
+  showPrice?: boolean
 }
 
 function useKur() {
@@ -47,9 +50,29 @@ function useKur() {
   return kur
 }
 
-export default function ProductGrid({ products, suggested, searchQuery, isBayi = false }: Props) {
+export default function ProductGrid({ products, suggested, searchQuery, isBayi = false, showPrice: showPriceProp }: Props) {
   const kur = useKur()
   const [compareCount, setCompareCount] = useState(0)
+  const [authChecked, setAuthChecked] = useState(false)
+  const [isBayiAuth, setIsBayiAuth] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then((res: any) => {
+      const session = res.data?.session
+      if (session?.user) {
+        supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
+          .then(({ data }: any) => {
+            setIsBayiAuth(!!data?.onaylandi)
+            setAuthChecked(true)
+          })
+      } else {
+        setAuthChecked(true)
+      }
+    })
+  }, [])
+
+  const showPrice = showPriceProp !== undefined ? showPriceProp : (isBayi || isBayiAuth)
 
   useEffect(() => {
     const sync = () => setCompareCount(getCompareList().length)
@@ -72,12 +95,12 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
           <p className="font-display font-bold text-lg uppercase text-white/20 tracking-widest mb-2">Sonuç Bulunamadı</p>
           {searchQuery && (
             <p className="font-body text-white/20 text-sm">
-              "<span className="text-white/40">{searchQuery}</span>" için ürün bulunamadı.
+              &quot;<span className="text-white/40">{searchQuery}</span>&quot; için ürün bulunamadı.
             </p>
           )}
           <div className="mt-6 flex justify-center gap-3">
-            <a href="/urunler" className="btn-outline text-xs">Tüm Ürünleri Gör</a>
-            <a href="/iletisim" className="btn-primary text-xs">Ürün Sor <ArrowRight size={13} /></a>
+            <Link href="/urunler" className="btn-outline text-xs">Tüm Ürünleri Gör</Link>
+            <Link href="/iletisim" className="btn-primary text-xs">Ürün Sor <ArrowRight size={13} /></Link>
           </div>
         </div>
         {suggested && suggested.length > 0 && (
@@ -87,7 +110,7 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
               <span className="font-display font-semibold text-xs tracking-[0.3em] uppercase text-white/40">Bunlara Bakabilirsiniz</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-1">
-              {suggested.map(p => <ProductCard key={p.id} product={p} isBayi={isBayi} kur={kur} />)}
+              {suggested.map(p => <ProductCard key={p.id} product={p} isBayi={isBayi || isBayiAuth} kur={kur} showPrice={showPrice} />)}
             </div>
           </div>
         )}
@@ -104,13 +127,13 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
         </div>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1">
-        {products.map((p) => <ProductCard key={p.id} product={p} isBayi={isBayi} kur={kur} />)}
+        {products.map((p) => <ProductCard key={p.id} product={p} isBayi={isBayi || isBayiAuth} kur={kur} showPrice={showPrice} />)}
       </div>
     </>
   )
 }
 
-export function ProductCard({ product, isBayi = false, kur }: { product: Product; isBayi?: boolean; kur?: KurData }) {
+export function ProductCard({ product, isBayi = false, kur, showPrice = false }: { product: Product; isBayi?: boolean; kur?: KurData; showPrice?: boolean }) {
   const kurData = kur || { USD: 32.5, EUR: 35.2, guncelleme: null }
   const pb = product.para_birimi || 'TRY'
   const bayiPb = product.bayi_para_birimi || pb
@@ -131,6 +154,7 @@ export function ProductCard({ product, isBayi = false, kur }: { product: Product
     : 0
   const [fav, setFav] = useState(false)
   const [cmp, setCmp] = useState(false)
+  const [cartAdded, setCartAdded] = useState(false)
   const stockCount = product.stok_adedi ?? null
   const isCritical =
     stockCount !== null &&
@@ -156,122 +180,213 @@ export function ProductCard({ product, isBayi = false, kur }: { product: Product
     kullanim_alani: product.kullanim_alani ?? null,
   })
 
+  // Sepete ekleme handler
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!product.fiyat || stok === 'tukendi') return
+
+    const fiyatTL = dovizToTL(product.fiyat, pb, kurData)
+    const bayiFiyatTLVal = product.bayi_fiyati ? dovizToTL(product.bayi_fiyati, bayiPb, kurData) : null
+
+    addToCart({
+      id: product.id,
+      ad: product.ad,
+      kategori: product.kategori,
+      fotograf: product.fotograflar?.[0] || '',
+      fiyat: fiyatTL,
+      fiyat_doviz: product.fiyat,
+      para_birimi: pb,
+      bayi_fiyati: bayiFiyatTLVal,
+      bayi_fiyat_doviz: product.bayi_fiyati || null,
+      bayi_para_birimi: bayiPb,
+    })
+    setCartAdded(true)
+    setTimeout(() => setCartAdded(false), 2000)
+  }
+
+  // WhatsApp handler (window.open ile)
+  const handleWhatsApp = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    window.open(
+      `https://wa.me/905323934370?text=${encodeURIComponent(`Merhaba, ${product.ad} ürünü hakkında fiyat bilgisi almak istiyorum.`)}`,
+      '_blank'
+    )
+  }
+
   return (
     <div className="product-card group relative bg-[#141414] border border-white/5 overflow-hidden hover:border-brand-red/30 flex flex-col">
-      <Link href={`/urunler/${product.id}`} className="contents">
-      <div className="aspect-square bg-[#1A1A1A] relative overflow-hidden">
-        {product.fotograflar?.[0] ? (
-          <Image src={product.fotograflar[0]} alt={product.ad} fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Package size={40} className="text-white/10" />
-          </div>
-        )}
-
-        {hasBayiFiyat && (
-          <div className="absolute top-3 left-3 flex items-center gap-1 bg-brand-red text-white px-2 py-0.5">
-            <Tag size={9} />
-            <span className="font-display font-black text-xs">BAYİ ÖZEL</span>
-          </div>
-        )}
-        {isRecentUpdate && !hasBayiFiyat && (
-          <div className="absolute top-3 left-3 bg-green-600 text-white px-2 py-0.5 font-display font-black text-xs">
-            YENİ FİYAT
-          </div>
-        )}
-        {stok === 'tukendi' && (
-          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-            <span className="font-display font-black text-sm uppercase tracking-widest text-white/60">Tükendi</span>
-          </div>
-        )}
-      </div>
-
-      <div className="p-4 flex flex-col flex-1">
-        <div className="font-display font-semibold text-xs tracking-widest uppercase text-brand-red/60 mb-1">{product.kategori}</div>
-        <h3 className="font-display font-bold text-sm uppercase tracking-wide text-white group-hover:text-brand-red transition-colors leading-tight mb-3 flex-1">
-          {product.ad}
-        </h3>
-        {(product.marka || product.kullanim_alani) && (
-          <p className="font-body text-white/35 text-xs mb-3">
-            {product.marka ? `Marka: ${product.marka}` : ''}
-            {product.marka && product.kullanim_alani ? ' • ' : ''}
-            {product.kullanim_alani || ''}
-          </p>
-        )}
-
-        <div className="mt-auto space-y-0.5">
-          {hasBayiFiyat && bayiFiyatTL && normalFiyatTL ? (
-            <>
-              {/* Bayi görünümü */}
-              <div className="flex items-center gap-1.5">
-                <span className="font-body text-white/25 text-xs line-through">
-                  {formatFiyat(product.fiyat!, pb)}
-                </span>
-                <span className="font-display font-black text-xs bg-brand-red/10 text-brand-red px-1.5 py-0.5">
-                  %{indirimYuzde} İND
-                </span>
-              </div>
-              <div className="font-display font-black text-lg text-brand-red">
-                {formatFiyat(product.bayi_fiyati!, bayiPb)}
-              </div>
-              <div className="font-body text-white/30 text-xs">
-                ≈ {bayiFiyatTL.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
-              </div>
-            </>
-          ) : product.fiyat ? (
-            <>
-              <div className="font-display font-black text-lg text-white">
-                {formatFiyat(product.fiyat, pb)}
-              </div>
-              {pb !== 'TRY' && normalFiyatTL && (
-                <div className="font-body text-white/25 text-xs">
-                  ≈ {normalFiyatTL.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
-                </div>
-              )}
-            </>
+      {/* Tıklanabilir alan — Link ile sarılı (SEO + navigasyon) */}
+      <Link href={`/urunler/${product.id}`} className="flex flex-col flex-1">
+        {/* Görsel */}
+        <div className="aspect-square bg-[#1A1A1A] relative overflow-hidden">
+          {product.fotograflar?.[0] ? (
+            <Image src={product.fotograflar[0]} alt={product.ad} fill
+              className="object-cover transition-transform duration-500 group-hover:scale-105" />
           ) : (
-            <span className="font-body text-white/25 text-xs">Fiyat için iletişime geçin</span>
-          )}
-
-          {product.fiyat_guncelleme && (
-            <div className="font-body text-white/15 text-[10px]">
-              {new Date(product.fiyat_guncelleme).toLocaleDateString('tr-TR')}
+            <div className="w-full h-full flex items-center justify-center">
+              <Package size={40} className="text-white/10" />
             </div>
           )}
-          {stockCount !== null && (
-            <div className={`font-body text-[11px] ${isCritical ? 'text-yellow-400' : 'text-white/25'}`}>
-              Stok: {stockCount}{isCritical ? ' (Kritik)' : ''}
+
+          {hasBayiFiyat && (
+            <div className="absolute top-3 left-3 flex items-center gap-1 bg-brand-red text-white px-2 py-0.5">
+              <Tag size={9} />
+              <span className="font-display font-black text-xs">BAYİ ÖZEL</span>
+            </div>
+          )}
+          {isRecentUpdate && !hasBayiFiyat && (
+            <div className="absolute top-3 left-3 bg-green-600 text-white px-2 py-0.5 font-display font-black text-xs">
+              YENİ FİYAT
+            </div>
+          )}
+          {stok === 'tukendi' && (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <span className="font-display font-black text-sm uppercase tracking-widest text-white/60">Tükendi</span>
             </div>
           )}
         </div>
-      </div>
+
+        {/* İçerik */}
+        <div className="p-4 flex flex-col flex-1">
+          <div className="font-display font-semibold text-xs tracking-widest uppercase text-brand-red/60 mb-1">{product.kategori}</div>
+          <h3 className="font-display font-bold text-sm uppercase tracking-wide text-white group-hover:text-brand-red transition-colors leading-tight mb-3 flex-1">
+            {product.ad}
+          </h3>
+          {(product.marka || product.kullanim_alani) && (
+            <p className="font-body text-white/35 text-xs mb-3">
+              {product.marka ? `Marka: ${product.marka}` : ''}
+              {product.marka && product.kullanim_alani ? ' • ' : ''}
+              {product.kullanim_alani || ''}
+            </p>
+          )}
+
+          <div className="mt-auto space-y-0.5">
+            {showPrice ? (
+              <>
+                {hasBayiFiyat && bayiFiyatTL && normalFiyatTL ? (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-body text-white/25 text-xs line-through">
+                        {formatFiyat(product.fiyat!, pb)}
+                      </span>
+                      <span className="font-display font-black text-xs bg-brand-red/10 text-brand-red px-1.5 py-0.5">
+                        %{indirimYuzde} İND
+                      </span>
+                    </div>
+                    <div className="font-display font-black text-lg text-brand-red">
+                      {formatFiyat(product.bayi_fiyati!, bayiPb)}
+                    </div>
+                    <div className="font-body text-white/30 text-xs">
+                      ≈ {bayiFiyatTL.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                    </div>
+                  </>
+                ) : product.fiyat ? (
+                  <>
+                    <div className="font-display font-black text-lg text-white">
+                      {formatFiyat(product.fiyat, pb)}
+                    </div>
+                    {pb !== 'TRY' && normalFiyatTL && (
+                      <div className="font-body text-white/25 text-xs">
+                        ≈ {normalFiyatTL.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <span className="font-body text-white/25 text-xs">Fiyat için iletişime geçin</span>
+                )}
+              </>
+            ) : (
+              /* Fiyat gizli — WhatsApp bilgi metni (link değil, düz text) */
+              <div className="flex items-center gap-1.5 bg-green-600/15 border border-green-500/25 px-2.5 py-1.5 text-green-400">
+                <MessageCircle size={13} className="flex-shrink-0" />
+                <span className="font-display font-semibold text-[10px] tracking-wider uppercase">Fiyat İçin İletişime Geçiniz</span>
+              </div>
+            )}
+
+            {product.fiyat_guncelleme && showPrice && (
+              <div className="font-body text-white/15 text-[10px]">
+                {new Date(product.fiyat_guncelleme).toLocaleDateString('tr-TR')}
+              </div>
+            )}
+            {stockCount !== null && (
+              <div className={`font-body text-[11px] ${isCritical ? 'text-yellow-400' : 'text-white/25'}`}>
+                Stok: {stockCount}{isCritical ? ' (Kritik)' : ''}
+              </div>
+            )}
+          </div>
+        </div>
       </Link>
 
-      <div className="grid grid-cols-2 gap-2 border-t border-white/5 p-2">
-        <button
-          type="button"
-          className={`btn-outline text-xs justify-center ${fav ? '!border-brand-red !text-brand-red' : ''}`}
-          onClick={() => setFav(toggleFavorite(asSaved()))}
-        >
-          <Heart size={13} />
-          {fav ? 'Favoride' : 'Favori'}
-        </button>
-        <button
-          type="button"
-          className={`btn-outline text-xs justify-center ${cmp ? '!border-brand-red !text-brand-red' : ''}`}
-          onClick={() => {
-            const next = toggleCompare(asSaved())
-            if (next.overflow) {
-              alert('Karşılaştırma listesi en fazla 4 ürün olabilir.')
-              return
-            }
-            setCmp(next.active)
-          }}
-        >
-          <GitCompare size={13} />
-          {cmp ? 'Eklendi' : 'Karşılaştır'}
-        </button>
+      {/* Alt butonlar — Favori, Karşılaştır, Sepete Ekle */}
+      <div className="border-t border-white/5 p-2">
+        {showPrice && product.fiyat && stok !== 'tukendi' ? (
+          /* Bayi giriş yapmış veya fiyat görünen kullanıcı — Sepete Ekle butonu */
+          <div className="grid grid-cols-3 gap-1.5">
+            <button
+              type="button"
+              className={`btn-outline text-xs justify-center ${fav ? '!border-brand-red !text-brand-red' : ''}`}
+              onClick={(e) => { e.stopPropagation(); setFav(toggleFavorite(asSaved())) }}
+            >
+              <Heart size={12} />
+            </button>
+            <button
+              type="button"
+              className={`btn-outline text-xs justify-center ${cmp ? '!border-brand-red !text-brand-red' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                const next = toggleCompare(asSaved())
+                if (next.overflow) { alert('Karşılaştırma listesi en fazla 4 ürün olabilir.'); return }
+                setCmp(next.active)
+              }}
+            >
+              <GitCompare size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className={`flex items-center justify-center gap-1 text-xs font-display font-semibold uppercase tracking-wider px-2 py-1.5 border transition-all duration-300 ${
+                cartAdded
+                  ? 'bg-green-600 border-green-600 text-white'
+                  : 'bg-brand-red border-brand-red text-white hover:bg-brand-red/80'
+              }`}
+            >
+              {cartAdded ? <Check size={12} /> : <ShoppingCart size={12} />}
+              {cartAdded ? '✓' : 'Ekle'}
+            </button>
+          </div>
+        ) : (
+          /* Fiyat gizli veya stok yok — Favori, Karşılaştır, WhatsApp */
+          <div className="grid grid-cols-3 gap-1.5">
+            <button
+              type="button"
+              className={`btn-outline text-xs justify-center ${fav ? '!border-brand-red !text-brand-red' : ''}`}
+              onClick={() => setFav(toggleFavorite(asSaved()))}
+            >
+              <Heart size={12} />
+            </button>
+            <button
+              type="button"
+              className={`btn-outline text-xs justify-center ${cmp ? '!border-brand-red !text-brand-red' : ''}`}
+              onClick={() => {
+                const next = toggleCompare(asSaved())
+                if (next.overflow) { alert('Karşılaştırma listesi en fazla 4 ürün olabilir.'); return }
+                setCmp(next.active)
+              }}
+            >
+              <GitCompare size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={handleWhatsApp}
+              className="flex items-center justify-center gap-1 text-xs font-display font-semibold uppercase tracking-wider px-2 py-1.5 bg-green-600/20 border border-green-500/30 text-green-400 hover:bg-green-600/30 transition-colors"
+            >
+              <MessageCircle size={12} />
+              Sor
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-brand-red group-hover:w-full transition-all duration-500" />

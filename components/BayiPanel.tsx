@@ -8,8 +8,9 @@ import { LogOut, Package, Phone, Clock, CheckCircle, XCircle, Search, X, RotateC
 import { ProductCard } from './ProductGrid'
 import type { User } from '@supabase/supabase-js'
 import { addManyToCart } from '@/lib/cart'
+import { TUM_KATEGORILER } from '@/lib/categories'
 
-const KATEGORILER = ['Tümü','Ses Sistemleri','Işık Sistemleri','Görüntü Sistemleri','Okul Saat Sistemleri','Simultune Sistemleri','Aksesuarlar']
+const KATEGORILER = TUM_KATEGORILER
 
 interface Bayi {
   id: string

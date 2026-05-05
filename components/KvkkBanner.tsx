@@ -32,7 +32,7 @@ export default function KvkkBanner() {
               <p className="font-body text-white/40 text-xs leading-relaxed">
                 Bu site, hizmet kalitesini artırmak amacıyla çerezler kullanmaktadır.
                 Siteyi kullanmaya devam ederek{' '}
-                <a href="/kvkk" className="text-brand-red hover:underline">
+                <a href="/gizlilik-politikasi" className="text-brand-red hover:underline">
                   KVKK Aydınlatma Metni
                 </a>
                 'ni kabul etmiş sayılırsınız.
