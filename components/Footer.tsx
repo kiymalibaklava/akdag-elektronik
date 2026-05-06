@@ -22,10 +22,11 @@ export default function Footer() {
           <div className="flex gap-3 mt-6">
             <a href="https://facebook.com/kayseriakdagelektronik" target="_blank" rel="noopener noreferrer"
               className="w-9 h-9 border border-white/10 flex items-center justify-center text-white/40 hover:border-brand-red hover:text-brand-red transition-all duration-200">
-              <Facebook size={15} />
+              <Facebook size={16} />
             </a>
-            <a href="#" className="w-9 h-9 border border-white/10 flex items-center justify-center text-white/40 hover:border-brand-red hover:text-brand-red transition-all duration-200">
-              <Instagram size={15} />
+            <a href="https://www.instagram.com/akdagelektronik" target='_blank' rel='noopener noreferrer' 
+            className="w-9 h-9 border border-white/10 flex items-center justify-center text-white/40 hover:border-brand-red hover:text-brand-red transition-all duration-200">
+              <Instagram size={16} />
             </a>
           </div>
         </div>

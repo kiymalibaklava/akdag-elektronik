@@ -90,32 +90,34 @@ export default function IletisimPage() {
               </div>
             </div>
 
-            {/* Harita — Cumhuriyet Mah. Sur Cad. No:17/A, Melikgazi, Kayseri */}
-            <div className="mt-10 border border-white/5 overflow-hidden">
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3060.5!2d35.48120!3d38.72870!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x152b1c8e2e2e2e2f%3A0x0!2zQWtkYcSfIEVsZWt0cm9uaWssIFN1ciBDYWRkZXNpIE5vOjE3QSwgTWVsaWtnYXppLCBLYXlzZXJp!5e0!3m2!1str!2str!4v1700000000000!5m2!1str!2str"
-                width="100%"
-                height="280"
-                style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)' }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Akdağ Elektronik Konum"
-              />
-            </div>
+           {/* Harita — Cumhuriyet Mah. Sur Cad. No:17/A, Melikgazi, Kayseri */}
+<div className="mt-10 border border-white/5 overflow-hidden rounded-lg">
+  <iframe
+    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3112.553259957388!2d35.48554277647225!3d38.721208057213444!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x152b1219077228a1%3A0x633513a863f6946e!2sAkda%C4%9F%20Elektronik!5e0!3m2!1str!2str!4v1715014500000!5m2!1str!2str"
+    width="100%"
+    height="280"
+    style={{ 
+      border: 0, 
+      filter: 'invert(90%) hue-rotate(180deg)'
+    }}
+    allowFullScreen
+    loading="lazy"
+    referrerPolicy="no-referrer-when-downgrade"
+    title="Akdağ Elektronik Konum"
+  />
+</div>
 
-            {/* Harita yedek linki */}
-            <a
-              href="https://maps.google.com/?q=38.7287,35.4812"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-2 text-white/30 hover:text-brand-red text-xs transition-colors"
-            >
-              <MapPin size={12} />
-              Haritada göster
-            </a>
-          </div>
-
+{/* Harita yedek linki */}
+<a
+  href="https://maps.google.com/?q=Akdağ+Elektronik,+Sur+Caddesi+17A,+Melikgazi,+Kayseri"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="mt-3 inline-flex items-center gap-2 text-white/30 hover:text-brand-red text-xs transition-colors"
+>
+  <MapPin size={12} />
+  Haritada göster
+        </a>
+  </div>
           {/* Contact form */}
           <div>
             <h2 className="font-display font-bold text-2xl uppercase text-white tracking-wide mb-10 red-line">
