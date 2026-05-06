@@ -20,24 +20,32 @@ export default function SifreBelirle() {
   useEffect(() => {
     let isMounted = true;
 
-    // 1. Manuel olarak hemen mevcut oturumu kontrol et
-    const checkInitialSession = async () => {
+    const checkHashAndSession = async () => {
+      const hash = typeof window !== 'undefined' ? window.location.hash : ''
+      const hasToken = hash.includes('access_token=') || hash.includes('type=invite')
+      
       const { data: { session } } = await supabase.auth.getSession();
+      
       if (session && isMounted) {
         setStatus('ready');
+      } else if (!hasToken && !session && isMounted) {
+        // Token yok ve oturum yoksa direkt hata ver, 15 saniye bekletme
+        setErrorMsg('Geçersiz veya süresi dolmuş bir davet bağlantısı kullandınız. Lütfen e-postanızdaki butona tekrar tıklayın.');
+        setStatus('error');
       }
     };
-    checkInitialSession();
+    checkHashAndSession();
 
-    // 2. Auth değişimlerini dinle (SIGNED_OUT hatasını kaldırdık)
-const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {      if (!isMounted) return;
+    // 2. Auth değişimlerini dinle
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {      
+      if (!isMounted) return;
       
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
         setStatus('ready');
       }
     });
 
-    // 3. Zaman aşımı süresini 15 saniyeye çıkardık ve son bir kez session kontrolü ekledik
+    // 3. Sadece token varsa ve henüz ready olmadıysa timeout bekle
     const timeout = setTimeout(async () => {
       if (!isMounted) return;
 
@@ -45,13 +53,13 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthC
       if (!session) {
         setStatus(s => {
           if (s === 'loading') {
-            setErrorMsg('Bağlantı doğrulanamadı veya süresi dolmuş olabilir. Lütfen e-postanızdaki bağlantıya tekrar tıklayın.');
+            setErrorMsg('Bağlantı doğrulanamadı. İnternet bağlantınızı kontrol edip e-postanızdaki linke tekrar tıklayın.');
             return 'error';
           }
           return s;
         });
       }
-    }, 15000);
+    }, 10000);
 
     return () => {
       isMounted = false;
@@ -107,8 +115,8 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthC
           {status === 'loading' && (
             <div className="flex flex-col items-center gap-4 py-8">
               <Loader size={32} className="text-brand-red animate-spin" />
-              <p className="font-body text-white/30 text-sm text-center">
-                Davet bağlantısı işleniyor, lütfen bekleyin...
+              <p className="font-body text-white/40 text-sm text-center">
+                Güvenli bağlantı kontrol ediliyor...
               </p>
             </div>
           )}
@@ -117,8 +125,10 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthC
           {status === 'error' && (
             <div className="flex flex-col items-center gap-4 py-6">
               <AlertCircle size={40} className="text-brand-red" />
-              <p className="font-body text-white/40 text-sm text-center leading-relaxed">{errorMsg}</p>
-              <a href="/bayi" className="btn-outline text-sm mt-2">Giriş Sayfasına Git</a>
+              <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-sm text-center w-full">
+                <p className="font-body text-red-400/90 text-sm leading-relaxed">{errorMsg}</p>
+              </div>
+              <a href="/bayi" className="btn-outline text-sm mt-4 w-full justify-center">Giriş Sayfasına Dön</a>
             </div>
           )}
 

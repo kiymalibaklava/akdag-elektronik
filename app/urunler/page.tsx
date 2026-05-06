@@ -31,6 +31,7 @@ export default async function UrunlerPage({
     marka?: string
     kullanim?: string
     alt?: string
+    urun_tipi?: string
   }
 }) {
   const supabase = await createServerSupabaseClient()

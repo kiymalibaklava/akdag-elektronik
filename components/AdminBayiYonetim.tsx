@@ -93,12 +93,11 @@ export default function AdminBayiYonetim({ activeTab }: Props) {
 
   const updateBasvuruDurum = async (id: string, durum: string, basvuru?: Basvuru) => {
     setActionLoading(id)
-    await supabase.from('bayi_basvurular').update({ durum }).eq('id', id)
-
-    // Onaylandıysa otomatik davet e-postası gönder
+    
+    // Onaylama işlemi ise, önce e-posta davetini ve bayi oluşturmayı deniyoruz.
     if (durum === 'onaylandi' && basvuru) {
       try {
-        await fetch('/api/bayi-davet', {
+        const res = await fetch('/api/bayi-davet', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -109,11 +108,23 @@ export default function AdminBayiYonetim({ activeTab }: Props) {
             telefon: basvuru.telefon,
           }),
         })
+
+        const data = await res.json()
+        if (!res.ok) {
+          alert(`Davet gönderilirken bir hata oluştu: ${data.error || 'Bilinmeyen hata'}`)
+          setActionLoading(null)
+          return // İşlemi iptal et, durumu onaylandı yapma!
+        }
       } catch (e) {
         console.error('Davet gönderilemedi:', e)
+        alert('Sunucuya bağlanılamadı. Davet gönderilemedi.')
+        setActionLoading(null)
+        return // İşlemi iptal et
       }
     }
 
+    // Davet başarılıysa (veya reddetme işlemindeysek) başvuru durumunu güncelle
+    await supabase.from('bayi_basvurular').update({ durum }).eq('id', id)
     await loadAll()
     setActionLoading(null)
   }

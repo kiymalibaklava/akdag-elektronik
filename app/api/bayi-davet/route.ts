@@ -19,7 +19,8 @@ export async function POST(req: NextRequest) {
 
     const { email, firma_adi, yetkili_adi, sehir, telefon } = parsed.data
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const siteUrl = origin.replace(/\/$/, '')
 
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

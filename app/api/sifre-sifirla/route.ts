@@ -24,8 +24,11 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 
+    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const siteUrl = origin.replace(/\/$/, '')
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectTo || `${process.env.NEXT_PUBLIC_SITE_URL}/bayi/sifrele`,
+      redirectTo: redirectTo || `${siteUrl}/bayi/sifrele`,
     })
 
     if (error) {
