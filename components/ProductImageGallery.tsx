@@ -40,14 +40,14 @@ export default function ProductImageGallery({ images, alt }: { images: string[];
           <motion.div
             key={active}
             custom={direction}
-            initial={{ opacity: 0, x: direction * 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -direction * 50 }}
+            initial={{ opacity: 0, x: direction * 40, scale: 0.98 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -direction * 40, scale: 0.98 }}
             transition={{ 
               type: 'spring', 
-              stiffness: 300, 
-              damping: 30,
-              opacity: { duration: 0.2 } 
+              stiffness: 260, 
+              damping: 24,
+              opacity: { duration: 0.3 } 
             }}
             className="absolute inset-0"
           >

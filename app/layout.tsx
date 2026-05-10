@@ -29,6 +29,15 @@ export const metadata: Metadata = {
   title: 'Akdağ Elektronik | Ses, Işık & Görüntü Sistemleri – Kayseri',
   description: 'Kayseri\'nin lider ses, ışık ve görüntü sistemleri firması. Profesyonel ses sistemleri, sahne ekipmanları ve akıllı okul çözümleri. AKUSTEK ana bayisi.',
   keywords: 'ses sistemi, ışık sistemi, görüntü sistemi, kayseri, akdağ elektronik, akustek, okul saati, simultune',
+  metadataBase: new URL('https://akdagelektronik.com'),
+  alternates: {
+    canonical: '/',
+  },
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
+  manifest: '/manifest.json',
   openGraph: {
     title: 'Akdağ Elektronik | Ses, Işık & Görüntü Sistemleri',
     description: 'Kayseri\'nin profesyonel ses ve görüntü sistemleri uzmanı.',

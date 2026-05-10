@@ -243,9 +243,19 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
 
 function GridSkeleton() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
       {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="bg-[#141414] border border-white/5 h-[420px] animate-pulse" />
+        <div key={i} className="bg-[#141414] border border-white/5 h-[400px] overflow-hidden">
+          <div className="aspect-square bg-white/[0.02] animate-pulse" />
+          <div className="p-4 space-y-3">
+             <div className="h-4 bg-white/5 w-3/4 animate-pulse" />
+             <div className="h-3 bg-white/[0.02] w-1/2 animate-pulse" />
+             <div className="pt-4 flex justify-between items-center">
+                <div className="h-5 bg-white/5 w-1/3 animate-pulse" />
+                <div className="h-8 bg-white/5 w-1/4 animate-pulse" />
+             </div>
+          </div>
+        </div>
       ))}
     </div>
   )

@@ -35,6 +35,8 @@ interface Siparis {
   vergi_dairesi?: string
   vergi_no?: string
   teslimat_adresi?: string
+  dolar_kuru?: number
+  euro_kuru?: number
   created_at: string
   updated_at: string
 }
@@ -79,12 +81,19 @@ export default function AdminSiparisler() {
 
   const updateDurum = async (id: string, durum: string) => {
     setUpdatingId(id)
-    await supabase.from('siparisler').update({
-      durum,
-      updated_at: new Date().toISOString(),
-    }).eq('id', id)
-    await loadSiparisler()
-    setUpdatingId(null)
+    try {
+      const res = await fetch('/api/siparis-durum-guncelle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, durum })
+      })
+      if (!res.ok) throw new Error('Güncellenemedi')
+      await loadSiparisler()
+    } catch (err) {
+      alert('Hata: Durum güncellenemedi.')
+    } finally {
+      setUpdatingId(null)
+    }
   }
 
   const updateOdemeDurumu = async (id: string, durum: string) => {
@@ -97,12 +106,19 @@ export default function AdminSiparisler() {
 
   const kaydetKargoNo = async (id: string, no: string) => {
     setUpdatingKargo(id)
-    await supabase.from('siparisler').update({
-      kargo_takip_no: no,
-      updated_at: new Date().toISOString(),
-    }).eq('id', id)
-    await loadSiparisler()
-    setUpdatingKargo(null)
+    try {
+      const res = await fetch('/api/siparis-durum-guncelle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, durum: 'kargolandi', kargo_takip_no: no })
+      })
+      if (!res.ok) throw new Error('Güncellenemedi')
+      await loadSiparisler()
+    } catch (err) {
+      alert('Hata: Kargo bilgisi güncellenemedi.')
+    } finally {
+      setUpdatingKargo(null)
+    }
   }
 
   const filtered = siparisler.filter(s => {
@@ -226,7 +242,10 @@ export default function AdminSiparisler() {
 
                 <div className="text-right flex-shrink-0">
                   <div className="font-display font-black text-lg text-brand-red">{siparis.toplam_tutar?.toLocaleString('tr-TR')} ₺</div>
-                  <div className="font-body text-white/20 text-xs">{Array.isArray(siparis.urunler) ? siparis.urunler.reduce((s, u) => s + u.adet, 0) : 0} ürün</div>
+                  <div className="font-body text-white/30 text-[10px] uppercase font-bold tracking-tighter">
+                    $ {siparis.dolar_kuru ? (siparis.toplam_tutar / siparis.dolar_kuru).toFixed(2) : (siparis.toplam_tutar / 32.5).toFixed(2)}
+                  </div>
+                  <div className="font-body text-white/20 text-[10px]">{Array.isArray(siparis.urunler) ? siparis.urunler.reduce((s, u) => s + u.adet, 0) : 0} ürün</div>
                 </div>
 
                 <button onClick={() => setExpandedId(expanded ? null : siparis.id)}

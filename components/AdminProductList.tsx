@@ -239,7 +239,7 @@ export default function AdminProductList({ products, onDeleted }: Props) {
               </button>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+            <div className="p-6 pb-32 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Ürün Adı *</label>
                 <input type="text" value={editAd} onChange={e => setEditAd(e.target.value)} className="input-dark" />

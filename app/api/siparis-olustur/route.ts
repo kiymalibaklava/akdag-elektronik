@@ -77,6 +77,18 @@ export async function POST(req: NextRequest) {
 
     const db = supabaseAdmin()
 
+    // Döviz kurlarını al (Geçmişe dönük değer takibi için)
+    let dolarKuru = 32.5
+    let euroKuru = 35.2
+    try {
+      const kurRes = await fetch(`${req.nextUrl.origin}/api/kur`)
+      if (kurRes.ok) {
+        const kurData = await kurRes.json()
+        dolarKuru = kurData.USD || 32.5
+        euroKuru = kurData.EUR || 35.2
+      }
+    } catch {}
+
     const { data: siparis, error: dbErr } = await db
       .from('siparisler')
       .insert({
@@ -97,6 +109,10 @@ export async function POST(req: NextRequest) {
         vergi_dairesi: vergi_dairesi || null,
         vergi_no: vergi_no || null,
         teslimat_adresi: teslimat_adresi || null,
+        dolar_kuru: dolarKuru,
+        euro_kuru: euroKuru,
+        ip_adresi: ip,
+        user_agent: req.headers.get('user-agent') || null,
       })
       .select('siparis_no, id')
       .single()

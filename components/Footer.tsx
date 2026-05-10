@@ -40,6 +40,7 @@ export default function Footer() {
               { label: 'Ürünler', href: '/urunler' },
               { label: 'Hakkımızda', href: '/hakkimizda' },
               { label: 'İletişim', href: '/iletisim' },
+              { label: 'Banka Hesaplarımız', href: '/banka-hesaplari' },
               { label: 'Mesafeli Satış Sözleşmesi', href: '/mesafeli-satis-sozlesmesi' },
               { label: 'İptal ve İade Koşulları', href: '/iptal-ve-iade' },
               { label: 'Gizlilik Politikası', href: '/gizlilik-politikasi' },
