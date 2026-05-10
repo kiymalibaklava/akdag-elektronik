@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     // 1. Get order details
     const { data: siparis, error: getErr } = await db
       .from('siparisler')
-      .select('siparis_no, email, ad_soyad')
+      .select('siparis_no, email, ad_soyad, durum, urunler')
       .eq('id', id)
       .single()
 
@@ -41,8 +41,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Sipariş bulunamadı' }, { status: 404 })
     }
 
+    const eskiDurum = siparis.durum
+    const yeniDurum = durum
+
+    // Stok Yönetimi Mantığı
+    if (eskiDurum !== 'iptal' && yeniDurum === 'iptal') {
+      // Sipariş iptal edildi: Stokları geri yükle
+      for (const item of (siparis.urunler as any[])) {
+        if (!item.urun_id) continue
+        const { data: urun } = await db.from('urunler').select('stok_adedi').eq('id', item.urun_id).single()
+        if (urun) {
+          const yeniStok = (urun.stok_adedi || 0) + item.adet
+          await db.from('urunler').update({ 
+            stok_adedi: yeniStok,
+            stok_durumu: yeniStok > 0 ? 'stokta' : 'tukendi'
+          }).eq('id', item.urun_id)
+        }
+      }
+    } else if (eskiDurum === 'iptal' && yeniDurum !== 'iptal') {
+      // İptal edilmiş sipariş tekrar aktif edildi: Stokları tekrar düş
+      for (const item of (siparis.urunler as any[])) {
+        if (!item.urun_id) continue
+        const { data: urun } = await db.from('urunler').select('stok_adedi').eq('id', item.urun_id).single()
+        if (urun) {
+          const yeniStok = Math.max(0, (urun.stok_adedi || 0) - item.adet)
+          await db.from('urunler').update({ 
+            stok_adedi: yeniStok,
+            stok_durumu: yeniStok > 0 ? 'stokta' : 'tukendi'
+          }).eq('id', item.urun_id)
+        }
+      }
+    }
+
     // 2. Update status
-    const updateData: any = { durum, updated_at: new Date().toISOString() }
+    const updateData: any = { durum: yeniDurum, updated_at: new Date().toISOString() }
     if (kargo_takip_no) updateData.kargo_takip_no = kargo_takip_no
 
     const { error: updErr } = await db

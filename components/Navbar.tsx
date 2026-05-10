@@ -7,6 +7,7 @@ import { Menu, X, Search, Phone, Heart, GitCompare, ChevronRight, ChevronDown, S
 import AdLogo from './AdLogo'
 import CartIcon from './CartIcon'
 import KurGostergesi from './KurGostergesi'
+import ProductSearch from './ProductSearch'
 import { NEW_KATEGORI_HIYERARSI, type CategoryNode } from '@/lib/categories'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
@@ -285,9 +286,8 @@ export default function Navbar() {
           <div className="px-6 py-8 space-y-6 overflow-y-auto max-h-[85vh]">
             
             {/* Search Box Mobile */}
-            <div className="relative group">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-brand-red transition-colors" />
-              <input type="text" placeholder="Ürün Ara..." className="w-full bg-white/5 border border-white/5 rounded-none py-3.5 pl-12 pr-4 text-sm font-body text-white placeholder:text-white/20 focus:outline-none focus:border-brand-red/50 transition-all" />
+            <div className="relative">
+              <ProductSearch fullPage />
             </div>
 
             <div className="flex flex-col gap-1">

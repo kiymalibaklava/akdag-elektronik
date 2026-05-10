@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Search, X, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 
 interface Product {
@@ -20,6 +21,7 @@ export default function ProductSearch({ fullPage = false }: { fullPage?: boolean
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
@@ -43,7 +45,14 @@ export default function ProductSearch({ fullPage = false }: { fullPage?: boolean
     }, 350)
 
     return () => clearTimeout(timer)
-  }, [query])
+  }, [query, fullPage])
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!query.trim()) return
+    setOpen(false)
+    router.push(`/urunler?q=${encodeURIComponent(query.trim())}`)
+  }
 
   const clear = () => {
     setQuery('')
@@ -54,29 +63,35 @@ export default function ProductSearch({ fullPage = false }: { fullPage?: boolean
 
   return (
     <div className={`relative ${fullPage ? 'w-full' : 'w-full max-w-2xl mx-auto'}`}>
-      {/* Search input */}
-      <div className="relative flex items-center">
+      <form onSubmit={handleSearch} className="relative flex items-center">
         <Search size={18} className="absolute left-4 text-brand-red" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Ürün arayın... (ses sistemi, hoparlör, zil...)"
-          className="w-full bg-[#141414] border border-white/10 text-white placeholder-white/20 pl-12 pr-14 py-4 focus:outline-none focus:border-brand-red transition-colors duration-200 font-body text-sm"
-        />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => query && setOpen(true)}
+            onBlur={() => setTimeout(() => setOpen(false), 200)}
+            placeholder="Ürün arayın... (ses sistemi, hoparlör, zil...)"
+            className="w-full bg-[#141414] border border-white/10 text-white placeholder-white/20 pl-12 pr-14 py-4 focus:outline-none focus:border-brand-red transition-colors duration-200 font-body text-sm"
+          />
         {loading && (
           <div className="absolute right-12 w-4 h-4 border-2 border-brand-red/30 border-t-brand-red rounded-full animate-spin" />
         )}
         {query && !loading && (
-          <button onClick={clear} className="absolute right-4 text-white/20 hover:text-white transition-colors">
-            <X size={16} />
-          </button>
+          <div className="absolute right-4 flex items-center gap-2">
+             <button type="button" onClick={clear} className="text-white/20 hover:text-white transition-colors">
+               <X size={16} />
+             </button>
+             <button type="submit" className="text-brand-red hover:text-brand-red/80 transition-colors">
+               <ArrowRight size={18} />
+             </button>
+          </div>
         )}
-      </div>
+      </form>
 
       {/* Dropdown results */}
-      {open && results.length > 0 && !fullPage && (
+      {open && results.length > 0 && (
         <div className="absolute top-full left-0 right-0 z-50 bg-[#141414] border border-white/10 border-t-0 shadow-2xl">
           {results.map((product) => (
             <Link
@@ -121,8 +136,8 @@ export default function ProductSearch({ fullPage = false }: { fullPage?: boolean
         </div>
       )}
 
-      {open && query && results.length === 0 && !loading && !fullPage && (
-        <div className="absolute top-full left-0 right-0 z-50 bg-[#141414] border border-white/10 border-t-0 p-6 text-center">
+      {open && query && results.length === 0 && !loading && (
+        <div className="absolute top-full left-0 right-0 z-50 bg-[#141414] border border-white/10 border-t-0 p-6 text-center shadow-2xl">
           <p className="font-body text-white/30 text-sm">
             "<span className="text-white">{query}</span>" için sonuç bulunamadı.
           </p>

@@ -2,10 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Trash2, Package, Pencil, X, Check, Search } from 'lucide-react'
+import { Trash2, Package, Pencil, X, Check, Search, Upload, Plus } from 'lucide-react'
 import { PARA_BIRIMLERI } from '@/lib/kur'
 import { createClient } from '@/lib/supabase'
 import { KATEGORILER, KATEGORI_HIYERARSI } from '@/lib/categories'
+import { compressImage } from './ImageCompressor'
+
+interface FileEntry {
+  file: File
+  preview: string
+  compressing: boolean
+}
 
 interface Product {
   id: string
@@ -54,6 +61,9 @@ export default function AdminProductList({ products, onDeleted }: Props) {
   const [existingAlanlar, setExistingAlanlar] = useState<string[]>([])
   const [showMarkaSuggestions, setShowMarkaSuggestions] = useState(false)
   const [showAlanSuggestions, setShowAlanSuggestions] = useState(false)
+  const [editFotograflar, setEditFotograflar] = useState<string[]>([])
+  const [newPhotos, setNewPhotos] = useState<FileEntry[]>([])
+  const [uploadError, setUploadError] = useState('')
 
   useEffect(() => {
     const fetchExisting = async () => {
@@ -86,6 +96,9 @@ export default function AdminProductList({ products, onDeleted }: Props) {
     setEditKritikStok((p.kritik_stok ?? 5).toString())
     setEditMarka(p.marka || '')
     setEditKullanim(p.kullanim_alani || '')
+    setEditFotograflar(p.fotograflar || [])
+    setNewPhotos([])
+    setUploadError('')
     setSaveSuccess(false)
   }
 
@@ -99,12 +112,26 @@ export default function AdminProductList({ products, onDeleted }: Props) {
     const kritikStok = Math.max(0, parseInt(editKritikStok || '0'))
     const stokDurumu = stokAdedi <= 0 ? 'tukendi' : editStok
 
+    // Yeni fotoğrafları yükle
+    const yeniUrls: string[] = []
+    for (const entry of newPhotos) {
+      const path = `urunler/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`
+      const { error: uploadErr } = await supabase.storage.from('urun-fotograflari').upload(path, entry.file)
+      if (!uploadErr) {
+        const { data } = supabase.storage.from('urun-fotograflari').getPublicUrl(path)
+        yeniUrls.push(data.publicUrl)
+      }
+    }
+
+    const sonFotograflar = [...editFotograflar, ...yeniUrls]
+
     await supabase.from('urunler').update({
       ad: editAd.trim(),
       aciklama: editAciklama.trim(),
       kategori: editKategori,
       alt_kategori: editAltKategori || null,
       urun_tipi: editUrunTipi || null,
+      fotograflar: sonFotograflar,
       fiyat: editFiyat ? parseFloat(editFiyat) : null,
       bayi_fiyati: editBayiF ? parseFloat(editBayiF) : null,
       stok_durumu: stokDurumu,
@@ -130,6 +157,32 @@ export default function AdminProductList({ products, onDeleted }: Props) {
     await supabase.from('urunler').delete().eq('id', id)
     setDeleting(null)
     onDeleted?.()
+  }
+
+  const handleNewFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || [])
+    const totalCount = editFotograflar.length + newPhotos.length
+    for (const file of selected.slice(0, 10 - totalCount)) {
+      const preview = URL.createObjectURL(file)
+      setNewPhotos(p => [...p, { file, preview, compressing: true }])
+      const compressed = await compressImage(file)
+      setNewPhotos(p => p.map(e => e.preview === preview
+        ? { ...e, file: compressed, compressing: false }
+        : e))
+    }
+    e.target.value = ''
+  }
+
+  const removeExistingPhoto = (url: string) => {
+    setEditFotograflar(p => p.filter(x => x !== url))
+  }
+
+  const removeNewPhoto = (preview: string) => {
+    setNewPhotos(p => { 
+      const e = p.find(x => x.preview === preview)
+      if (e) URL.revokeObjectURL(e.preview)
+      return p.filter(x => x.preview !== preview) 
+    })
   }
 
   return (
@@ -376,10 +429,56 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                   <input type="number" min="0" value={editKritikStok} onChange={(e) => setEditKritikStok(e.target.value)} className="input-dark" />
                 </div>
               </div>
+
+              {/* Fotoğraf Düzenleme */}
+              <div className="pt-4 border-t border-white/5 space-y-4">
+                <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block">
+                  Fotoğraflar <span className="text-white/20 normal-case tracking-normal font-body font-normal text-xs">(max 10)</span>
+                </label>
+                
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Mevcutlar */}
+                  {editFotograflar.map((url) => (
+                    <div key={url} className="relative aspect-square bg-[#1A1A1A] border border-white/5 overflow-hidden group">
+                      <Image src={url} alt="" fill className="object-cover" sizes="100px" />
+                      <button onClick={() => removeExistingPhoto(url)}
+                        className="absolute top-1 right-1 w-6 h-6 bg-black/70 flex items-center justify-center text-white hover:bg-brand-red transition-colors opacity-0 group-hover:opacity-100">
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {/* Yeniler */}
+                  {newPhotos.map((entry) => (
+                    <div key={entry.preview} className="relative aspect-square bg-[#1A1A1A] border border-brand-red/20 overflow-hidden group">
+                      <Image src={entry.preview} alt="" fill className="object-cover opacity-50" sizes="100px" />
+                      {entry.compressing ? (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-brand-red/30 border-t-brand-red rounded-full animate-spin" />
+                        </div>
+                      ) : (
+                        <button onClick={() => removeNewPhoto(entry.preview)}
+                          className="absolute top-1 right-1 w-6 h-6 bg-black/70 flex items-center justify-center text-white hover:bg-brand-red transition-colors">
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Ekleme Butonu */}
+                  {editFotograflar.length + newPhotos.length < 10 && (
+                    <label className="aspect-square flex flex-col items-center justify-center gap-2 border border-dashed border-white/10 hover:border-brand-red/40 cursor-pointer transition-colors">
+                      <Upload size={16} className="text-white/20" />
+                      <span className="font-display font-bold text-[8px] uppercase text-white/20">EKLE</span>
+                      <input type="file" multiple accept="image/*" className="hidden" onChange={handleNewFiles} />
+                    </label>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="flex gap-3 px-6 pb-6 pt-3 border-t border-white/5 flex-shrink-0 bg-[#141414]">
-              <button onClick={handleSave} disabled={saving || !editAd || !editAciklama}
+              <button onClick={handleSave} disabled={saving || !editAd || !editAciklama || newPhotos.some(n => n.compressing)}
                 className={`btn-primary flex-1 justify-center text-sm disabled:opacity-40 ${saveSuccess ? '!bg-green-600' : ''}`}>
                 {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   : saveSuccess ? <Check size={15} /> : null}
