@@ -53,8 +53,8 @@ export default function AdminBayiYonetim({ activeTab }: Props) {
   const loadAll = async () => {
     setLoading(true)
     const [{ data: b }, { data: bv }] = await Promise.all([
-      supabase.from('bayiler').select('*').order('created_at', { ascending: false }),
-      supabase.from('bayi_basvurular').select('*').order('created_at', { ascending: false }),
+      supabase.from('bayiler').select('id, firma_adi, yetkili_adi, telefon, sehir, onaylandi, created_at, user_id').order('created_at', { ascending: false }),
+      supabase.from('bayi_basvurular').select('id, firma_adi, yetkili_adi, telefon, email, sehir, mesaj, durum, created_at').order('created_at', { ascending: false }),
     ])
     setBayiler(b || [])
     setBasvurular(bv || [])

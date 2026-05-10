@@ -56,9 +56,14 @@ const ODEME_TIPI: Record<string, string> = {
   whatsapp: 'WhatsApp',
 }
 
+const PAGE_SIZE = 50
+
 export default function AdminSiparisler() {
   const [siparisler, setSiparisler] = useState<Siparis[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [filterDurum, setFilterDurum] = useState('hepsi')
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -67,16 +72,30 @@ export default function AdminSiparisler() {
   const [kargoInputs, setKargoInputs] = useState<Record<string, string>>({})
   const supabase = useRef(createClient()).current
 
-  useEffect(() => { loadSiparisler() }, [])
+  useEffect(() => { loadSiparisler(0) }, [])
 
-  const loadSiparisler = async () => {
-    setLoading(true)
+  const loadSiparisler = async (p: number, append = false) => {
+    if (append) setLoadingMore(true)
+    else setLoading(true)
+
+    const from = p * PAGE_SIZE
+    const to = from + PAGE_SIZE - 1
+
     const { data } = await supabase
       .from('siparisler')
       .select('*')
       .order('created_at', { ascending: false })
-    setSiparisler(data || [])
+      .range(from, to)
+    
+    if (data) {
+      if (append) setSiparisler(prev => [...prev, ...data])
+      else setSiparisler(data)
+      setHasMore(data.length === PAGE_SIZE)
+    }
+    
     setLoading(false)
+    setLoadingMore(false)
+    setPage(p)
   }
 
   const updateDurum = async (id: string, durum: string) => {
@@ -88,7 +107,7 @@ export default function AdminSiparisler() {
         body: JSON.stringify({ id, durum })
       })
       if (!res.ok) throw new Error('Güncellenemedi')
-      await loadSiparisler()
+      await loadSiparisler(0)
     } catch (err) {
       alert('Hata: Durum güncellenemedi.')
     } finally {
@@ -101,7 +120,7 @@ export default function AdminSiparisler() {
       odeme_durumu: durum,
       updated_at: new Date().toISOString(),
     }).eq('id', id)
-    await loadSiparisler()
+    await loadSiparisler(0)
   }
 
   const kaydetKargoNo = async (id: string, no: string) => {
@@ -113,7 +132,7 @@ export default function AdminSiparisler() {
         body: JSON.stringify({ id, durum: 'kargolandi', kargo_takip_no: no })
       })
       if (!res.ok) throw new Error('Güncellenemedi')
-      await loadSiparisler()
+      await loadSiparisler(0)
     } catch (err) {
       alert('Hata: Kargo bilgisi güncellenemedi.')
     } finally {
@@ -200,7 +219,7 @@ export default function AdminSiparisler() {
             </button>
           ))}
         </div>
-        <button onClick={loadSiparisler} className="flex items-center gap-2 text-white/30 hover:text-white text-xs font-display uppercase tracking-widest transition-colors px-3">
+        <button onClick={() => loadSiparisler(0)} className="flex items-center gap-2 text-white/30 hover:text-white text-xs font-display uppercase tracking-widest transition-colors px-3">
           <RefreshCw size={12} />Yenile
         </button>
       </div>
@@ -421,6 +440,22 @@ export default function AdminSiparisler() {
           )
         })}
       </div>
+
+      {hasMore && (
+        <div className="mt-8 flex justify-center">
+          <button
+            onClick={() => loadSiparisler(page + 1, true)}
+            disabled={loadingMore}
+            className="btn-outline text-xs py-3 px-10 min-w-[200px] justify-center"
+          >
+            {loadingMore ? (
+              <div className="w-4 h-4 border-2 border-white/10 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>DAHA FAZLA YÜKLE</>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

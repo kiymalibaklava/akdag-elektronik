@@ -6,11 +6,11 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { SEARCH_SUGGESTION_FIELDS } from '@/lib/product-queries'
 
 interface Product {
   id: string
   ad: string
-  aciklama: string
   kategori: string
   fotograflar: string[]
 }
@@ -35,7 +35,7 @@ export default function ProductSearch({ fullPage = false }: { fullPage?: boolean
       setLoading(true)
       const { data } = await supabase
         .from('urunler')
-        .select('id, ad, aciklama, kategori, fotograflar')
+        .select(SEARCH_SUGGESTION_FIELDS)
         .ilike('ad', `%${query}%`)
         .limit(6)
 

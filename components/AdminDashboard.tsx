@@ -40,7 +40,10 @@ export default function AdminDashboard() {
     setLoading(true)
     try {
       const [{ data: sData }, { count: bCount }] = await Promise.all([
-        supabase.from('siparisler').select('*').order('created_at', { ascending: false }),
+        supabase
+          .from('siparisler')
+          .select('id, siparis_no, ad_soyad, toplam_tutar, durum, odeme_durumu, dekont_url, created_at, urunler')
+          .order('created_at', { ascending: false }),
         supabase.from('bayiler').select('*', { count: 'exact', head: true }).eq('onay_durumu', 'onaylandi')
       ])
       setSiparisler(sData || [])

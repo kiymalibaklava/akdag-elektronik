@@ -19,7 +19,7 @@ import { createClient } from '@/lib/supabase'
 interface Product {
   id: string
   ad: string
-  aciklama: string
+  aciklama?: string
   kategori: string
   fotograflar: string[]
   fiyat?: number
@@ -313,10 +313,21 @@ export function ProductCard({ product, isBayi = false, kur, showPrice = false }:
               </div>
             )}
             {stockCount !== null && (
-              <div className={`font-body text-[11px] ${isCritical ? 'text-brand-red font-bold animate-pulse' : 'text-white/25'}`}>
-                {stockCount > 20 ? 'STOKTA: 20+ ADET' : `STOKTA: ${stockCount} ADET`}
-                {isCritical && stockCount > 0 && <span className="ml-1"> (SON ÜRÜNLER!)</span>}
-                {stockCount <= 0 && 'STOKTA YOK'}
+              <div className={`mt-2 font-display font-bold text-[10px] tracking-wider uppercase ${isCritical ? 'text-brand-red animate-pulse' : 'text-white/20'}`}>
+                {stockCount <= 0 ? (
+                  <span className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-sm">
+                    <div className="w-1 h-1 rounded-full bg-red-500" />
+                    STOKTA YOK
+                  </span>
+                ) : (
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-1 h-1 rounded-full ${isCritical ? 'bg-brand-red' : 'bg-green-500'}`} />
+                      {stockCount > 20 ? 'STOKTA: 20+ ADET' : `STOKTA: ${stockCount} ADET`}
+                    </div>
+                    {isCritical && <span className="text-[9px] text-brand-red/60 leading-none">SON ÜRÜNLER!</span>}
+                  </div>
+                )}
               </div>
             )}
           </div>

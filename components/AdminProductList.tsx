@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Trash2, Package, Pencil, X, Check, Search, Upload, Plus } from 'lucide-react'
+import { Trash2, Package, Pencil, X, Check, Search, Upload } from 'lucide-react'
 import { PARA_BIRIMLERI } from '@/lib/kur'
 import { createClient } from '@/lib/supabase'
 import { KATEGORILER, KATEGORI_HIYERARSI } from '@/lib/categories'
@@ -19,7 +19,7 @@ interface Product {
   ad: string
   kategori: string
   fotograflar: string[]
-  aciklama: string
+  aciklama?: string
   fiyat?: number
   bayi_fiyati?: number
   stok_durumu?: string
@@ -64,14 +64,16 @@ export default function AdminProductList({ products, onDeleted }: Props) {
   const [editFotograflar, setEditFotograflar] = useState<string[]>([])
   const [newPhotos, setNewPhotos] = useState<FileEntry[]>([])
   const [uploadError, setUploadError] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
 
   useEffect(() => {
     const fetchExisting = async () => {
       const supabase = createClient()
-      const { data: m } = await supabase.from('urunler').select('marka').not('marka', 'is', null)
-      const { data: a } = await supabase.from('urunler').select('kullanim_alani').not('kullanim_alani', 'is', null)
-      if (m) setExistingMarkalar(Array.from(new Set(m.map((x: any) => x.marka).filter(Boolean))))
-      if (a) setExistingAlanlar(Array.from(new Set(a.map((x: any) => x.kullanim_alani).filter(Boolean))))
+      const { data } = await supabase.from('urunler').select('marka, kullanim_alani').limit(200)
+      if (data) {
+        setExistingMarkalar(Array.from(new Set(data.map((x: any) => x.marka).filter(Boolean))))
+        setExistingAlanlar(Array.from(new Set(data.map((x: any) => x.kullanim_alani).filter(Boolean))))
+      }
     }
     fetchExisting()
   }, [])
@@ -80,26 +82,31 @@ export default function AdminProductList({ products, onDeleted }: Props) {
     !search || p.ad.toLowerCase().includes(search.toLowerCase()) || p.kategori.toLowerCase().includes(search.toLowerCase())
   )
 
-  const openEdit = (p: Product) => {
+  const openEdit = async (p: Product) => {
+    setEditLoading(true)
     setEditProduct(p)
-    setEditAd(p.ad)
-    setEditAciklama(p.aciklama)
-    setEditKategori(p.kategori)
-    setEditAltKategori((p as any).alt_kategori || '')
-    setEditUrunTipi((p as any).urun_tipi || '')
-    setEditFiyat(p.fiyat?.toString() || '')
-    setEditBayiF(p.bayi_fiyati?.toString() || '')
-    setEditStok(p.stok_durumu || 'stokta')
-    setEditParaBirimi(p.para_birimi || 'USD')
-    setEditBayiParaBirimi(p.bayi_para_birimi || 'USD')
-    setEditStokAdedi((p.stok_adedi ?? 0).toString())
-    setEditKritikStok((p.kritik_stok ?? 5).toString())
-    setEditMarka(p.marka || '')
-    setEditKullanim(p.kullanim_alani || '')
-    setEditFotograflar(p.fotograflar || [])
+    const supabase = createClient()
+    const { data: fullProduct } = await supabase.from('urunler').select('*').eq('id', p.id).single()
+    const prod = fullProduct || p
+    setEditAd(prod.ad)
+    setEditAciklama(prod.aciklama || '')
+    setEditKategori(prod.kategori)
+    setEditAltKategori((prod as any).alt_kategori || '')
+    setEditUrunTipi((prod as any).urun_tipi || '')
+    setEditFiyat(prod.fiyat?.toString() || '')
+    setEditBayiF(prod.bayi_fiyati?.toString() || '')
+    setEditStok(prod.stok_durumu || 'stokta')
+    setEditParaBirimi(prod.para_birimi || 'USD')
+    setEditBayiParaBirimi(prod.bayi_para_birimi || 'USD')
+    setEditStokAdedi((prod.stok_adedi ?? 0).toString())
+    setEditKritikStok((prod.kritik_stok ?? 5).toString())
+    setEditMarka(prod.marka || '')
+    setEditKullanim(prod.kullanim_alani || '')
+    setEditFotograflar(prod.fotograflar || [])
     setNewPhotos([])
     setUploadError('')
     setSaveSuccess(false)
+    setEditLoading(false)
   }
 
   const handleSave = async () => {
@@ -107,12 +114,10 @@ export default function AdminProductList({ products, onDeleted }: Props) {
     setSaving(true)
     const supabase = createClient()
     const fiyatDegisti = editFiyat !== editProduct.fiyat?.toString() || editBayiF !== editProduct.bayi_fiyati?.toString()
-
     const stokAdedi = Math.max(0, parseInt(editStokAdedi || '0'))
     const kritikStok = Math.max(0, parseInt(editKritikStok || '0'))
     const stokDurumu = stokAdedi <= 0 ? 'tukendi' : editStok
 
-    // Yeni fotoğrafları yükle
     const yeniUrls: string[] = []
     for (const entry of newPhotos) {
       const path = `urunler/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`
@@ -187,7 +192,6 @@ export default function AdminProductList({ products, onDeleted }: Props) {
 
   return (
     <>
-      {/* Arama */}
       <div className="relative mb-4">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-red" />
         <input
@@ -207,33 +211,38 @@ export default function AdminProductList({ products, onDeleted }: Props) {
       {filtered.length === 0 ? (
         <div className="border border-white/5 bg-[#141414] p-10 text-center">
           {search ? (
-            <p className="font-body text-white/20 text-sm">
-              "<span className="text-white/40">{search}</span>" için ürün bulunamadı.
-            </p>
+            <>
+              <Search size={40} className="text-white/5 mx-auto mb-4" />
+              <p className="font-display font-bold text-sm uppercase text-white/20 tracking-widest">
+                "{search}" için sonuç bulunamadı
+              </p>
+            </>
           ) : (
             <>
-              <Package size={40} className="text-white/10 mx-auto mb-3" />
-              <p className="font-display font-semibold text-sm uppercase text-white/20 tracking-widest">Henüz ürün yok</p>
+              <Package size={40} className="text-white/5 mx-auto mb-4" />
+              <p className="font-display font-bold text-sm uppercase text-white/20 tracking-widest">
+                Henüz ürün eklenmemiş
+              </p>
             </>
           )}
         </div>
       ) : (
-        <div className="space-y-1">
-          {filtered.map(product => (
-            <div key={product.id}
-              className="flex items-center gap-4 bg-[#141414] border border-white/5 p-4 hover:border-white/10 transition-colors">
-              <div className="w-14 h-14 bg-[#1A1A1A] border border-white/5 flex-shrink-0 overflow-hidden">
-                {product.fotograflar?.[0]
-                  ? <Image src={product.fotograflar[0]} alt={product.ad} width={56} height={56} className="w-full h-full object-cover" />
-                  : <div className="w-full h-full flex items-center justify-center"><Package size={18} className="text-white/10" /></div>
-                }
+        <div className="space-y-1 overflow-y-auto max-h-[calc(100vh-250px)] pr-2 custom-scrollbar">
+          {filtered.map((product) => (
+            <div key={product.id} className="bg-[#141414] border border-white/5 p-3 flex items-center gap-4 hover:border-white/10 transition-colors group">
+              <div className="w-12 h-12 bg-black border border-white/5 flex-shrink-0 relative overflow-hidden">
+                {product.fotograflar?.[0] ? (
+                  <Image src={product.fotograflar[0]} alt={product.ad} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/5"><Package size={20} /></div>
+                )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-display font-bold text-sm uppercase text-white tracking-wide truncate">{product.ad}</div>
-                <div className="font-display font-semibold text-xs tracking-widest text-brand-red/50 uppercase mt-0.5">{product.kategori}</div>
-                <div className="flex items-center gap-4 mt-1">
+                <div className="font-display font-bold text-sm uppercase text-white truncate tracking-wide">{product.ad}</div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                  <span className="font-body text-white/40 text-[10px] uppercase tracking-wider">{product.kategori}</span>
                   {product.fiyat && (
-                    <span className="font-body text-white/40 text-xs">
+                    <span className="font-display font-bold text-[10px] text-brand-red">
                       {PARA_BIRIMLERI.find(p => p.value === product.para_birimi)?.symbol || ''} {product.fiyat.toLocaleString('tr-TR')} {product.para_birimi || 'TL'}
                       {product.bayi_fiyati && (
                         <span className="text-green-400/60 ml-1">
@@ -277,7 +286,6 @@ export default function AdminProductList({ products, onDeleted }: Props) {
         </div>
       )}
 
-      {/* Düzenleme Modalı */}
       {editProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
           <div className="bg-[#141414] border border-white/10 w-full max-w-lg flex flex-col"
@@ -293,188 +301,138 @@ export default function AdminProductList({ products, onDeleted }: Props) {
             </div>
 
             <div className="p-6 pb-32 space-y-4 overflow-y-auto flex-1">
-              <div>
-                <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Ürün Adı *</label>
-                <input type="text" value={editAd} onChange={e => setEditAd(e.target.value)} className="input-dark" />
-              </div>
-
-              <div className="border border-white/5 bg-[#1A1A1A] p-3 space-y-2">
-                <span className="font-display font-semibold text-xs tracking-widest uppercase text-white/40">Kategori Hiyerarşisi</span>
-                <div className="grid grid-cols-3 gap-2">
+              {editLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                  <div className="w-10 h-10 border-4 border-white/10 border-t-brand-red rounded-full animate-spin" />
+                  <p className="font-display font-bold text-xs uppercase text-white/30 tracking-widest">Detaylar Yükleniyor...</p>
+                </div>
+              ) : (
+                <>
                   <div>
-                    <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1">Ana</label>
-                    <select value={editKategori} onChange={e => { setEditKategori(e.target.value); setEditAltKategori(''); setEditUrunTipi('') }} className="input-dark appearance-none cursor-pointer text-sm">
-                      {KATEGORILER.map(k => <option key={k} value={k}>{k}</option>)}
-                    </select>
+                    <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Ürün Adı *</label>
+                    <input type="text" value={editAd} onChange={e => setEditAd(e.target.value)} className="input-dark" />
                   </div>
+
+                  <div className="border border-white/5 bg-[#1A1A1A] p-3 space-y-2">
+                    <span className="font-display font-semibold text-xs tracking-widest uppercase text-white/40">Kategori Hiyerarşisi</span>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1">Ana</label>
+                        <select value={editKategori} onChange={e => { setEditKategori(e.target.value); setEditAltKategori(''); setEditUrunTipi('') }} className="input-dark appearance-none cursor-pointer text-sm">
+                          {KATEGORILER.map(k => <option key={k} value={k}>{k}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1">Alt</label>
+                        <select value={editAltKategori} onChange={e => { setEditAltKategori(e.target.value); setEditUrunTipi('') }} className="input-dark appearance-none cursor-pointer text-sm">
+                          <option value="">—</option>
+                          {(KATEGORI_HIYERARSI.find(k => k.label === editKategori)?.altKategoriler || []).map(a => <option key={a.label} value={a.label}>{a.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1">Tip</label>
+                        <select value={editUrunTipi} onChange={e => setEditUrunTipi(e.target.value)} className="input-dark appearance-none cursor-pointer text-sm">
+                          <option value="">—</option>
+                          {(KATEGORI_HIYERARSI.find(k => k.label === editKategori)?.altKategoriler.find(a => a.label === editAltKategori)?.detaylar || []).map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1">Alt</label>
-                    <select value={editAltKategori} onChange={e => { setEditAltKategori(e.target.value); setEditUrunTipi('') }} className="input-dark appearance-none cursor-pointer text-sm">
-                      <option value="">—</option>
-                      {(KATEGORI_HIYERARSI.find(k => k.label === editKategori)?.altKategoriler || []).map(a => <option key={a.label} value={a.label}>{a.label}</option>)}
-                    </select>
+                    <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Açıklama *</label>
+                    <textarea value={editAciklama} onChange={e => setEditAciklama(e.target.value)} rows={4} className="input-dark resize-none" />
                   </div>
-                  <div>
-                    <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1">Tip</label>
-                    <select value={editUrunTipi} onChange={e => setEditUrunTipi(e.target.value)} className="input-dark appearance-none cursor-pointer text-sm">
-                      <option value="">—</option>
-                      {(KATEGORI_HIYERARSI.find(k => k.label === editKategori)?.altKategoriler.find(a => a.label === editAltKategori)?.detaylar || []).map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
 
-              <div>
-                <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Açıklama *</label>
-                <textarea value={editAciklama} onChange={e => setEditAciklama(e.target.value)} rows={4} className="input-dark resize-none" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="relative">
-                  <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Marka</label>
-                  <input 
-                    type="text" 
-                    value={editMarka} 
-                    onChange={e => setEditMarka(e.target.value)} 
-                    onFocus={() => setShowMarkaSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowMarkaSuggestions(false), 200)}
-                    className="input-dark" 
-                  />
-                  {showMarkaSuggestions && existingMarkalar.filter(m => m.toLowerCase().includes(editMarka.toLowerCase())).length > 0 && (
-                    <div className="absolute z-20 left-0 right-0 mt-1 bg-[#1A1A1A] border border-white/10 max-h-40 overflow-y-auto shadow-2xl">
-                      {existingMarkalar.filter(m => m.toLowerCase().includes(editMarka.toLowerCase())).map(m => (
-                        <button
-                          key={m}
-                          onClick={() => { setEditMarka(m); setShowMarkaSuggestions(false) }}
-                          className="w-full text-left px-4 py-2 text-xs text-white/70 hover:bg-brand-red/10 hover:text-white transition-colors border-b border-white/5 last:border-0"
-                        >
-                          {m}
-                        </button>
-                      ))}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="relative">
+                      <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Fiyat</label>
+                      <input type="number" step="0.01" value={editFiyat} onChange={e => setEditFiyat(e.target.value)} className="input-dark" />
+                      <select value={editParaBirimi} onChange={e => setEditParaBirimi(e.target.value)} className="absolute right-2 top-7 bg-transparent text-white/40 border-none outline-none text-xs">
+                        {PARA_BIRIMLERI.map(p => <option key={p.value} value={p.value}>{p.value}</option>)}
+                      </select>
                     </div>
-                  )}
-                </div>
-                <div className="relative">
-                  <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Kullanım Alanı</label>
-                  <input 
-                    type="text" 
-                    value={editKullanim} 
-                    onChange={e => setEditKullanim(e.target.value)} 
-                    onFocus={() => setShowAlanSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowAlanSuggestions(false), 200)}
-                    className="input-dark" 
-                  />
-                  {showAlanSuggestions && existingAlanlar.filter(a => a.toLowerCase().includes(editKullanim.toLowerCase())).length > 0 && (
-                    <div className="absolute z-20 left-0 right-0 mt-1 bg-[#1A1A1A] border border-white/10 max-h-40 overflow-y-auto shadow-2xl">
-                      {existingAlanlar.filter(a => a.toLowerCase().includes(editKullanim.toLowerCase())).map(a => (
-                        <button
-                          key={a}
-                          onClick={() => { setEditKullanim(a); setShowAlanSuggestions(false) }}
-                          className="w-full text-left px-4 py-2 text-xs text-white/70 hover:bg-brand-red/10 hover:text-white transition-colors border-b border-white/5 last:border-0"
-                        >
-                          {a}
-                        </button>
-                      ))}
+                    <div className="relative">
+                      <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-green-500/40 block mb-1">Bayi Fiyatı</label>
+                      <input type="number" step="0.01" value={editBayiF} onChange={e => setEditBayiF(e.target.value)} className="input-dark border-green-500/10 focus:border-green-500/40" />
+                      <select value={editBayiParaBirimi} onChange={e => setEditBayiParaBirimi(e.target.value)} className="absolute right-2 top-7 bg-transparent text-white/40 border-none outline-none text-xs">
+                        {PARA_BIRIMLERI.map(p => <option key={p.value} value={p.value}>{p.value}</option>)}
+                      </select>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Fiyat bölümü */}
-              <div className="border border-white/5 bg-[#1A1A1A] p-4 space-y-3">
-                <span className="font-display font-semibold text-xs tracking-widest uppercase text-white/40">Fiyatlandırma</span>
-                <div>
-                  <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/30 block mb-1.5">Normal Fiyat</label>
-                  <div className="flex gap-2">
-                    <select value={editParaBirimi} onChange={e => setEditParaBirimi(e.target.value)} className="input-dark appearance-none cursor-pointer w-28 flex-shrink-0">
-                      {PARA_BIRIMLERI.map(p => <option key={p.value} value={p.value}>{p.symbol} {p.value}</option>)}
-                    </select>
-                    <input type="number" min="0" step="0.01" value={editFiyat} onChange={e => setEditFiyat(e.target.value)} className="input-dark flex-1" placeholder="0.00" />
                   </div>
-                </div>
-                <div>
-                  <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/30 block mb-1.5">
-                    Bayi Fiyatı (₺)
-                    <span className="ml-1 text-white/15 normal-case tracking-normal font-body font-normal text-xs">— Sadece bayiler görür</span>
-                  </label>
-                  <div className="flex gap-2">
-                    <select value={editBayiParaBirimi} onChange={e => setEditBayiParaBirimi(e.target.value)} className="input-dark appearance-none cursor-pointer w-28 flex-shrink-0">
-                      {PARA_BIRIMLERI.map(p => <option key={p.value} value={p.value}>{p.symbol} {p.value}</option>)}
-                    </select>
-                    <input type="number" min="0" step="0.01" value={editBayiF} onChange={e => setEditBayiF(e.target.value)} className="input-dark flex-1" placeholder="Boş bırakılabilir" />
-                  </div>
-                </div>
-                {editProduct.fiyat_guncelleme && (
-                  <p className="font-body text-white/20 text-xs">
-                    Son fiyat güncelleme: {new Date(editProduct.fiyat_guncelleme).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  </p>
-                )}
-                <p className="font-body text-white/15 text-xs">Fiyat değiştirilirse tarih otomatik güncellenir.</p>
-              </div>
 
-              <div>
-                <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Stok Durumu</label>
-                <select value={editStok} onChange={e => setEditStok(e.target.value)} className="input-dark appearance-none cursor-pointer">
-                  <option value="stokta">Stokta</option>
-                  <option value="tukendi">Tükendi</option>
-                  <option value="siparise_gore">Siparişe Göre</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Stok Adedi</label>
-                  <input type="number" min="0" value={editStokAdedi} onChange={(e) => setEditStokAdedi(e.target.value)} className="input-dark" />
-                </div>
-                <div>
-                  <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Kritik Seviye</label>
-                  <input type="number" min="0" value={editKritikStok} onChange={(e) => setEditKritikStok(e.target.value)} className="input-dark" />
-                </div>
-              </div>
-
-              {/* Fotoğraf Düzenleme */}
-              <div className="pt-4 border-t border-white/5 space-y-4">
-                <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block">
-                  Fotoğraflar <span className="text-white/20 normal-case tracking-normal font-body font-normal text-xs">(max 10)</span>
-                </label>
-                
-                <div className="grid grid-cols-3 gap-2">
-                  {/* Mevcutlar */}
-                  {editFotograflar.map((url) => (
-                    <div key={url} className="relative aspect-square bg-[#1A1A1A] border border-white/5 overflow-hidden group">
-                      <Image src={url} alt="" fill className="object-cover" sizes="100px" />
-                      <button onClick={() => removeExistingPhoto(url)}
-                        className="absolute top-1 right-1 w-6 h-6 bg-black/70 flex items-center justify-center text-white hover:bg-brand-red transition-colors opacity-0 group-hover:opacity-100">
-                        <Trash2 size={12} />
-                      </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="relative">
+                      <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Stok Adedi</label>
+                      <input type="number" value={editStokAdedi} onChange={e => setEditStokAdedi(e.target.value)} className="input-dark" />
                     </div>
-                  ))}
-                  
-                  {/* Yeniler */}
-                  {newPhotos.map((entry) => (
-                    <div key={entry.preview} className="relative aspect-square bg-[#1A1A1A] border border-brand-red/20 overflow-hidden group">
-                      <Image src={entry.preview} alt="" fill className="object-cover opacity-50" sizes="100px" />
-                      {entry.compressing ? (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-4 h-4 border-2 border-brand-red/30 border-t-brand-red rounded-full animate-spin" />
+                    <div className="relative">
+                      <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Kritik Stok</label>
+                      <input type="number" value={editKritikStok} onChange={e => setEditKritikStok(e.target.value)} className="input-dark" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="relative">
+                      <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Marka</label>
+                      <input type="text" value={editMarka} onChange={e => setEditMarka(e.target.value)} onFocus={() => setShowMarkaSuggestions(true)} onBlur={() => setTimeout(() => setShowMarkaSuggestions(false), 200)} className="input-dark" />
+                      {showMarkaSuggestions && existingMarkalar.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-[#1A1A1A] border border-white/10 max-h-32 overflow-y-auto">
+                          {existingMarkalar.filter(m => m.toLowerCase().includes(editMarka.toLowerCase())).map(m => (
+                            <button key={m} onClick={() => setEditMarka(m)} className="w-full text-left px-3 py-2 text-xs text-white/60 hover:bg-white/5">{m}</button>
+                          ))}
                         </div>
-                      ) : (
-                        <button onClick={() => removeNewPhoto(entry.preview)}
-                          className="absolute top-1 right-1 w-6 h-6 bg-black/70 flex items-center justify-center text-white hover:bg-brand-red transition-colors">
-                          <X size={12} />
-                        </button>
                       )}
                     </div>
-                  ))}
+                    <div className="relative">
+                      <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Kullanım Alanı</label>
+                      <input type="text" value={editKullanim} onChange={e => setEditKullanim(e.target.value)} onFocus={() => setShowAlanSuggestions(true)} onBlur={() => setTimeout(() => setShowAlanSuggestions(false), 200)} className="input-dark" />
+                      {showAlanSuggestions && existingAlanlar.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-[#1A1A1A] border border-white/10 max-h-32 overflow-y-auto">
+                          {existingAlanlar.filter(a => a.toLowerCase().includes(editKullanim.toLowerCase())).map(a => (
+                            <button key={a} onClick={() => setEditKullanim(a)} className="w-full text-left px-3 py-2 text-xs text-white/60 hover:bg-white/5">{a}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-                  {/* Ekleme Butonu */}
-                  {editFotograflar.length + newPhotos.length < 10 && (
-                    <label className="aspect-square flex flex-col items-center justify-center gap-2 border border-dashed border-white/10 hover:border-brand-red/40 cursor-pointer transition-colors">
-                      <Upload size={16} className="text-white/20" />
-                      <span className="font-display font-bold text-[8px] uppercase text-white/20">EKLE</span>
-                      <input type="file" multiple accept="image/*" className="hidden" onChange={handleNewFiles} />
-                    </label>
-                  )}
-                </div>
-              </div>
+                  <div className="space-y-3">
+                    <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block">Fotoğraflar (En fazla 10)</label>
+                    <div className="grid grid-cols-5 gap-2">
+                      {editFotograflar.map((url, i) => (
+                        <div key={i} className="aspect-square relative group bg-black border border-white/5">
+                          <Image src={url} alt="" fill className="object-cover" />
+                          <button onClick={() => removeExistingPhoto(url)} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                      {newPhotos.map((p, i) => (
+                        <div key={i} className="aspect-square relative group bg-black border border-white/10">
+                          <Image src={p.preview} alt="" fill className={`object-cover ${p.compressing ? 'opacity-30' : ''}`} />
+                          {p.compressing ? (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="w-4 h-4 border-2 border-white/10 border-t-white rounded-full animate-spin" />
+                            </div>
+                          ) : (
+                            <button onClick={() => removeNewPhoto(p.preview)} className="absolute -top-1 -right-1 w-5 h-5 bg-brand-red text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                              <X size={12} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {editFotograflar.length + newPhotos.length < 10 && (
+                        <label className="aspect-square flex flex-col items-center justify-center gap-2 border border-dashed border-white/10 hover:border-brand-red/40 cursor-pointer transition-colors">
+                          <Upload size={16} className="text-white/20" />
+                          <span className="font-display font-bold text-[8px] uppercase text-white/20">EKLE</span>
+                          <input type="file" multiple accept="image/*" className="hidden" onChange={handleNewFiles} />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="flex gap-3 px-6 pb-6 pt-3 border-t border-white/5 flex-shrink-0 bg-[#141414]">

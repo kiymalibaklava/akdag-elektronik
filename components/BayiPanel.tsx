@@ -9,6 +9,7 @@ import { ProductCard } from './ProductGrid'
 import type { User } from '@supabase/supabase-js'
 import { addManyToCart } from '@/lib/cart'
 import { TUM_KATEGORILER } from '@/lib/categories'
+import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
 
 const KATEGORILER = TUM_KATEGORILER
 
@@ -69,7 +70,9 @@ export default function BayiPanel({ user }: { user: User }) {
 
       if (bayiData?.onaylandi) {
         const { data } = await supabase
-          .from('urunler').select('*').order('created_at', { ascending: false })
+          .from('urunler')
+          .select(LIGHT_PRODUCT_FIELDS)
+          .order('created_at', { ascending: false })
         setUrunler(data || [])
 
         const { data: siparisData } = await supabase

@@ -14,18 +14,42 @@ import { getBreadcrumbs } from '@/lib/categories'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+import { getProduct } from '@/lib/product-service'
+
 interface Props { params: { id: string } }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const supabase = await createServerSupabaseClient()
-  const { data: product } = await supabase.from('urunler').select('ad, aciklama').eq('id', params.id).single()
+  const { data: product } = await getProduct(params.id)
   if (!product) return { title: 'Ürün Bulunamadı | Akdağ Elektronik' }
-  return { title: `${product.ad} | Akdağ Elektronik`, description: product.aciklama }
+
+  const url = `${getSiteUrl()}/urun/${product.id}`
+  const description = product.aciklama?.slice(0, 160) || `${product.ad} ürünü hakkında detaylı bilgi ve fiyatlar.`
+  const image = product.fotograflar?.[0] || `${getSiteUrl()}/og-image.jpg`
+
+  return {
+    title: `${product.ad} | Akdağ Elektronik`,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: product.ad,
+      description,
+      url,
+      siteName: 'Akdağ Elektronik',
+      images: [{ url: image, width: 1200, height: 630, alt: product.ad }],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: product.ad,
+      description,
+      images: [image],
+    },
+  }
 }
 
 export default async function UrunDetayPage({ params }: Props) {
   const supabase = await createServerSupabaseClient()
-  const { data: product } = await supabase.from('urunler').select('*').eq('id', params.id).single()
+  const { data: product } = await getProduct(params.id)
   if (!product) notFound()
 
   const { data: related } = await supabase

@@ -11,6 +11,7 @@ import AdminDashboard from './AdminDashboard'
 import AdminCategoryManager from './AdminCategoryManager'
 import { LogOut, Package, Users, FileText, ShoppingBag, LayoutDashboard, Layers } from 'lucide-react'
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
+import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
 
 interface AdminClientProps {
   onSuccess?: () => void
@@ -21,7 +22,6 @@ interface Product {
   ad: string
   kategori: string
   fotograflar: string[]
-  aciklama: string
   fiyat?: number
   bayi_fiyati?: number
   stok_durumu?: string
@@ -60,7 +60,10 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
   }, [onSuccess])
 
   const loadProducts = async () => {
-    const { data } = await supabase.from('urunler').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase
+      .from('urunler')
+      .select(LIGHT_PRODUCT_FIELDS)
+      .order('created_at', { ascending: false })
     setProducts(data || [])
   }
 

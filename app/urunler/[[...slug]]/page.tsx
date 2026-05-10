@@ -7,10 +7,31 @@ import { TUM_KATEGORILER, KATEGORI_HIYERARSI, NEW_KATEGORI_HIYERARSI, findCatego
 import { notFound } from 'next/navigation'
 import { Filter, SlidersHorizontal, ChevronRight } from 'lucide-react'
 
+import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
+import { unstable_cache } from 'next/cache'
+
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 const PER_PAGE = 16
+
+// Filtre seçeneklerini cache-leyerek egress tasarrufu yapıyoruz
+const getCachedFilters = unstable_cache(
+  async () => {
+    const supabase = await createServerSupabaseClient()
+    const { data } = await supabase
+      .from('urunler')
+      .select('marka, kullanim_alani')
+      .limit(5000)
+    
+    const markalar = Array.from(new Set((data || []).map((r) => r.marka).filter(Boolean))).sort() as string[]
+    const kullanimAlanlari = Array.from(new Set((data || []).map((r) => r.kullanim_alani).filter(Boolean))).sort() as string[]
+    
+    return { markalar, kullanimAlanlari }
+  },
+  ['product-filters'],
+  { revalidate: 3600 } // 1 saatlik cache
+)
 
 interface Props {
   params: { slug?: string[] }
@@ -22,6 +43,7 @@ interface Props {
     stok?: string
     marka?: string
     kullanim?: string
+    sirala?: string
   }
 }
 
@@ -50,12 +72,19 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
   const to = from + PER_PAGE - 1
   const min = searchParams.min ? Number(searchParams.min) : null
   const max = searchParams.max ? Number(searchParams.max) : null
+  const sirala = searchParams.sirala || 'yeni'
 
   let query = supabase
     .from('urunler')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range(from, to)
+    .select(LIGHT_PRODUCT_FIELDS, { count: 'exact' })
+
+  // Sıralama Mantığı
+  if (sirala === 'yeni') query = query.order('created_at', { ascending: false })
+  else if (sirala === 'fiyat_artan') query = query.order('fiyat', { ascending: true })
+  else if (sirala === 'fiyat_azalan') query = query.order('fiyat', { ascending: false })
+  else if (sirala === 'ad_asc') query = query.order('ad', { ascending: true })
+  
+  query = query.range(from, to)
 
   // Filtreleme
   if (searchParams.q) {
@@ -89,17 +118,11 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
     query = query.eq('kullanim_alani', searchParams.kullanim)
   }
 
-  const { data: products, count } = await query
+  const { data: products, count } = await query as any
   const totalPages = Math.ceil((count || 0) / PER_PAGE)
 
-  // Filtre Seçeneklerini Yükle (Daha akıllı bir şekilde)
-  const { data: filterRows } = await supabase
-    .from('urunler')
-    .select('marka, kullanim_alani')
-    .limit(1000)
-
-  const markalar = Array.from(new Set((filterRows || []).map((r) => r.marka).filter(Boolean))).sort() as string[]
-  const kullanimAlanlari = Array.from(new Set((filterRows || []).map((r) => r.kullanim_alani).filter(Boolean))).sort() as string[]
+  // Cache'den filtreleri çek
+  const { markalar, kullanimAlanlari } = await getCachedFilters()
 
   const baseParams = new URLSearchParams()
   Object.entries(searchParams).forEach(([k, v]) => { if (v && k !== 'sayfa') baseParams.set(k, v) })
@@ -133,7 +156,7 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
             <SlidersHorizontal size={14} className="text-brand-red" />
             <span className="font-display font-bold text-[10px] tracking-[0.2em] uppercase text-white/40">FİLTRELEME SEÇENEKLERİ</span>
           </div>
-          <form className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <form className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
             <div className="space-y-2">
               <label className="block text-[9px] font-display font-bold uppercase text-white/20 tracking-widest">Marka</label>
               <select name="marka" defaultValue={searchParams.marka || 'tum'} className="input-dark text-xs py-3 border-white/10 hover:border-brand-red/30 transition-colors appearance-none cursor-pointer">
@@ -168,10 +191,27 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
               </div>
             </div>
 
-            <div className="flex items-end">
-              <button className="btn-primary w-full justify-center text-xs py-3.5 tracking-[0.2em]" type="submit">
+            <div className="space-y-2">
+              <label className="block text-[9px] font-display font-bold uppercase text-white/20 tracking-widest">Sıralama</label>
+              <select name="sirala" defaultValue={searchParams.sirala || 'yeni'} className="input-dark text-xs py-3 border-white/10 hover:border-brand-red/30 transition-colors appearance-none cursor-pointer">
+                <option value="yeni">EN YENİLER</option>
+                <option value="fiyat_artan">FİYAT: DÜŞÜKTEN YÜKSEĞE</option>
+                <option value="fiyat_azalan">FİYAT: YÜKSEKTEN DÜŞÜĞE</option>
+                <option value="ad_asc">İSİM: A-Z</option>
+              </select>
+            </div>
+
+            <div className="flex items-end gap-2 xl:col-span-1 sm:col-span-2">
+              <button className="btn-primary flex-1 justify-center text-xs py-3.5 tracking-[0.2em]" type="submit">
                 <Filter size={14} className="mr-2" /> UYGULA
               </button>
+              {(searchParams.marka || searchParams.kullanim || searchParams.stok || searchParams.min || searchParams.max || searchParams.q) && (
+                <a href={slugArray.length > 0 ? `/urunler/${slugArray.join('/')}` : '/urunler'} 
+                   className="w-12 h-12 flex items-center justify-center border border-white/10 text-white/40 hover:border-brand-red/40 hover:text-brand-red transition-all"
+                   title="Filtreleri Temizle">
+                  <X size={16} />
+                </a>
+              )}
             </div>
           </form>
         </div>
