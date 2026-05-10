@@ -21,6 +21,11 @@ export const siparisOlusturSchema = z.object({
   teslimat_tipi: z.enum(['kargo', 'depo']).optional().default('kargo'),
   bayi_adi: z.string().max(200).optional().nullable(),
   is_bayi: z.boolean().optional(),
+  fatura_tipi: z.enum(['bireysel', 'kurumsal']).optional().default('bireysel'),
+  firma_unvani: z.string().max(300).optional().nullable(),
+  vergi_dairesi: z.string().max(100).optional().nullable(),
+  vergi_no: z.string().max(50).optional().nullable(),
+  teslimat_adresi: z.string().max(2000).optional().nullable(),
 })
 
 export const paytrTokenSchema = z.object({

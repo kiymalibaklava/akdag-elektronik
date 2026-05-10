@@ -80,7 +80,7 @@ export default function ProductSearch({ fullPage = false }: { fullPage?: boolean
         <div className="absolute top-full left-0 right-0 z-50 bg-[#141414] border border-white/10 border-t-0 shadow-2xl">
           {results.map((product) => (
             <Link
-              href={`/urunler/${product.id}`}
+              href={`/urun/${product.id}`}
               key={product.id}
               onClick={() => setOpen(false)}
               className="flex items-center gap-4 p-4 hover:bg-white/5 border-b border-white/5 last:border-0 transition-colors duration-150 group"

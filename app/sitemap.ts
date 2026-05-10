@@ -46,7 +46,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .limit(5000) 
 
     const urunPages: MetadataRoute.Sitemap = (urunler || []).map((urun) => ({
-      url: `${baseUrl}/urunler/${urun.id}`,
+      url: `${baseUrl}/urun/${urun.id}`,
       lastModified: new Date(urun.created_at),
       changeFrequency: 'weekly',
       priority: 0.8,

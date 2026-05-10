@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { Upload, Plus, X, Check, AlertCircle, Tag, ChevronRight } from 'lucide-react'
 import { PARA_BIRIMLERI } from '@/lib/kur'
 import { compressImage, formatFileSize } from './ImageCompressor'
-import { KATEGORI_HIYERARSI } from '@/lib/categories'
+import { NEW_KATEGORI_HIYERARSI, type CategoryNode } from '@/lib/categories'
 
 interface FileEntry {
   file: File
@@ -20,10 +20,12 @@ interface Props { onAdded?: () => void }
 export default function AdminAddProduct({ onAdded }: Props) {
   const [ad, setAd] = useState('')
   const [aciklama, setAciklama] = useState('')
-  // 3 seviyeli kategori state
-  const [anaIdx, setAnaIdx] = useState(0)
-  const [altIdx, setAltIdx] = useState(0)
-  const [detayIdx, setDetayIdx] = useState(0)
+  
+  // 3 seviyeli kategori state (Index yerine direkt isim/slug tutmak daha sağlam olabilir)
+  const [anaCat, setAnaCat] = useState<CategoryNode | null>(NEW_KATEGORI_HIYERARSI[0])
+  const [altCat, setAltCat] = useState<CategoryNode | null>(null)
+  const [detayCat, setDetayCat] = useState<CategoryNode | null>(null)
+
   const [fiyat, setFiyat] = useState('')
   const [bayi_fiyati, setBayiF] = useState('')
   const [stok, setStok] = useState('stokta')
@@ -37,12 +39,26 @@ export default function AdminAddProduct({ onAdded }: Props) {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [existingMarkalar, setExistingMarkalar] = useState<string[]>([])
+  const [existingAlanlar, setExistingAlanlar] = useState<string[]>([])
+  const [showMarkaSuggestions, setShowMarkaSuggestions] = useState(false)
+  const [showAlanSuggestions, setShowAlanSuggestions] = useState(false)
 
-  // Hiyerarşi hesaplama
-  const ana = KATEGORI_HIYERARSI[anaIdx]
-  const altKategoriler = ana?.altKategoriler || []
-  const alt = altKategoriler[altIdx]
-  const detaylar = alt?.detaylar || []
+  useEffect(() => {
+    const fetchExisting = async () => {
+      const supabase = createClient()
+      const { data: m } = await supabase.from('urunler').select('marka').not('marka', 'is', null)
+      const { data: a } = await supabase.from('urunler').select('kullanim_alani').not('kullanim_alani', 'is', null)
+      
+      if (m) setExistingMarkalar(Array.from(new Set(m.map((x: any) => x.marka).filter(Boolean))))
+      if (a) setExistingAlanlar(Array.from(new Set(a.map((x: any) => x.kullanim_alani).filter(Boolean))))
+    }
+    fetchExisting()
+  }, [])
+
+  // Hiyerarşi seçenekleri
+  const altKategoriler = anaCat?.children || []
+  const detaylar = altCat?.children || []
 
   const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || [])
@@ -65,6 +81,8 @@ export default function AdminAddProduct({ onAdded }: Props) {
   const handleSubmit = async () => {
     if (!ad.trim() || !aciklama.trim()) { setError('Ürün adı ve açıklama zorunludur.'); return }
     if (!fiyat || isNaN(parseFloat(fiyat))) { setError('Geçerli bir fiyat girin.'); return }
+    if (!anaCat) { setError('En az bir ana kategori seçmelisiniz.'); return }
+    
     setLoading(true); setError('')
 
     const supabase = createClient()
@@ -83,10 +101,11 @@ export default function AdminAddProduct({ onAdded }: Props) {
     const stokDurumu = stokAdetNum <= 0 ? 'tukendi' : stok
 
     const { error: insertErr } = await supabase.from('urunler').insert({
-      ad: ad.trim(), aciklama: aciklama.trim(),
-      kategori: ana?.label || '',
-      alt_kategori: alt?.label || null,
-      urun_tipi: detaylar[detayIdx] || null,
+      ad: ad.trim(), 
+      aciklama: aciklama.trim(),
+      kategori: anaCat.name,
+      alt_kategori: altCat?.name || null,
+      urun_tipi: detayCat?.name || null,
       fotograflar,
       fiyat: parseFloat(fiyat),
       bayi_fiyati: bayi_fiyati ? parseFloat(bayi_fiyati) : null,
@@ -102,7 +121,7 @@ export default function AdminAddProduct({ onAdded }: Props) {
     setLoading(false)
     if (insertErr) { setError(`Eklenemedi: ${insertErr.message}`); return }
     setSuccess(true)
-    setAd(''); setAciklama(''); setAnaIdx(0); setAltIdx(0); setDetayIdx(0)
+    setAd(''); setAciklama(''); setAnaCat(NEW_KATEGORI_HIYERARSI[0]); setAltCat(null); setDetayCat(null)
     setFiyat(''); setBayiF(''); setStok('stokta'); setParaBirimi('USD'); setBayiParaBirimi('USD')
     setMarka(''); setKullanimAlani(''); setStokAdedi('0'); setKritikStok('5')
     setEntries([])
@@ -114,7 +133,7 @@ export default function AdminAddProduct({ onAdded }: Props) {
     <div className="space-y-4">
       <div>
         <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Ürün Adı *</label>
-        <input type="text" value={ad} onChange={e => setAd(e.target.value)} className="input-dark" placeholder="JBL PRX915 Aktif Hoparlör" />
+        <input type="text" value={ad} onChange={e => setAd(e.target.value)} className="input-dark" placeholder="Örn: JBL PRX915" />
       </div>
 
       {/* ── Hiyerarşik Kategori Seçimi ───────────────── */}
@@ -129,12 +148,18 @@ export default function AdminAddProduct({ onAdded }: Props) {
           <div>
             <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1.5">Ana Kategori</label>
             <select
-              value={anaIdx}
-              onChange={e => { setAnaIdx(Number(e.target.value)); setAltIdx(0); setDetayIdx(0) }}
+              value={anaCat?.slug || ''}
+              onChange={e => { 
+                const found = NEW_KATEGORI_HIYERARSI.find(k => k.slug === e.target.value)
+                setAnaCat(found || null)
+                setAltCat(null)
+                setDetayCat(null)
+              }}
               className="input-dark appearance-none cursor-pointer text-sm"
             >
-              {KATEGORI_HIYERARSI.map((k, i) => (
-                <option key={k.label} value={i}>{k.label}</option>
+              <option value="">Seçiniz...</option>
+              {NEW_KATEGORI_HIYERARSI.map(k => (
+                <option key={k.slug} value={k.slug}>{k.name}</option>
               ))}
             </select>
           </div>
@@ -143,28 +168,37 @@ export default function AdminAddProduct({ onAdded }: Props) {
           <div>
             <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1.5">Alt Kategori</label>
             <select
-              value={altIdx}
-              onChange={e => { setAltIdx(Number(e.target.value)); setDetayIdx(0) }}
-              className="input-dark appearance-none cursor-pointer text-sm"
-              disabled={altKategoriler.length === 0}
+              value={altCat?.slug || ''}
+              onChange={e => { 
+                const found = altKategoriler.find(a => a.slug === e.target.value)
+                setAltCat(found || null)
+                setDetayCat(null)
+              }}
+              className="input-dark appearance-none cursor-pointer text-sm disabled:opacity-30"
+              disabled={!anaCat || altKategoriler.length === 0}
             >
-              {altKategoriler.map((a, i) => (
-                <option key={a.label} value={i}>{a.label}</option>
+              <option value="">Seçiniz...</option>
+              {altKategoriler.map(a => (
+                <option key={a.slug} value={a.slug}>{a.name}</option>
               ))}
             </select>
           </div>
 
-          {/* Detay / Ürün Tipi */}
+          {/* 3. Seviye / Ürün Tipi */}
           <div>
-            <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1.5">Ürün Tipi</label>
+            <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1.5">3. Seviye Kategori</label>
             <select
-              value={detayIdx}
-              onChange={e => setDetayIdx(Number(e.target.value))}
-              className="input-dark appearance-none cursor-pointer text-sm"
-              disabled={detaylar.length === 0}
+              value={detayCat?.slug || ''}
+              onChange={e => { 
+                const found = detaylar.find(d => d.slug === e.target.value)
+                setDetayCat(found || null)
+              }}
+              className="input-dark appearance-none cursor-pointer text-sm disabled:opacity-30"
+              disabled={!altCat || detaylar.length === 0}
             >
-              {detaylar.map((d, i) => (
-                <option key={d} value={i}>{d}</option>
+              <option value="">Seçiniz...</option>
+              {detaylar.map(d => (
+                <option key={d.slug} value={d.slug}>{d.name}</option>
               ))}
             </select>
           </div>
@@ -172,11 +206,11 @@ export default function AdminAddProduct({ onAdded }: Props) {
 
         {/* Seçim özeti */}
         <div className="flex items-center gap-1.5 text-[10px] font-body text-white/25 pt-1">
-          <span className="text-brand-red/60">{ana?.label}</span>
+          <span className={anaCat ? 'text-brand-red/60' : ''}>{anaCat?.name || '—'}</span>
           <ChevronRight size={8} className="text-white/15" />
-          <span className="text-white/40">{alt?.label || '—'}</span>
+          <span className={altCat ? 'text-white/40' : ''}>{altCat?.name || '—'}</span>
           <ChevronRight size={8} className="text-white/15" />
-          <span className="text-white/50">{detaylar[detayIdx] || '—'}</span>
+          <span className={detayCat ? 'text-white/50' : ''}>{detayCat?.name || '—'}</span>
         </div>
       </div>
 
@@ -186,13 +220,55 @@ export default function AdminAddProduct({ onAdded }: Props) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
+        <div className="relative">
           <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Marka</label>
-          <input type="text" value={marka} onChange={(e) => setMarka(e.target.value)} className="input-dark" placeholder="JBL" />
+          <input 
+            type="text" 
+            value={marka} 
+            onChange={(e) => setMarka(e.target.value)} 
+            onFocus={() => setShowMarkaSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowMarkaSuggestions(false), 200)}
+            className="input-dark" 
+            placeholder="Örn: JBL" 
+          />
+          {showMarkaSuggestions && existingMarkalar.filter(m => m.toLowerCase().includes(marka.toLowerCase())).length > 0 && (
+            <div className="absolute z-20 left-0 right-0 mt-1 bg-[#1A1A1A] border border-white/10 max-h-40 overflow-y-auto shadow-2xl">
+              {existingMarkalar.filter(m => m.toLowerCase().includes(marka.toLowerCase())).map(m => (
+                <button
+                  key={m}
+                  onClick={() => { setMarka(m); setShowMarkaSuggestions(false) }}
+                  className="w-full text-left px-4 py-2 text-xs text-white/70 hover:bg-brand-red/10 hover:text-white transition-colors border-b border-white/5 last:border-0"
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <div>
+        <div className="relative">
           <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Kullanım Alanı</label>
-          <input type="text" value={kullanimAlani} onChange={(e) => setKullanimAlani(e.target.value)} className="input-dark" placeholder="Konferans Salonu" />
+          <input 
+            type="text" 
+            value={kullanimAlani} 
+            onChange={(e) => setKullanimAlani(e.target.value)} 
+            onFocus={() => setShowAlanSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowAlanSuggestions(false), 200)}
+            className="input-dark" 
+            placeholder="Örn: Konser" 
+          />
+          {showAlanSuggestions && existingAlanlar.filter(a => a.toLowerCase().includes(kullanimAlani.toLowerCase())).length > 0 && (
+            <div className="absolute z-20 left-0 right-0 mt-1 bg-[#1A1A1A] border border-white/10 max-h-40 overflow-y-auto shadow-2xl">
+              {existingAlanlar.filter(a => a.toLowerCase().includes(kullanimAlani.toLowerCase())).map(a => (
+                <button
+                  key={a}
+                  onClick={() => { setKullanimAlani(a); setShowAlanSuggestions(false) }}
+                  className="w-full text-left px-4 py-2 text-xs text-white/70 hover:bg-brand-red/10 hover:text-white transition-colors border-b border-white/5 last:border-0"
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -215,7 +291,7 @@ export default function AdminAddProduct({ onAdded }: Props) {
 
         <div>
           <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-1.5">
-            Bayi Fiyatı (₺)
+            Bayi Fiyatı
             <span className="ml-1 text-white/20 normal-case tracking-normal font-body font-normal text-xs">— Sadece bayiler görür</span>
           </label>
           <div className="flex gap-2">
@@ -249,22 +325,13 @@ export default function AdminAddProduct({ onAdded }: Props) {
       {/* Fotoğraflar */}
       <div>
         <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">
-          Fotoğraflar <span className="text-white/20 normal-case tracking-normal font-body font-normal text-xs">(max 10, otomatik sıkıştırılır)</span>
+          Fotoğraflar <span className="text-white/20 normal-case tracking-normal font-body font-normal text-xs">(max 10)</span>
         </label>
         {entries.length > 0 && (
           <div className="grid grid-cols-3 gap-2 mb-2">
             {entries.map(entry => (
               <div key={entry.preview} className="relative aspect-square bg-[#1A1A1A] border border-white/5 overflow-hidden">
                 <img src={entry.preview} alt="" className="w-full h-full object-cover" />
-                {entry.compressing ? (
-                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  </div>
-                ) : entry.compressedSize && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5 text-center">
-                    <span className="text-[9px] text-white/40">{formatFileSize(entry.originalSize)} → {formatFileSize(entry.compressedSize)}</span>
-                  </div>
-                )}
                 <button onClick={() => removeFile(entry.preview)}
                   className="absolute top-1 right-1 w-5 h-5 bg-black/70 flex items-center justify-center text-white hover:bg-brand-red transition-colors">
                   <X size={10} />

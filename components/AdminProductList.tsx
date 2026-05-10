@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Trash2, Package, Pencil, X, Check, Search } from 'lucide-react'
 import { PARA_BIRIMLERI } from '@/lib/kur'
@@ -50,6 +50,21 @@ export default function AdminProductList({ products, onDeleted }: Props) {
   const [editKullanim, setEditKullanim] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [existingMarkalar, setExistingMarkalar] = useState<string[]>([])
+  const [existingAlanlar, setExistingAlanlar] = useState<string[]>([])
+  const [showMarkaSuggestions, setShowMarkaSuggestions] = useState(false)
+  const [showAlanSuggestions, setShowAlanSuggestions] = useState(false)
+
+  useEffect(() => {
+    const fetchExisting = async () => {
+      const supabase = createClient()
+      const { data: m } = await supabase.from('urunler').select('marka').not('marka', 'is', null)
+      const { data: a } = await supabase.from('urunler').select('kullanim_alani').not('kullanim_alani', 'is', null)
+      if (m) setExistingMarkalar(Array.from(new Set(m.map((x: any) => x.marka).filter(Boolean))))
+      if (a) setExistingAlanlar(Array.from(new Set(a.map((x: any) => x.kullanim_alani).filter(Boolean))))
+    }
+    fetchExisting()
+  }, [])
 
   const filtered = products.filter(p =>
     !search || p.ad.toLowerCase().includes(search.toLowerCase()) || p.kategori.toLowerCase().includes(search.toLowerCase())
@@ -166,9 +181,11 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                 <div className="flex items-center gap-4 mt-1">
                   {product.fiyat && (
                     <span className="font-body text-white/40 text-xs">
-                      {product.fiyat.toLocaleString('tr-TR')} ₺
+                      {PARA_BIRIMLERI.find(p => p.value === product.para_birimi)?.symbol || ''} {product.fiyat.toLocaleString('tr-TR')} {product.para_birimi || 'TL'}
                       {product.bayi_fiyati && (
-                        <span className="text-green-400/60 ml-1">/ Bayi: {product.bayi_fiyati.toLocaleString('tr-TR')} ₺</span>
+                        <span className="text-green-400/60 ml-1">
+                          / Bayi: {PARA_BIRIMLERI.find(p => p.value === product.bayi_para_birimi)?.symbol || ''} {product.bayi_fiyati.toLocaleString('tr-TR')} {product.bayi_para_birimi || 'TL'}
+                        </span>
                       )}
                     </span>
                   )}
@@ -259,13 +276,53 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                 <textarea value={editAciklama} onChange={e => setEditAciklama(e.target.value)} rows={4} className="input-dark resize-none" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <div className="relative">
                   <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Marka</label>
-                  <input type="text" value={editMarka} onChange={e => setEditMarka(e.target.value)} className="input-dark" />
+                  <input 
+                    type="text" 
+                    value={editMarka} 
+                    onChange={e => setEditMarka(e.target.value)} 
+                    onFocus={() => setShowMarkaSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowMarkaSuggestions(false), 200)}
+                    className="input-dark" 
+                  />
+                  {showMarkaSuggestions && existingMarkalar.filter(m => m.toLowerCase().includes(editMarka.toLowerCase())).length > 0 && (
+                    <div className="absolute z-20 left-0 right-0 mt-1 bg-[#1A1A1A] border border-white/10 max-h-40 overflow-y-auto shadow-2xl">
+                      {existingMarkalar.filter(m => m.toLowerCase().includes(editMarka.toLowerCase())).map(m => (
+                        <button
+                          key={m}
+                          onClick={() => { setEditMarka(m); setShowMarkaSuggestions(false) }}
+                          className="w-full text-left px-4 py-2 text-xs text-white/70 hover:bg-brand-red/10 hover:text-white transition-colors border-b border-white/5 last:border-0"
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div>
+                <div className="relative">
                   <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Kullanım Alanı</label>
-                  <input type="text" value={editKullanim} onChange={e => setEditKullanim(e.target.value)} className="input-dark" />
+                  <input 
+                    type="text" 
+                    value={editKullanim} 
+                    onChange={e => setEditKullanim(e.target.value)} 
+                    onFocus={() => setShowAlanSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowAlanSuggestions(false), 200)}
+                    className="input-dark" 
+                  />
+                  {showAlanSuggestions && existingAlanlar.filter(a => a.toLowerCase().includes(editKullanim.toLowerCase())).length > 0 && (
+                    <div className="absolute z-20 left-0 right-0 mt-1 bg-[#1A1A1A] border border-white/10 max-h-40 overflow-y-auto shadow-2xl">
+                      {existingAlanlar.filter(a => a.toLowerCase().includes(editKullanim.toLowerCase())).map(a => (
+                        <button
+                          key={a}
+                          onClick={() => { setEditKullanim(a); setShowAlanSuggestions(false) }}
+                          className="w-full text-left px-4 py-2 text-xs text-white/70 hover:bg-brand-red/10 hover:text-white transition-colors border-b border-white/5 last:border-0"
+                        >
+                          {a}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

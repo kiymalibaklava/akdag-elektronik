@@ -63,6 +63,11 @@ export async function POST(req: NextRequest) {
       teslimat_tipi,
       bayi_adi,
       is_bayi,
+      fatura_tipi,
+      firma_unvani,
+      vergi_dairesi,
+      vergi_no,
+      teslimat_adresi,
     } = parsed.data
 
     const hesaplanan = urunler.reduce((s, u) => s + u.fiyat * u.adet, 0)
@@ -87,6 +92,11 @@ export async function POST(req: NextRequest) {
         teslimat_tipi: teslimat_tipi || 'kargo',
         odeme_durumu: 'beklemede',
         durum: 'beklemede',
+        fatura_tipi: fatura_tipi || 'bireysel',
+        firma_unvani: firma_unvani || null,
+        vergi_dairesi: vergi_dairesi || null,
+        vergi_no: vergi_no || null,
+        teslimat_adresi: teslimat_adresi || null,
       })
       .select('siparis_no, id')
       .single()

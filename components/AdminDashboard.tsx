@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import { TrendingUp, Package, Users, Clock, Download, Calendar } from 'lucide-react'
+import { TrendingUp, Package, Users, Clock, Download, Calendar, FileText } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
 interface Siparis {
@@ -15,6 +15,7 @@ interface Siparis {
   toplam_tutar: number
   durum: string
   odeme_durumu: string
+  dekont_url?: string
   created_at: string
   urunler: any[]
 }
@@ -76,13 +77,14 @@ export default function AdminDashboard() {
   // İstatistikler (Filtrelenmiş siparişlere göre)
   const stats = useMemo(() => {
     const gerceklesenCiro = filteredSiparisler
-      .filter(s => s.odeme_durumu === 'odendi' || s.durum === 'tamamlandi')
+      .filter(s => s.odeme_durumu === 'odendi' || s.durum === 'teslim_edildi')
       .reduce((sum, s) => sum + Number(s.toplam_tutar), 0)
 
     const bekleyenSayisi = filteredSiparisler.filter(s => s.durum === 'beklemede').length
     const kargoBekleyenler = filteredSiparisler.filter(s => s.durum === 'onaylandi').length
+    const dekontBekleyenler = filteredSiparisler.filter(s => s.dekont_url && s.odeme_durumu !== 'odendi').length
 
-    return { ciro: gerceklesenCiro, bekleyen: bekleyenSayisi, kargoBekleyen: kargoBekleyenler, bayiSayisi: bayiCount }
+    return { ciro: gerceklesenCiro, bekleyen: bekleyenSayisi, kargoBekleyen: kargoBekleyenler, bayiSayisi: bayiCount, dekontBekleyen: dekontBekleyenler }
   }, [filteredSiparisler, bayiCount])
 
   // En Çok Satan Ürünler (Top 5)
@@ -90,7 +92,7 @@ export default function AdminDashboard() {
     const urunMap: Record<string, { ad: string, adet: number, ciro: number }> = {}
     
     filteredSiparisler
-      .filter(s => s.odeme_durumu === 'odendi' || s.durum === 'tamamlandi')
+      .filter(s => s.odeme_durumu === 'odendi' || s.durum === 'teslim_edildi')
       .forEach(s => {
         if (Array.isArray(s.urunler)) {
           s.urunler.forEach(u => {
@@ -117,7 +119,7 @@ export default function AdminDashboard() {
       const ayAdi = aylar[hedefTarih.getMonth()]
       const oAydakiSiparisler = siparisler.filter(s => {
         const d = new Date(s.created_at)
-        return d.getMonth() === hedefTarih.getMonth() && d.getFullYear() === hedefTarih.getFullYear() && (s.odeme_durumu === 'odendi' || s.durum === 'tamamlandi')
+        return d.getMonth() === hedefTarih.getMonth() && d.getFullYear() === hedefTarih.getFullYear() && (s.odeme_durumu === 'odendi' || s.durum === 'teslim_edildi')
       })
       grafik.push({ isim: ayAdi, ciro: oAydakiSiparisler.reduce((sum, s) => sum + Number(s.toplam_tutar), 0) })
     }
@@ -204,6 +206,15 @@ export default function AdminDashboard() {
           <Users size={80} className="absolute -right-4 -bottom-4 text-yellow-500/5 group-hover:scale-110 transition-transform" />
           <div className="text-white/40 mb-2 font-display font-semibold text-xs tracking-widest uppercase relative z-10">Onaylı Bayiler</div>
           <div className="font-display font-black text-3xl text-white relative z-10">{stats.bayiSayisi}</div>
+        </div>
+
+        <div className={`bg-[#141414] border border-white/5 p-6 border-l-2 relative overflow-hidden group ${stats.dekontBekleyen > 0 ? 'border-l-orange-500' : 'border-l-white/10'}`}>
+          <FileText size={80} className="absolute -right-4 -bottom-4 text-orange-500/5 group-hover:scale-110 transition-transform" />
+          <div className="text-white/40 mb-2 font-display font-semibold text-xs tracking-widest uppercase relative z-10">Dekont Onayı Bekleyen</div>
+          <div className="font-display font-black text-3xl text-white relative z-10">
+            {stats.dekontBekleyen}
+            {stats.dekontBekleyen > 0 && <span className="ml-2 text-xs font-body text-orange-500 animate-pulse">Onay Gerekli</span>}
+          </div>
         </div>
       </div>
 

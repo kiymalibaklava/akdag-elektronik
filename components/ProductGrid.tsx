@@ -42,10 +42,12 @@ interface Props {
   showPrice?: boolean
 }
 
+import { getKurClient } from '@/lib/kur-client'
+
 function useKur() {
   const [kur, setKur] = useState<KurData>({ USD: 32.5, EUR: 35.2, guncelleme: null })
   useEffect(() => {
-    fetch('/api/kur').then(r => r.json()).then(setKur).catch(() => {})
+    getKurClient().then(setKur)
   }, [])
   return kur
 }
@@ -72,7 +74,7 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
     })
   }, [])
 
-  const showPrice = showPriceProp !== undefined ? showPriceProp : (isBayi || isBayiAuth)
+  const showPrice = isBayi || isBayiAuth
 
   useEffect(() => {
     const sync = () => setCompareCount(getCompareList().length)
@@ -218,7 +220,7 @@ export function ProductCard({ product, isBayi = false, kur, showPrice = false }:
   return (
     <div className="product-card group relative bg-[#141414] border border-white/5 overflow-hidden hover:border-brand-red/30 flex flex-col">
       {/* Tıklanabilir alan — Link ile sarılı (SEO + navigasyon) */}
-      <Link href={`/urunler/${product.id}`} className="flex flex-col flex-1">
+      <Link href={`/urun/${product.id}`} className="flex flex-col flex-1">
         {/* Görsel */}
         <div className="aspect-square bg-[#1A1A1A] relative overflow-hidden">
           {product.fotograflar?.[0] ? (
@@ -311,8 +313,10 @@ export function ProductCard({ product, isBayi = false, kur, showPrice = false }:
               </div>
             )}
             {stockCount !== null && (
-              <div className={`font-body text-[11px] ${isCritical ? 'text-yellow-400' : 'text-white/25'}`}>
-                Stok: {stockCount}{isCritical ? ' (Kritik)' : ''}
+              <div className={`font-body text-[11px] ${isCritical ? 'text-brand-red font-bold animate-pulse' : 'text-white/25'}`}>
+                {stockCount > 20 ? 'STOKTA: 20+ ADET' : `STOKTA: ${stockCount} ADET`}
+                {isCritical && stockCount > 0 && <span className="ml-1"> (SON ÜRÜNLER!)</span>}
+                {stockCount <= 0 && 'STOKTA YOK'}
               </div>
             )}
           </div>

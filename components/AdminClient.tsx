@@ -8,7 +8,8 @@ import AdminLoginForm from './AdminLoginForm'
 import AdminBayiYonetim from './AdminBayiYonetim'
 import AdminSiparisler from './AdminSiparisler'
 import AdminDashboard from './AdminDashboard'
-import { LogOut, Package, Users, FileText, ShoppingBag, LayoutDashboard } from 'lucide-react'
+import AdminCategoryManager from './AdminCategoryManager'
+import { LogOut, Package, Users, FileText, ShoppingBag, LayoutDashboard, Layers } from 'lucide-react'
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 
 interface AdminClientProps {
@@ -27,7 +28,7 @@ interface Product {
   fiyat_guncelleme?: string
 }
 
-type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'bayiler' | 'basvurular'
+type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'kategoriler' | 'bayiler' | 'basvurular'
 
 export default function AdminClient({ onSuccess }: AdminClientProps) {
   const [user, setUser] = useState<User | null>(null)
@@ -38,7 +39,6 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
   const supabase = useRef(createClient()).current
 
   useEffect(() => {
-    // BURASI DÜZELTİLDİ: response yanına : any eklendi
     supabase.auth.getSession().then((response: any) => {
       const session = response.data.session
       setUser(session?.user ?? null)
@@ -103,7 +103,6 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
           </div>
           <div className="bg-[#141414] border border-white/8 p-8">
             <AdminLoginForm onSuccess={() => {
-              // BURASI DÜZELTİLDİ: response yanına : any eklendi
               supabase.auth.getSession().then((response: any) => {
                 const session = response.data.session;
                 if (session) { 
@@ -124,6 +123,7 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
     { id: 'dashboard' as Tab, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'siparisler' as Tab, label: 'Siparişler', icon: ShoppingBag, badge: bekleyenSiparis },
     { id: 'urunler'   as Tab, label: 'Ürünler',    icon: Package },
+    { id: 'kategoriler' as Tab, label: 'Kategoriler', icon: Layers },
     { id: 'bayiler'   as Tab, label: 'Bayiler',     icon: Users },
     { id: 'basvurular'as Tab, label: 'Başvurular',  icon: FileText },
   ]
@@ -190,6 +190,8 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
             </div>
           </div>
         )}
+
+        {activeTab === 'kategoriler' && <AdminCategoryManager />}
 
         {(activeTab === 'bayiler' || activeTab === 'basvurular') && (
           <AdminBayiYonetim activeTab={activeTab} />

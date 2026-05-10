@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { TrendingUp, RefreshCw } from 'lucide-react'
+import { getKurClient } from '@/lib/kur-client'
 
 interface Kur { USD: number; EUR: number; guncelleme: string | null; fallback?: boolean }
 
@@ -12,10 +13,9 @@ export default function KurGostergesi() {
 
   const fetchKur = async () => {
     try {
-      const res = await fetch('/api/kur')
-      const data = await res.json()
+      const data = await getKurClient()
       setSon(kur)
-      setKur(data)
+      setKur(data as any)
     } catch {}
     finally { setYukleniyor(false) }
   }
@@ -29,7 +29,7 @@ export default function KurGostergesi() {
 
   if (yukleniyor) {
     return (
-      <div className="hidden md:flex items-center gap-3 text-white/20 text-xs">
+      <div className="flex items-center gap-3 text-white/20 text-xs">
         <RefreshCw size={10} className="animate-spin" />
         <span className="font-body">Kur yükleniyor...</span>
       </div>
@@ -42,7 +42,7 @@ export default function KurGostergesi() {
   const eurYon = son ? (kur.EUR > son.EUR ? 'up' : kur.EUR < son.EUR ? 'down' : 'flat') : 'flat'
 
   return (
-    <div className="hidden md:flex items-center gap-4">
+    <div className="flex items-center gap-4 flex-wrap md:flex-nowrap">
       {/* USD/TRY */}
       <div className="flex items-center gap-1.5">
         <span className="font-display font-bold text-xs text-white/30 tracking-wider">USD</span>

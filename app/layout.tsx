@@ -1,10 +1,29 @@
 import type { Metadata } from 'next'
+import { Barlow, Barlow_Condensed } from 'next/font/google'
 import './globals.css'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import WhatsAppButton from '@/components/WhatsAppButton'
-import KvkkBanner from '@/components/KvkkBanner'
+import dynamic from 'next/dynamic'
 import { getSiteUrl } from '@/lib/site-url'
+
+// Fonts optimized for performance and no layout shift
+const barlow = Barlow({ 
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  variable: '--font-body',
+  display: 'swap',
+})
+
+const barlowCondensed = Barlow_Condensed({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800', '900'],
+  variable: '--font-display',
+  display: 'swap',
+})
+
+// Dynamic imports for non-critical global components to reduce initial bundle
+const WhatsAppButton = dynamic(() => import('@/components/WhatsAppButton'), { ssr: false })
+const KvkkBanner = dynamic(() => import('@/components/KvkkBanner'), { ssr: false })
 
 export const metadata: Metadata = {
   title: 'Akdağ Elektronik | Ses, Işık & Görüntü Sistemleri – Kayseri',
@@ -38,8 +57,8 @@ const orgJsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" suppressHydrationWarning>
-      <body className="bg-[#0F0F0F] text-white antialiased">
+    <html lang="tr" className={`${barlow.variable} ${barlowCondensed.variable}`} suppressHydrationWarning>
+      <body className="bg-[#0F0F0F] text-white antialiased font-body">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import {
   Package, Clock, CheckCircle, XCircle, Truck, Store,
-  RefreshCw, Search, X, ChevronDown, ChevronUp, Phone, Mail, MapPin
+  RefreshCw, Search, X, ChevronDown, ChevronUp, Phone, Mail, MapPin, FileText, ExternalLink, Briefcase, User as UserIcon, CreditCard
 } from 'lucide-react'
 
 interface SiparisUrun {
@@ -29,6 +29,12 @@ interface Siparis {
   notlar: string
   teslimat_tipi?: string
   kargo_takip_no?: string
+  dekont_url?: string
+  fatura_tipi?: 'bireysel' | 'kurumsal'
+  firma_unvani?: string
+  vergi_dairesi?: string
+  vergi_no?: string
+  teslimat_adresi?: string
   created_at: string
   updated_at: string
 }
@@ -81,6 +87,14 @@ export default function AdminSiparisler() {
     setUpdatingId(null)
   }
 
+  const updateOdemeDurumu = async (id: string, durum: string) => {
+    await supabase.from('siparisler').update({
+      odeme_durumu: durum,
+      updated_at: new Date().toISOString(),
+    }).eq('id', id)
+    await loadSiparisler()
+  }
+
   const kaydetKargoNo = async (id: string, no: string) => {
     setUpdatingKargo(id)
     await supabase.from('siparisler').update({
@@ -92,7 +106,7 @@ export default function AdminSiparisler() {
   }
 
   const filtered = siparisler.filter(s => {
-    const durumMatch = filterDurum === 'hepsi' || s.durum === filterDurum
+    const durumMatch = filterDurum === 'hepsi' || s.durum === filterDurum || (filterDurum === 'dekontlu' && s.dekont_url)
     const searchMatch = !search ||
       s.siparis_no?.toLowerCase().includes(search.toLowerCase()) ||
       s.ad_soyad?.toLowerCase().includes(search.toLowerCase()) ||
@@ -101,7 +115,6 @@ export default function AdminSiparisler() {
     return durumMatch && searchMatch
   })
 
-  // İstatistikler
   const stats = {
     toplam: siparisler.length,
     beklemede: siparisler.filter(s => s.durum === 'beklemede').length,
@@ -160,6 +173,7 @@ export default function AdminSiparisler() {
         <div className="flex gap-1.5 flex-wrap">
           {[
             { id: 'hepsi', label: 'Tümü' },
+            { id: 'dekontlu', label: 'Dekontlu' },
             ...Object.entries(DURUM_CONFIG).map(([id, c]) => ({ id, label: c.label })),
           ].map(f => (
             <button key={f.id} onClick={() => setFilterDurum(f.id)}
@@ -177,236 +191,217 @@ export default function AdminSiparisler() {
 
       <div className="font-body text-white/30 text-sm mb-4">{filtered.length} sipariş</div>
 
-      {/* Sipariş listesi */}
-      {filtered.length === 0 ? (
-        <div className="border border-white/5 bg-[#141414] p-12 text-center">
-          <Package size={40} className="text-white/10 mx-auto mb-3" />
-          <p className="font-display font-semibold text-sm uppercase text-white/20 tracking-widest">
-            {search || filterDurum !== 'hepsi' ? 'Sonuç bulunamadı' : 'Henüz sipariş yok'}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-1">
-          {filtered.map(siparis => {
-            const cfg = DURUM_CONFIG[siparis.durum] || DURUM_CONFIG.beklemede
-            const Icon = cfg.icon
-            const expanded = expandedId === siparis.id
+      <div className="space-y-1">
+        {filtered.map(siparis => {
+          const cfg = DURUM_CONFIG[siparis.durum] || DURUM_CONFIG.beklemede
+          const Icon = cfg.icon
+          const expanded = expandedId === siparis.id
 
-            return (
-              <div key={siparis.id} className="bg-[#141414] border border-white/5 overflow-hidden hover:border-white/10 transition-colors">
-                {/* Ana satır */}
-                <div className="flex items-center gap-4 p-4">
-                  {/* Durum ikonu */}
-                  <div className={`w-9 h-9 flex items-center justify-center flex-shrink-0 border ${cfg.bg}`}>
-                    <Icon size={15} className={cfg.color} />
-                  </div>
-
-                  {/* Bilgiler */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="font-display font-black text-sm text-white tracking-wide">
-                        {siparis.siparis_no || 'AKD-?'}
-                      </span>
-                      <span className={`font-display font-semibold text-xs tracking-widest uppercase px-2 py-0.5 border ${cfg.bg} ${cfg.color}`}>
-                        {cfg.label}
-                      </span>
-                      <span className="font-body text-white/20 text-xs">
-                        {ODEME_TIPI[siparis.odeme_tipi] || siparis.odeme_tipi}
-                      </span>
-                      {siparis.odeme_durumu === 'odendi' && (
-                        <span className="font-display font-semibold text-xs tracking-widest uppercase px-2 py-0.5 bg-green-500/10 border border-green-500/20 text-green-400">
-                          Ödendi
-                        </span>
-                      )}
-                      {/* Teslimat tipi etiketi */}
-                      {siparis.teslimat_tipi === 'depo' ? (
-                        <span className="font-display font-bold text-xs tracking-widest uppercase px-2 py-0.5 bg-orange-500/15 border border-orange-500/30 text-orange-400 flex items-center gap-1">
-                          <Store size={10} />
-                          DEPODAN AL
-                        </span>
-                      ) : (
-                        <span className="font-display font-semibold text-xs tracking-widest uppercase px-2 py-0.5 bg-white/3 border border-white/8 text-white/25 flex items-center gap-1">
-                          <Truck size={10} />
-                          KARGO
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 mt-0.5 flex-wrap">
-                      <span className="font-body text-white/50 text-sm">
-                        {siparis.ad_soyad || 'Misafir'}
-                      </span>
-                      {siparis.telefon && (
-                        <a href={`tel:${siparis.telefon}`} className="font-body text-white/30 text-xs hover:text-brand-red transition-colors flex items-center gap-1">
-                          <Phone size={10} />{siparis.telefon}
-                        </a>
-                      )}
-                      <span className="font-body text-white/20 text-xs">
-                        {new Date(siparis.created_at).toLocaleDateString('tr-TR', {
-                          day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
-                        })}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Tutar */}
-                  <div className="text-right flex-shrink-0">
-                    <div className="font-display font-black text-lg text-brand-red">
-                      {siparis.toplam_tutar?.toLocaleString('tr-TR')} ₺
-                    </div>
-                    <div className="font-body text-white/20 text-xs">
-                      {Array.isArray(siparis.urunler) ? siparis.urunler.reduce((s, u) => s + u.adet, 0) : 0} ürün
-                    </div>
-                  </div>
-
-                  {/* Detay toggle */}
-                  <button onClick={() => setExpandedId(expanded ? null : siparis.id)}
-                    className="w-8 h-8 border border-white/10 flex items-center justify-center text-white/30 hover:border-brand-red/40 hover:text-brand-red transition-all flex-shrink-0">
-                    {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </button>
+          return (
+            <div key={siparis.id} className="bg-[#141414] border border-white/5 overflow-hidden hover:border-white/10 transition-colors">
+              <div className="flex items-center gap-4 p-4">
+                <div className={`w-9 h-9 flex items-center justify-center flex-shrink-0 border ${cfg.bg}`}>
+                  <Icon size={15} className={cfg.color} />
                 </div>
 
-                {/* Detay panel */}
-                {expanded && (
-                  <div className="border-t border-white/5 p-5 space-y-5 bg-[#111111]">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      {/* Müşteri bilgileri */}
-                      <div>
-                        <h4 className="font-display font-bold text-xs uppercase tracking-widest text-white/40 mb-3">Müşteri Bilgileri</h4>
-                        <div className="space-y-1.5 text-sm font-body">
-                          <div className="flex gap-2"><span className="text-white/30 w-16">Ad:</span><span className="text-white/70">{siparis.ad_soyad || '—'}</span></div>
-                          <div className="flex gap-2"><span className="text-white/30 w-16">E-posta:</span>
-                            <a href={`mailto:${siparis.email}`} className="text-brand-red/70 hover:text-brand-red">{siparis.email || '—'}</a>
-                          </div>
-                          <div className="flex gap-2"><span className="text-white/30 w-16">Tel:</span>
-                            <a href={`tel:${siparis.telefon}`} className="text-white/70 hover:text-brand-red">{siparis.telefon || '—'}</a>
-                          </div>
-                          {siparis.notlar && (
-                            <div className="flex gap-2"><span className="text-white/30 w-16">Not:</span><span className="text-white/50 italic">{siparis.notlar}</span></div>
-                          )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="font-display font-black text-sm text-white tracking-wide">{siparis.siparis_no}</span>
+                    <span className={`font-display font-semibold text-xs tracking-widest uppercase px-2 py-0.5 border ${cfg.bg} ${cfg.color}`}>{cfg.label}</span>
+                    <span className="font-body text-white/20 text-xs">{ODEME_TIPI[siparis.odeme_tipi] || siparis.odeme_tipi}</span>
+                    {siparis.odeme_durumu === 'odendi' && (
+                      <span className="font-display font-semibold text-xs tracking-widest uppercase px-2 py-0.5 bg-green-500/10 border border-green-500/20 text-green-400">Ödendi</span>
+                    )}
+                    {siparis.dekont_url && (
+                      <span className="font-display font-black text-[10px] bg-brand-red text-white px-2 py-0.5 animate-pulse">DEKONT YÜKLÜ</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 mt-0.5 flex-wrap">
+                    <span className="font-body text-white/50 text-sm">{siparis.ad_soyad}</span>
+                    <span className="font-body text-white/20 text-xs">
+                      {new Date(siparis.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right flex-shrink-0">
+                  <div className="font-display font-black text-lg text-brand-red">{siparis.toplam_tutar?.toLocaleString('tr-TR')} ₺</div>
+                  <div className="font-body text-white/20 text-xs">{Array.isArray(siparis.urunler) ? siparis.urunler.reduce((s, u) => s + u.adet, 0) : 0} ürün</div>
+                </div>
+
+                <button onClick={() => setExpandedId(expanded ? null : siparis.id)}
+                  className="w-8 h-8 border border-white/10 flex items-center justify-center text-white/30 hover:border-brand-red/40 hover:text-brand-red transition-all flex-shrink-0">
+                  {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
+              </div>
+
+              {expanded && (
+                <div className="border-t border-white/5 p-5 space-y-6 bg-[#111111]">
+                  <div className="grid md:grid-cols-3 gap-8">
+                    {/* 1. Müşteri & Fatura Bilgileri */}
+                    <div>
+                      <h4 className="font-display font-bold text-xs uppercase tracking-widest text-white/40 mb-4 flex items-center gap-2">
+                        <UserIcon size={12} className="text-brand-red" /> Müşteri & Fatura
+                      </h4>
+                      <div className="space-y-3 text-sm font-body">
+                        <div className="bg-white/3 p-3 space-y-2 border border-white/5">
+                           <div className="text-white/80 font-bold">{siparis.ad_soyad}</div>
+                           <div className="text-white/40 text-xs">{siparis.email}</div>
+                           <div className="text-white/40 text-xs">{siparis.telefon}</div>
+                        </div>
+                        
+                        <div className="bg-brand-red/5 p-3 border border-brand-red/10">
+                           <div className="flex items-center gap-2 mb-2">
+                              {siparis.fatura_tipi === 'kurumsal' ? <Briefcase size={13} className="text-brand-red" /> : <UserIcon size={13} className="text-brand-red" />}
+                              <span className="font-display font-bold text-[10px] uppercase tracking-widest text-white/60">
+                                {siparis.fatura_tipi === 'kurumsal' ? 'Kurumsal Fatura' : 'Bireysel Fatura'}
+                              </span>
+                           </div>
+                           {siparis.fatura_tipi === 'kurumsal' ? (
+                             <div className="text-xs text-white/70 space-y-1">
+                                <div className="font-bold uppercase text-white">{siparis.firma_unvani}</div>
+                                <div>{siparis.vergi_dairesi} / {siparis.vergi_no}</div>
+                             </div>
+                           ) : (
+                             <div className="text-xs text-white/50">Şahıs faturası kesilecektir.</div>
+                           )}
                         </div>
 
-                        {/* Teslimat bilgisi */}
-                        {siparis.teslimat_tipi === 'depo' && (
-                          <div className="mt-3 bg-orange-500/10 border border-orange-500/20 p-3 space-y-1.5">
-                            <div className="flex items-center gap-2">
-                              <Store size={13} className="text-orange-400" />
-                              <span className="font-display font-bold text-xs uppercase tracking-widest text-orange-400">Depodan Teslim Alınacak</span>
+                        {siparis.teslimat_tipi === 'kargo' && siparis.teslimat_adresi && (
+                          <div className="bg-blue-500/5 border border-blue-500/20 p-3 mt-3">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <MapPin size={13} className="text-blue-400" />
+                              <span className="font-display font-bold text-[10px] uppercase tracking-widest text-blue-400">Kargo Adresi</span>
                             </div>
-                            <div className="flex items-start gap-2">
-                              <MapPin size={11} className="text-orange-300/50 shrink-0 mt-0.5" />
-                              <span className="font-body text-white/40 text-xs">Cumhuriyet Mah. Sur Cad. No:17/A, Melikgazi / Kayseri</span>
+                            <div className="text-xs text-white/60 leading-relaxed font-body">
+                              {siparis.teslimat_adresi}
                             </div>
-                            <div className="font-body text-orange-300/60 text-xs">Ürün 1 saat içinde depoda hazır edilmelidir.</div>
                           </div>
                         )}
-                      </div>
 
-                      {/* Ürünler */}
-                      <div>
-                        <h4 className="font-display font-bold text-xs uppercase tracking-widest text-white/40 mb-3">Sipariş Kalemleri</h4>
-                        <div className="space-y-2">
-                          {Array.isArray(siparis.urunler) && siparis.urunler.map((u, i) => (
-                            <div key={i} className="flex items-center gap-3">
-                              {u.fotograf && (
-                                <img src={u.fotograf} alt={u.ad} className="w-10 h-10 object-cover bg-[#1A1A1A] flex-shrink-0" />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="font-display font-bold text-xs uppercase text-white truncate">{u.ad}</div>
-                                <div className="font-body text-white/30 text-xs">×{u.adet} — {u.fiyat?.toLocaleString('tr-TR')} ₺/adet</div>
-                              </div>
-                              <div className="font-display font-black text-sm text-white flex-shrink-0">
-                                {((u.fiyat || 0) * u.adet).toLocaleString('tr-TR')} ₺
-                              </div>
-                            </div>
-                          ))}
-                          <div className="flex justify-between pt-2 border-t border-white/5">
-                            <span className="font-display font-bold text-xs uppercase text-white/40">Toplam</span>
-                            <span className="font-display font-black text-base text-brand-red">{siparis.toplam_tutar?.toLocaleString('tr-TR')} ₺</span>
+                        {siparis.notlar && (
+                          <div className="text-xs text-white/40 italic bg-black/20 p-2 border-l-2 border-white/10">
+                            " {siparis.notlar} "
                           </div>
-                        </div>
+                        )}
                       </div>
                     </div>
 
-                    {/* Durum güncelleme */}
-                    <div className="border-t border-white/5 pt-4">
-                      <h4 className="font-display font-bold text-xs uppercase tracking-widest text-white/40 mb-3">Durum Güncelle</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(DURUM_CONFIG).map(([durum, cfg]) => {
-                          const BtnIcon = cfg.icon
-                          const isActive = siparis.durum === durum
-                          return (
-                            <button
-                              key={durum}
-                              onClick={() => !isActive && updateDurum(siparis.id, durum)}
-                              disabled={isActive || updatingId === siparis.id}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-display font-semibold uppercase tracking-widest transition-all disabled:cursor-not-allowed ${
-                                isActive
-                                  ? `${cfg.bg} ${cfg.color} cursor-default`
-                                  : 'border-white/10 text-white/30 hover:border-white/30 hover:text-white'
-                              }`}
-                            >
-                              {updatingId === siparis.id
-                                ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-                                : <BtnIcon size={11} />
-                              }
-                              {cfg.label}
-                            </button>
-                          )
-                        })}
-                      </div>
-
-                      {/* İletişim butonları */}
-                      <div className="flex gap-2 mt-3">
-                        {siparis.telefon && (
-                          <a href={`https://wa.me/${siparis.telefon.replace(/\D/g, '')}?text=${encodeURIComponent(`Merhaba ${siparis.ad_soyad}, ${siparis.siparis_no} numaralı siparişiniz hakkında bilgi vermek istiyoruz.`)}`}
-                            target="_blank" rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366]/10 border border-[#25D366]/20 text-[#25D366] text-xs font-display font-semibold uppercase tracking-widest hover:bg-[#25D366]/20 transition-colors">
-                            <Phone size={11} />WhatsApp
-                          </a>
-                        )}
-                        {siparis.email && (
-                          <a href={`mailto:${siparis.email}?subject=Siparişiniz Hakkında - ${siparis.siparis_no}`}
-                            className="flex items-center gap-1.5 px-3 py-1.5 border border-white/10 text-white/30 text-xs font-display font-semibold uppercase tracking-widest hover:border-brand-red/40 hover:text-brand-red transition-all">
-                            <Mail size={11} />E-posta
-                          </a>
-                        )}
-                      </div>
-
-                      {/* Kargo Takip Girişi */}
-                      {siparis.teslimat_tipi !== 'depo' && (
-                        <div className="border-t border-white/5 pt-4 mt-4">
-                          <h4 className="font-display font-bold text-xs uppercase tracking-widest text-white/40 mb-3">Kargo Takip Bilgisi</h4>
-                          <div className="flex items-center gap-2 max-w-sm">
-                            <input 
-                              type="text" 
-                              className="input-dark text-xs flex-1" 
-                              placeholder="Örn: 1Z9999999999999999" 
-                              value={kargoInputs[siparis.id] !== undefined ? kargoInputs[siparis.id] : (siparis.kargo_takip_no || '')}
-                              onChange={(e) => setKargoInputs({...kargoInputs, [siparis.id]: e.target.value})}
-                            />
-                            <button 
-                              onClick={() => kaydetKargoNo(siparis.id, kargoInputs[siparis.id] !== undefined ? kargoInputs[siparis.id] : (siparis.kargo_takip_no || ''))}
-                              disabled={updatingKargo === siparis.id}
-                              className="btn-primary text-xs py-2 px-4"
-                            >
-                              {updatingKargo === siparis.id ? '...' : 'Kaydet'}
-                            </button>
-                          </div>
-                          {siparis.kargo_takip_no && (
-                            <p className="font-body text-green-400/80 text-[10px] mt-2 flex items-center gap-1">
-                              <CheckCircle size={10} /> Takip numarası müşteriye yansıtıldı.
-                            </p>
-                          )}
+                    {/* 2. Ödeme & Dekont */}
+                    <div>
+                      <h4 className="font-display font-bold text-xs uppercase tracking-widest text-white/40 mb-4 flex items-center gap-2">
+                        <CreditCard size={12} className="text-brand-red" /> Ödeme Bilgisi
+                      </h4>
+                      <div className="space-y-4">
+                        <div className="bg-white/3 p-4 border border-white/5">
+                           <div className="font-body text-xs text-white/40 mb-1">Yöntem: <span className="text-white/80">{ODEME_TIPI[siparis.odeme_tipi] || siparis.odeme_tipi}</span></div>
+                           <div className="font-body text-xs text-white/40">Durum: <span className={siparis.odeme_durumu === 'odendi' ? 'text-green-400 font-bold' : 'text-yellow-400'}>
+                             {siparis.odeme_durumu === 'odendi' ? 'ÖDEME ALINDI' : 'ÖDEME BEKLENİYOR'}
+                           </span></div>
                         </div>
-                      )}
+
+                        {siparis.dekont_url && (
+                          <div className="bg-green-500/10 border border-green-500/20 p-4 space-y-3">
+                             <div className="flex items-center gap-2 text-green-400 font-display font-bold text-[10px] uppercase tracking-widest">
+                                <FileText size={14} /> DEKONT YÜKLENDİ
+                             </div>
+                             <a 
+                               href={siparis.dekont_url} 
+                               target="_blank" 
+                               rel="noreferrer" 
+                               className="flex items-center justify-center gap-2 w-full py-2 bg-green-600 text-white font-display font-bold text-[10px] uppercase tracking-widest hover:bg-green-700 transition-colors"
+                             >
+                               DEKONTU GÖRÜNTÜLE <ExternalLink size={12} />
+                             </a>
+                             {siparis.odeme_durumu !== 'odendi' && (
+                               <button 
+                                 onClick={() => updateOdemeDurumu(siparis.id, 'odendi')}
+                                 className="w-full py-2 border border-green-500/30 text-green-400 font-display font-bold text-[10px] uppercase tracking-widest hover:bg-green-500/10"
+                               >
+                                 ÖDEMEYİ ONAYLA
+                               </button>
+                             )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 3. Ürünler */}
+                    <div>
+                      <h4 className="font-display font-bold text-xs uppercase tracking-widest text-white/40 mb-4 flex items-center gap-2">
+                        <Package size={12} className="text-brand-red" /> Ürünler
+                      </h4>
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 scrollbar-hide">
+                        {Array.isArray(siparis.urunler) && siparis.urunler.map((u, i) => (
+                          <div key={i} className="flex items-center gap-3 bg-white/3 p-2">
+                            {u.fotograf && <img src={u.fotograf} alt={u.ad} className="w-10 h-10 object-cover bg-black flex-shrink-0" />}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-display font-bold text-[10px] uppercase text-white truncate">{u.ad}</div>
+                              <div className="font-body text-white/30 text-[10px]">×{u.adet} — {u.fiyat?.toLocaleString('tr-TR')} ₺</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-white/10 flex justify-between items-center">
+                         <span className="font-display font-bold text-xs uppercase text-white/40">Toplam Tutar</span>
+                         <span className="font-display font-black text-xl text-brand-red">{siparis.toplam_tutar?.toLocaleString('tr-TR')} ₺</span>
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
+
+                  {/* Alt İşlemler: Durum ve Kargo */}
+                  <div className="grid md:grid-cols-2 gap-8 pt-6 border-t border-white/5">
+                     <div>
+                        <h4 className="font-display font-bold text-xs uppercase tracking-widest text-white/40 mb-3">Sipariş Durumu</h4>
+                        <div className="flex flex-wrap gap-2">
+                           {Object.entries(DURUM_CONFIG).map(([durum, cfg]) => (
+                             <button
+                               key={durum}
+                               onClick={() => siparis.durum !== durum && updateDurum(siparis.id, durum)}
+                               disabled={siparis.durum === durum || updatingId === siparis.id}
+                               className={`flex items-center gap-1.5 px-3 py-1.5 border text-[10px] font-display font-bold uppercase tracking-widest transition-all ${
+                                 siparis.durum === durum ? `${cfg.bg} ${cfg.color}` : 'border-white/10 text-white/30 hover:border-brand-red/40 hover:text-white'
+                               }`}
+                             >
+                               <cfg.icon size={11} /> {cfg.label}
+                             </button>
+                           ))}
+                        </div>
+                     </div>
+
+                     <div>
+                        <h4 className="font-display font-bold text-xs uppercase tracking-widest text-white/40 mb-3">Lojistik & Takip</h4>
+                        {siparis.teslimat_tipi === 'depo' ? (
+                           <div className="bg-orange-500/10 border border-orange-500/20 p-3 flex items-center gap-3">
+                              <Store size={16} className="text-orange-400" />
+                              <span className="font-display font-bold text-[10px] uppercase tracking-widest text-orange-400">Mağazadan Teslim Edilecek</span>
+                           </div>
+                        ) : (
+                           <div className="flex gap-2">
+                              <input 
+                                type="text" 
+                                className="input-dark text-xs flex-1" 
+                                placeholder="Kargo Takip No" 
+                                value={kargoInputs[siparis.id] !== undefined ? kargoInputs[siparis.id] : (siparis.kargo_takip_no || '')}
+                                onChange={(e) => setKargoInputs({...kargoInputs, [siparis.id]: e.target.value})}
+                              />
+                              <button 
+                                onClick={() => kaydetKargoNo(siparis.id, kargoInputs[siparis.id] !== undefined ? kargoInputs[siparis.id] : (siparis.kargo_takip_no || ''))}
+                                disabled={updatingKargo === siparis.id}
+                                className="btn-primary text-[10px] py-2"
+                              >
+                                {updatingKargo === siparis.id ? '...' : 'TAKİP NO KAYDET'}
+                              </button>
+                           </div>
+                        )}
+                     </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
