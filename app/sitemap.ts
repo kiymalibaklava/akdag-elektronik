@@ -3,7 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getSiteUrl } from '@/lib/site-url'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = getSiteUrl()
+  // baseUrl'in sonundaki / işaretini temizleyerek çift slash hatasını önleriz
+  const rawUrl = getSiteUrl()
+  const baseUrl = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl
 
   // 1. Sabit (Statik) Sayfalar
   const staticPages: MetadataRoute.Sitemap = [
@@ -41,7 +43,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .from('urunler')
       .select('id, created_at')
       .order('created_at', { ascending: false })
-      // Limit if too many, but standard sitemap handles 50,000 URLs
       .limit(5000) 
 
     const urunPages: MetadataRoute.Sitemap = (urunler || []).map((urun) => ({
