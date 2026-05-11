@@ -204,10 +204,22 @@ export default function AdminProposalManager() {
                       </div>
                       <input type="number" value={item.miktar} onChange={e => {const n=[...items]; n[idx].miktar=Number(e.target.value); setItems(n)}} className="w-16 bg-white/5 border border-white/10 text-white text-xs p-1"/>
                       <div className="flex gap-1 items-center">
-                        {item.id.toString().startsWith('manual') ? (
-                          <input type="number" value={item.fiyat_doviz} onChange={e => updateManualItem(idx, 'fiyat_doviz', e.target.value)} className="w-20 bg-white/5 border border-white/10 text-white text-xs p-1"/>
-                        ) : <span className="text-xs text-white">{item.fiyat_doviz}</span>}
-                        <span className="text-[10px] text-white/40">{item.para_birimi}</span>
+                        <input 
+                          type="number" 
+                          value={item.fiyat_doviz} 
+                          onChange={e => updateManualItem(idx, 'fiyat_doviz', e.target.value)} 
+                          className="w-20 bg-white/5 border border-white/10 text-white text-xs p-1 outline-none focus:border-brand-red"
+                          step="0.01"
+                        />
+                        <select 
+                          value={item.para_birimi}
+                          onChange={e => updateManualItem(idx, 'para_birimi', e.target.value)}
+                          className="bg-[#1A1A1A] border border-white/10 text-[10px] text-white px-1 outline-none"
+                        >
+                          <option value="TRY">₺</option>
+                          <option value="USD">$</option>
+                          <option value="EUR">€</option>
+                        </select>
                       </div>
                       <button onClick={() => setItems(items.filter((_,i)=>i!==idx))} className="text-white/20 hover:text-brand-red transition-colors"><Trash2 size={16}/></button>
                     </div>
