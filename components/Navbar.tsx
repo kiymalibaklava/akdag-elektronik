@@ -19,7 +19,6 @@ const navLinks = [
   { href: '/iletisim', label: 'İletişim' },
 ]
 
-/** Ana kategori ikonları — hiyerarşi sırasına göre */
 const KATEGORI_IKONLARI = [Speaker, Lightbulb, Monitor, Box, Plug, Briefcase]
 
 export default function Navbar() {
