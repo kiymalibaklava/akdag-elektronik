@@ -8,6 +8,7 @@ import AdminLoginForm from './AdminLoginForm'
 import AdminBayiYonetim from './AdminBayiYonetim'
 import AdminSiparisler from './AdminSiparisler'
 import AdminDashboard from './AdminDashboard'
+import AdminProposalManager from './AdminProposalManager'
 import { LogOut, Package, Users, FileText, ShoppingBag, LayoutDashboard, Layers } from 'lucide-react'
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
@@ -27,7 +28,7 @@ interface Product {
   fiyat_guncelleme?: string
 }
 
-type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'bayiler' | 'basvurular'
+type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'teklif' | 'bayiler' | 'basvurular'
 
 export default function AdminClient({ onSuccess }: AdminClientProps) {
   const [user, setUser] = useState<User | null>(null)
@@ -125,6 +126,7 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
     { id: 'dashboard' as Tab, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'siparisler' as Tab, label: 'Siparişler', icon: ShoppingBag, badge: bekleyenSiparis },
     { id: 'urunler'   as Tab, label: 'Ürünler',    icon: Package },
+    { id: 'teklif'    as Tab, label: 'Teklif Hazırla', icon: FileText },
     { id: 'bayiler'   as Tab, label: 'Bayiler',     icon: Users },
     { id: 'basvurular'as Tab, label: 'Başvurular',  icon: FileText },
   ]
@@ -192,6 +194,8 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
           </div>
         )}
 
+
+        {activeTab === 'teklif' && <AdminProposalManager />}
 
         {(activeTab === 'bayiler' || activeTab === 'basvurular') && (
           <AdminBayiYonetim activeTab={activeTab} />

@@ -5,7 +5,7 @@ import ProductGrid from '@/components/ProductGrid'
 import Pagination from '@/components/Pagination'
 import { TUM_KATEGORILER, KATEGORI_HIYERARSI, NEW_KATEGORI_HIYERARSI, findCategoryBySlug } from '@/lib/categories'
 import { notFound } from 'next/navigation'
-import { Filter, SlidersHorizontal, ChevronRight } from 'lucide-react'
+import { Filter, SlidersHorizontal, ChevronRight, X } from 'lucide-react'
 
 import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
 import { unstable_cache } from 'next/cache'
