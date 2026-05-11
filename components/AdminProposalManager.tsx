@@ -301,12 +301,12 @@ export default function AdminProposalManager() {
               return (
                 <tr key={idx} className="border-b border-black/10">
                   <td className="p-2 border border-black/10 text-center"><img src={i.gorsel} className="w-10 h-10 object-contain mx-auto"/></td>
-                  <td className="p-2 border border-black/10 font-bold text-center">{i.amount || i.miktar} Adet</td>
+                  <td className="p-2 border border-black/10 font-bold text-center">{i.miktar} Adet</td>
                   <td className="p-2 border border-black/10 font-bold uppercase">{i.marka}<br/><span className="text-[7px] opacity-40">{i.kod}</span></td>
                   <td className="p-2 border border-black/10">{i.ad}</td>
                   <td className="p-2 border border-black/10 text-right font-medium">{i.fiyat_doviz.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {i.para_birimi === 'USD' ? '$' : i.para_birimi === 'EUR' ? '€' : '₺'}</td>
                   <td className="p-2 border border-black/10 text-right">{birim_tl.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</td>
-                  <td className="p-2 border border-black/10 text-right font-black">{(birim_tl * (i.amount || i.miktar)).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</td>
+                  <td className="p-2 border border-black/10 text-right font-black">{(birim_tl * i.miktar).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</td>
                 </tr>
               )
             })}
