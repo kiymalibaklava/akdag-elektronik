@@ -33,3 +33,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Binary / installer files (should never be committed)
+*.exe
+*.msi
+*.dmg
+*.odg
+*.xlsx
+*.zip
+*.rar

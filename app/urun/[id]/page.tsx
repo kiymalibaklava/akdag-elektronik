@@ -130,7 +130,9 @@ export default async function UrunDetayPage({ params }: Props) {
             <div className="flex items-center gap-2 mb-6">
               <div className={`w-2 h-2 rounded-full ${stok === 'stokta' ? 'bg-green-400' : stok === 'tukendi' ? 'bg-red-500' : 'bg-yellow-400'}`} />
               <span className="font-body text-sm text-white/50">
-                {product.stok_adedi !== null && product.stok_adedi !== undefined ? (
+                {stok === 'siparise_gore' ? (
+                  'Siparişe Göre'
+                ) : product.stok_adedi !== null && product.stok_adedi !== undefined ? (
                   product.stok_adedi > 20 ? 'Stokta: 20+ Adet' : `Stokta: ${product.stok_adedi} Adet`
                 ) : (
                   stok === 'stokta' ? 'Stokta Mevcut' : stok === 'tukendi' ? 'Tükendi' : 'Siparişe Göre'

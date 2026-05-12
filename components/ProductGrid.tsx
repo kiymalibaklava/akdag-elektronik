@@ -248,6 +248,11 @@ export function ProductCard({ product, isBayi = false, kur, showPrice = false }:
               <span className="font-display font-black text-sm uppercase tracking-widest text-white/60">Tükendi</span>
             </div>
           )}
+          {stok === 'siparise_gore' && (
+            <div className="absolute top-3 right-3 bg-yellow-500 text-black px-2 py-0.5 font-display font-black text-[9px] uppercase tracking-wider">
+              Siparişe Göre
+            </div>
+          )}
         </div>
 
         {/* İçerik */}

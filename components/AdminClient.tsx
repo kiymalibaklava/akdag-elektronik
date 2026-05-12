@@ -9,7 +9,8 @@ import AdminBayiYonetim from './AdminBayiYonetim'
 import AdminSiparisler from './AdminSiparisler'
 import AdminDashboard from './AdminDashboard'
 import AdminProposalManager from './AdminProposalManager'
-import { LogOut, Package, Users, FileText, ShoppingBag, LayoutDashboard, Layers } from 'lucide-react'
+import AdminWolvoxQueue from './AdminWolvoxQueue'
+import { LogOut, Package, Users, FileText, ShoppingBag, LayoutDashboard, Layers, Database } from 'lucide-react'
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
 
@@ -28,7 +29,7 @@ interface Product {
   fiyat_guncelleme?: string
 }
 
-type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'teklif' | 'bayiler' | 'basvurular'
+type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'teklif' | 'bayiler' | 'basvurular' | 'wolvox'
 
 export default function AdminClient({ onSuccess }: AdminClientProps) {
   const [user, setUser] = useState<User | null>(null)
@@ -126,6 +127,7 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
     { id: 'dashboard' as Tab, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'siparisler' as Tab, label: 'Siparişler', icon: ShoppingBag, badge: bekleyenSiparis },
     { id: 'urunler'   as Tab, label: 'Ürünler',    icon: Package },
+    { id: 'wolvox'    as Tab, label: 'Wolvox Kuyruğu', icon: Database },
     { id: 'teklif'    as Tab, label: 'Teklif Hazırla', icon: FileText },
     { id: 'bayiler'   as Tab, label: 'Bayiler',     icon: Users },
     { id: 'basvurular'as Tab, label: 'Başvurular',  icon: FileText },
@@ -196,6 +198,8 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
 
 
         {activeTab === 'teklif' && <AdminProposalManager />}
+        
+        {activeTab === 'wolvox' && <AdminWolvoxQueue />}
 
         {(activeTab === 'bayiler' || activeTab === 'basvurular') && (
           <AdminBayiYonetim activeTab={activeTab} />

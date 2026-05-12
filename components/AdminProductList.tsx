@@ -7,6 +7,7 @@ import { PARA_BIRIMLERI } from '@/lib/kur'
 import { createClient } from '@/lib/supabase'
 import { KATEGORILER, KATEGORI_HIYERARSI } from '@/lib/categories'
 import { compressImage } from './ImageCompressor'
+import * as XLSX from 'xlsx'
 
 interface FileEntry {
   file: File
@@ -190,6 +191,27 @@ export default function AdminProductList({ products, onDeleted }: Props) {
     })
   }
 
+  const exportToExcel = () => {
+    const dataToExport = filtered.map(p => ({
+      'Ürün Adı': p.ad,
+      'Kategori': p.kategori,
+      'Marka': p.marka || '-',
+      'Stok Kodu': (p as any).model_kodu || '-',
+      'Fiyat': p.fiyat || 0,
+      'Para Birimi': p.para_birimi || 'TRY',
+      'Bayi Fiyatı': p.bayi_fiyati || 0,
+      'Bayi Para Birimi': p.bayi_para_birimi || 'TRY',
+      'Stok Adedi': p.stok_adedi || 0,
+      'Stok Durumu': p.stok_durumu === 'stokta' ? 'Stokta' : p.stok_durumu === 'tukendi' ? 'Tükendi' : 'Siparişe Göre',
+      'Son Güncelleme': p.fiyat_guncelleme ? new Date(p.fiyat_guncelleme).toLocaleDateString('tr-TR') : '-'
+    }))
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Ürünler')
+    XLSX.writeFile(workbook, `Akdag_Elektronik_Urunler_${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
+
   return (
     <>
       <div className="relative mb-4">
@@ -206,6 +228,12 @@ export default function AdminProductList({ products, onDeleted }: Props) {
             <X size={14} />
           </button>
         )}
+        <button 
+          onClick={exportToExcel}
+          className="absolute -right-36 top-1/2 -translate-y-1/2 bg-green-600/10 border border-green-600/20 text-green-500 px-4 py-2 rounded-sm text-[10px] font-bold uppercase hover:bg-green-600/20 transition-all flex items-center gap-2"
+        >
+          <Upload size={12} className="rotate-180" /> Excel&apos;e Aktar
+        </button>
       </div>
 
       {filtered.length === 0 ? (

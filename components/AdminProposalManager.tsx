@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
-import { Search, Plus, Trash2, FileText, User, Calendar, Info, RefreshCw, Printer } from 'lucide-react'
+import { Search, Plus, Trash2, FileText, User, Calendar, Info, RefreshCw, Printer, Download } from 'lucide-react'
 import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
+import * as XLSX from 'xlsx'
 
 interface ProposalItem {
   id: string
@@ -44,6 +45,9 @@ export default function AdminProposalManager() {
   const [showHistory, setShowHistory] = useState(false)
   const [pastProposals, setPastProposals] = useState<any[]>([])
   const [isSaving, setIsSaving] = useState(false)
+  const [archiveSearch, setArchiveSearch] = useState('')
+  const [currentProposalId, setCurrentProposalId] = useState<string | null>(null)
+  const [currentProposalNo, setCurrentProposalNo] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -67,16 +71,26 @@ export default function AdminProposalManager() {
     setPastProposals(data || [])
   }
 
-  const handleSaveProposal = async () => {
+  const handleSaveProposal = async (isNewVersion: boolean = false) => {
     if (!customerName || items.length === 0) {
       alert('Müşteri adı ve en az bir ürün gereklidir.')
       return
     }
     setIsSaving(true)
     const totals = calculateTotal()
+    
+    let nextProposalNo = currentProposalNo || `AK-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000) + 1000}`
+    
+    // Eğer yeni bir versiyon isteniyorsa numara üret
+    if (isNewVersion && currentProposalNo) {
+      const baseNo = currentProposalNo.split('-V')[0]
+      const currentV = currentProposalNo.includes('-V') ? parseInt(currentProposalNo.split('-V')[1]) : 1
+      nextProposalNo = `${baseNo}-V${currentV + 1}`
+    }
+
     try {
-      await supabase.from('teklifler').insert([{
-        teklif_no: `AK-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000) + 1000}`,
+      const payload = {
+        teklif_no: nextProposalNo,
         musteri_adi: customerName,
         tarih: proposalDate,
         ozel_not: customNote,
@@ -86,14 +100,87 @@ export default function AdminProposalManager() {
         genel_toplam: totals.genelToplam,
         kur_usd: kur.USD,
         kur_eur: kur.EUR
-      }])
-      alert('Teklif kaydedildi.')
+      }
+
+      let result;
+      if (isNewVersion || !currentProposalId) {
+        // Yeni kayıt (Insert)
+        result = await supabase.from('teklifler').insert([payload]).select().single()
+      } else {
+        // Mevcut kaydı güncelle (Update)
+        result = await supabase.from('teklifler').update(payload).eq('id', currentProposalId).select().single()
+      }
+
+      if (result.error) throw result.error
+      
+      alert(isNewVersion ? 'Yeni versiyon kaydedildi.' : currentProposalId ? 'Teklif güncellendi.' : 'Teklif kaydedildi.')
+      
+      if (result.data) {
+        setCurrentProposalId(result.data.id)
+        setCurrentProposalNo(result.data.teklif_no)
+      }
       loadHistory()
-    } catch {
-      alert('Hata oluştu.')
+    } catch (err: any) {
+      alert('Hata oluştu: ' + err.message)
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleDeleteProposal = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm('Bu teklif kalıcı olarak silinecek. Emin misiniz?')) return
+    const { error } = await supabase.from('teklifler').delete().eq('id', id)
+    if (!error) {
+      setPastProposals(prev => prev.filter(p => p.id !== id))
+      if (currentProposalId === id) {
+        setCurrentProposalId(null)
+        setCurrentProposalNo(null)
+      }
+    } else {
+      alert('Silme hatası: ' + error.message)
+    }
+  }
+
+  const handleNewProposal = () => {
+    setItems([])
+    setCustomerName('')
+    setProposalDate(new Date().toISOString().split('T')[0])
+    setCustomNote('')
+    setCurrentProposalId(null)
+    setCurrentProposalNo(null)
+    fetchKur()
+  }
+
+  const exportToExcel = () => {
+    if (items.length === 0) return
+    
+    const data = items.map(i => {
+      const k = i.para_birimi === 'USD' ? kur.USD : i.para_birimi === 'EUR' ? kur.EUR : 1
+      const birimTl = i.fiyat_doviz * k
+      return {
+        'Marka': i.marka,
+        'Kod': i.kod,
+        'Ürün Adı': i.ad,
+        'Miktar': i.miktar,
+        'Birim Fiyat (Döviz)': i.fiyat_doviz,
+        'Para Birimi': i.para_birimi,
+        'Birim Fiyat (TL)': birimTl,
+        'Toplam (TL)': birimTl * i.miktar
+      }
+    })
+
+    const worksheet = XLSX.utils.json_to_sheet(data)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Teklif")
+    
+    // Sütun genişliklerini ayarla
+    worksheet['!cols'] = [
+      { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 10 }, 
+      { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 15 }
+    ]
+
+    XLSX.writeFile(workbook, `${customerName || 'Teklif'}_${new Date().toISOString().split('T')[0]}.xlsx`)
   }
 
   const handleSearch = async (query: string) => {
@@ -164,10 +251,26 @@ export default function AdminProposalManager() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-[#141414] p-8 border border-white/5 rounded-sm">
-              <h3 className="text-brand-red font-display font-bold text-sm uppercase mb-6 flex items-center gap-2"><User size={16}/> Bilgiler</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} className="bg-white/5 border border-white/10 p-4 text-white outline-none focus:border-brand-red" placeholder="Müşteri Adı"/>
-                <input type="date" value={proposalDate} onChange={e => setProposalDate(e.target.value)} className="bg-white/5 border border-white/10 p-4 text-white outline-none focus:border-brand-red"/>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-white/40 ml-1">Müşteri Adı</label>
+                  <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 text-white outline-none focus:border-brand-red" placeholder="Müşteri Adı"/>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-white/40 ml-1">Teklif Tarihi</label>
+                  <input type="date" value={proposalDate} onChange={e => setProposalDate(e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 text-white outline-none focus:border-brand-red"/>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-white/40 ml-1">Dolar Kuru ($)</label>
+                  <input type="number" step="0.01" value={kur.USD} onChange={e => setKur({...kur, USD: parseFloat(e.target.value) || 0})} className="w-full bg-white/5 border border-white/10 p-3 text-white text-sm outline-none focus:border-brand-red"/>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-white/40 ml-1">Euro Kuru (€)</label>
+                  <input type="number" step="0.01" value={kur.EUR} onChange={e => setKur({...kur, EUR: parseFloat(e.target.value) || 0})} className="w-full bg-white/5 border border-white/10 p-3 text-white text-sm outline-none focus:border-brand-red"/>
+                </div>
               </div>
               <div className="mt-8 flex gap-4">
                 <div className="flex-1 relative">
@@ -184,7 +287,9 @@ export default function AdminProposalManager() {
                     </div>
                   )}
                 </div>
-                <button onClick={addManualItem} className="bg-white/5 px-6 border border-white/10 text-white text-xs font-bold uppercase hover:bg-white/10 transition-colors">Serbest Kalem</button>
+                <button onClick={addManualItem} className="bg-brand-red/10 px-6 border border-brand-red/20 text-brand-red text-[10px] font-bold uppercase hover:bg-brand-red/20 transition-colors whitespace-nowrap">
+                  + Serbest Kalem
+                </button>
               </div>
               <textarea value={customNote} onChange={e => setCustomNote(e.target.value)} className="w-full mt-6 bg-white/5 border border-white/10 p-4 text-white text-sm outline-none focus:border-brand-red" placeholder="Özel Not (Hitap vb.)" rows={2}/>
             </div>
@@ -237,11 +342,49 @@ export default function AdminProposalManager() {
                 <div className="flex justify-between text-white/60"><span>KDV (%20)</span><span>{totals.kdv.toLocaleString()} ₺</span></div>
                 <div className="flex justify-between text-white font-black text-lg pt-3 border-t border-white/10"><span>TOPLAM</span><span>{totals.genelToplam.toLocaleString()} ₺</span></div>
               </div>
-              <button onClick={() => window.print()} disabled={items.length===0} className="w-full mt-8 bg-brand-red text-white py-4 font-bold text-xs uppercase tracking-widest hover:bg-brand-red/80 flex items-center justify-center gap-2"><Printer size={16}/> YAZDIR / PDF</button>
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                <button onClick={handleSaveProposal} className="bg-white/5 border border-white/10 text-white py-3 text-[10px] uppercase font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2"><RefreshCw size={12}/> KAYDET</button>
-                <button onClick={() => setShowHistory(true)} className="bg-white/5 border border-white/10 text-white py-3 text-[10px] uppercase font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2"><FileText size={12}/> ARŞİV</button>
+              <button onClick={() => window.print()} disabled={items.length===0} className="w-full mt-8 bg-brand-red text-white py-4 font-bold text-xs uppercase tracking-widest hover:bg-brand-red/80 flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"><Printer size={16}/> YAZDIR / PDF</button>
+              
+              <button 
+                onClick={exportToExcel} 
+                disabled={items.length===0} 
+                className="w-full mt-2 bg-green-600/20 border border-green-600/30 text-green-500 py-3 text-[10px] uppercase font-bold hover:bg-green-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <Download size={14}/> Excel&apos;e Aktar
+              </button>
+
+              {/* Kaydet Butonları */}
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <button
+                  onClick={() => handleSaveProposal(false)}
+                  disabled={isSaving || !customerName || items.length === 0}
+                  className="bg-white/5 border border-white/10 text-white py-3 text-[10px] uppercase font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  {isSaving ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <RefreshCw size={12}/>}
+                  {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
+                </button>
+                {currentProposalNo ? (
+                  <button
+                    onClick={() => handleSaveProposal(true)}
+                    disabled={isSaving}
+                    className="bg-brand-red/20 border border-brand-red/30 text-brand-red py-3 text-[10px] uppercase font-bold hover:bg-brand-red/30 transition-all flex items-center justify-center gap-2 disabled:opacity-30"
+                  >
+                    <Plus size={12}/> Yeni Versiyon
+                  </button>
+                ) : (
+                  <button onClick={() => setShowHistory(true)} className="bg-white/5 border border-white/10 text-white py-3 text-[10px] uppercase font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                    <FileText size={12}/> Arşiv
+                  </button>
+                )}
               </div>
+
+              {/* Arşiv (Yeni Versiyon varken) */}
+              {currentProposalNo && (
+                <button onClick={() => setShowHistory(true)} className="w-full mt-2 bg-white/5 border border-white/10 text-white py-2 text-[10px] uppercase font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                  <FileText size={12}/> Arşiv
+                </button>
+              )}
+
+
             </div>
           </div>
         </div>
@@ -250,16 +393,105 @@ export default function AdminProposalManager() {
       {/* ARŞİV MODAL */}
       {showHistory && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 no-print">
-          <div className="bg-[#1A1A1A] border border-white/10 w-full max-w-2xl max-h-[70vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center text-white font-bold uppercase tracking-widest text-xs">Arşivdeki Teklifler <button onClick={()=>setShowHistory(false)}>Kapat</button></div>
-            <div className="p-6 overflow-y-auto grid grid-cols-1 gap-4">
-              {pastProposals.map(p => (
-                <button key={p.id} onClick={()=>{setCustomerName(p.musteri_adi); setItems(p.urunler); setProposalDate(p.tarih); setCustomNote(p.ozel_not); setKur({USD:p.kur_usd, EUR:p.kur_eur}); setShowHistory(false)}} className="p-4 bg-white/5 border border-white/5 hover:border-brand-red/50 text-left transition-all">
-                  <div className="flex justify-between items-start text-[10px] text-brand-red font-black mb-1"><span>{p.teklif_no}</span><span>{p.tarih}</span></div>
-                  <div className="text-white font-bold">{p.musteri_adi}</div>
-                  <div className="text-right text-white font-black text-xs mt-2">{p.genel_toplam?.toLocaleString()} ₺</div>
+          <div className="bg-[#1A1A1A] border border-white/10 w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col rounded-sm">
+            {/* Modal Başlık */}
+            <div className="p-5 border-b border-white/5 flex justify-between items-center">
+              <div>
+                <h3 className="text-white font-black text-sm uppercase tracking-widest">Teklif Arşivi</h3>
+                <p className="text-white/30 text-[10px] mt-0.5">{pastProposals.length} teklif</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { handleNewProposal(); setShowHistory(false) }}
+                  className="bg-brand-red/20 border border-brand-red/30 text-brand-red px-4 py-2 text-[10px] uppercase font-bold hover:bg-brand-red/30 transition-all"
+                >
+                  + Yeni Teklif
                 </button>
-              ))}
+                <button onClick={() => setShowHistory(false)} className="text-white/40 hover:text-white transition-colors text-[10px] uppercase font-bold px-3 py-2">
+                  Kapat
+                </button>
+              </div>
+            </div>
+
+            {/* Arama */}
+            <div className="px-5 pt-4 pb-2">
+              <input
+                type="text"
+                value={archiveSearch}
+                onChange={e => setArchiveSearch(e.target.value)}
+                placeholder="Müşteri adı veya teklif no ile ara..."
+                className="w-full bg-white/5 border border-white/10 p-3 text-white text-xs outline-none focus:border-brand-red placeholder:text-white/20"
+              />
+            </div>
+
+            {/* Liste */}
+            <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-2">
+              {(() => {
+                const filtered = pastProposals.filter(p =>
+                  p.musteri_adi?.toLowerCase().includes(archiveSearch.toLowerCase()) ||
+                  p.teklif_no?.toLowerCase().includes(archiveSearch.toLowerCase())
+                )
+                if (filtered.length === 0) {
+                  return (
+                    <div className="text-center py-12 text-white/20 text-xs">
+                      {archiveSearch ? 'Aramayla eşleşen teklif bulunamadı.' : 'Henüz kaydedilmiş teklif yok.'}
+                    </div>
+                  )
+                }
+                return filtered.map(p => (
+                  <div
+                    key={p.id}
+                    className={`relative group p-4 border transition-all cursor-pointer hover:border-brand-red/50 ${
+                      currentProposalId === p.id
+                        ? 'bg-brand-red/10 border-brand-red/40'
+                        : 'bg-white/[0.02] border-white/5'
+                    }`}
+                    onClick={() => {
+                      setCustomerName(p.musteri_adi)
+                      setItems(p.urunler)
+                      setProposalDate(p.tarih)
+                      setCustomNote(p.ozel_not || '')
+                      setKur({ USD: p.kur_usd, EUR: p.kur_eur })
+                      setCurrentProposalId(p.id)
+                      setCurrentProposalNo(p.teklif_no)
+                      setShowHistory(false)
+                    }}
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-brand-red font-black text-[11px]">{p.teklif_no}</span>
+                        {p.teklif_no?.includes('-V') && (
+                          <span className="bg-brand-red/20 text-brand-red text-[9px] font-bold px-1.5 py-0.5">
+                            REV {p.teklif_no.split('-V')[1]}
+                          </span>
+                        )}
+                        {currentProposalId === p.id && (
+                          <span className="bg-white/10 text-white/60 text-[9px] font-bold px-1.5 py-0.5">AÇIK</span>
+                        )}
+                      </div>
+                      <button
+                        onClick={e => handleDeleteProposal(p.id, e)}
+                        className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-brand-red transition-all p-1"
+                        title="Teklifi sil"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                    <div className="flex justify-between items-end">
+                      <div>
+                        <div className="text-white font-bold text-sm">{p.musteri_adi}</div>
+                        <div className="text-white/30 text-[10px] mt-0.5">
+                          {new Date(p.tarih).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {' • '}{p.urunler?.length || 0} kalem
+                        </div>
+                      </div>
+                      <div className="text-white font-black text-sm">
+                        {p.genel_toplam?.toLocaleString('tr-TR', { minimumFractionDigits: 0 })} ₺
+                      </div>
+                    </div>
+                  </div>
+                ))
+              })()}
             </div>
           </div>
         </div>
@@ -288,22 +520,22 @@ export default function AdminProposalManager() {
             <h2 className="text-xl font-black uppercase mb-4">{customerName || '-----------------'}</h2>
             {customNote && <div className="p-3 bg-black/[0.03] border-l-2 border-black/20 italic text-[10px] text-black/70 leading-relaxed">{customNote}</div>}
           </div>
-          <div className="text-right text-[9px] font-bold">
-            <h3 className="text-2xl font-black opacity-10 uppercase mb-2">FİYAT TEKLİFİ</h3>
-            <p>Tarih: {new Date(proposalDate).toLocaleDateString('tr-TR')}</p>
+          <div className="text-right text-[10px] font-bold">
+            <h3 className="text-3xl font-black text-black/20 uppercase mb-1 tracking-tighter">FİYAT TEKLİFİ</h3>
+            <p className="opacity-60">Tarih: {new Date(proposalDate).toLocaleDateString('tr-TR')}</p>
           </div>
         </div>
 
-        <table className="w-full border-collapse mb-8 text-[9px]">
+        <table className="w-full border-collapse mb-8 text-[9px] border border-black/20">
           <thead>
-            <tr className="bg-black text-white text-left uppercase font-bold">
-              <th className="p-3 border border-black w-12">Görsel</th>
-              <th className="p-3 border border-black w-16">Miktar</th>
-              <th className="p-3 border border-black w-40">Marka / Kod</th>
-              <th className="p-3 border border-black">Açıklama</th>
-              <th className="p-3 border border-black text-right w-20">Birim ($/€)</th>
-              <th className="p-3 border border-black text-right w-24">Birim (TL)</th>
-              <th className="p-3 border border-black text-right w-24">Toplam (TL)</th>
+            <tr className="bg-[#f2f2f2] text-black text-left uppercase font-black" style={{ WebkitPrintColorAdjust: 'exact' }}>
+              <th className="p-3 border border-black/20 w-10">Görsel</th>
+              <th className="p-3 border border-black/20 w-14 text-center">Miktar</th>
+              <th className="p-3 border border-black/20 w-28">Marka</th>
+              <th className="p-3 border border-black/20">Ürün Açıklaması</th>
+              <th className="p-3 border border-black/20 text-right w-20">Birim ($/€)</th>
+              <th className="p-3 border border-black/20 text-right w-22">Birim (TL)</th>
+              <th className="p-3 border border-black/20 text-right w-24">Toplam (TL)</th>
             </tr>
           </thead>
           <tbody>
@@ -312,13 +544,20 @@ export default function AdminProposalManager() {
               const birim_tl = i.fiyat_doviz * k
               return (
                 <tr key={idx} className="border-b border-black/10">
-                  <td className="p-2 border border-black/10 text-center"><img src={i.gorsel} className="w-10 h-10 object-contain mx-auto"/></td>
-                  <td className="p-2 border border-black/10 font-bold text-center">{i.miktar} Adet</td>
-                  <td className="p-2 border border-black/10 font-bold uppercase">{i.marka}<br/><span className="text-[7px] opacity-40">{i.kod}</span></td>
-                  <td className="p-2 border border-black/10">{i.ad}</td>
-                  <td className="p-2 border border-black/10 text-right font-medium">{i.fiyat_doviz.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {i.para_birimi === 'USD' ? '$' : i.para_birimi === 'EUR' ? '€' : '₺'}</td>
-                  <td className="p-2 border border-black/10 text-right">{birim_tl.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</td>
-                  <td className="p-2 border border-black/10 text-right font-black">{(birim_tl * i.miktar).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</td>
+                  <td className="p-2 border border-black/10 text-center align-top">
+                    <img src={i.gorsel} className="w-9 h-9 object-contain mx-auto" />
+                  </td>
+                  <td className="p-2 border border-black/10 font-bold text-center align-top">{i.miktar} Adet</td>
+                  <td className="p-2 border border-black/10 align-top">
+                    <div className="font-black text-[8px] uppercase leading-tight">{i.marka}</div>
+                    {i.kod && <div className="text-[6.5px] text-black/40 font-semibold mt-0.5 leading-tight tracking-wide">{i.kod}</div>}
+                  </td>
+                  <td className="p-2 border border-black/10 align-top">
+                    <div className="text-[9px] leading-snug font-medium">{i.ad}</div>
+                  </td>
+                  <td className="p-2 border border-black/10 text-right font-medium align-top">{i.fiyat_doviz.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {i.para_birimi === 'USD' ? '$' : i.para_birimi === 'EUR' ? '€' : '₺'}</td>
+                  <td className="p-2 border border-black/10 text-right align-top">{birim_tl.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</td>
+                  <td className="p-2 border border-black/10 text-right font-black align-top">{(birim_tl * i.miktar).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</td>
                 </tr>
               )
             })}

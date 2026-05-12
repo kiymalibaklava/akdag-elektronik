@@ -44,7 +44,7 @@ export default function AdminDashboard() {
           .from('siparisler')
           .select('id, siparis_no, ad_soyad, toplam_tutar, durum, odeme_durumu, dekont_url, created_at, urunler')
           .order('created_at', { ascending: false }),
-        supabase.from('bayiler').select('*', { count: 'exact', head: true }).eq('onay_durumu', 'onaylandi')
+        supabase.from('bayiler').select('*', { count: 'exact', head: true }).eq('onaylandi', true)
       ])
       setSiparisler(sData || [])
       setBayiCount(bCount || 0)

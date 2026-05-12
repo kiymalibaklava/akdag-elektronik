@@ -15,26 +15,39 @@ interface FileEntry {
   compressing: boolean
 }
 
-interface Props { onAdded?: () => void }
+interface Props { 
+  onAdded?: () => void;
+  initialData?: {
+    ad?: string;
+    kod?: string;
+    fiyat?: string;
+    paraBirimi?: string;
+    stokAdedi?: string;
+    taslakId?: string;
+    aciklama?: string;
+  }
+}
 
-export default function AdminAddProduct({ onAdded }: Props) {
-  const [ad, setAd] = useState('')
-  const [aciklama, setAciklama] = useState('')
+export default function AdminAddProduct({ onAdded, initialData }: Props) {
+  const [ad, setAd] = useState(initialData?.ad || '')
+  const [aciklama, setAciklama] = useState(initialData?.aciklama || '')
   
   // 3 seviyeli kategori state (Index yerine direkt isim/slug tutmak daha sağlam olabilir)
   const [anaCat, setAnaCat] = useState<CategoryNode | null>(NEW_KATEGORI_HIYERARSI[0])
   const [altCat, setAltCat] = useState<CategoryNode | null>(null)
   const [detayCat, setDetayCat] = useState<CategoryNode | null>(null)
 
-  const [fiyat, setFiyat] = useState('')
+  const [fiyat, setFiyat] = useState(initialData?.fiyat || '')
   const [bayi_fiyati, setBayiF] = useState('')
   const [stok, setStok] = useState('stokta')
-  const [paraBirimi, setParaBirimi] = useState('USD')
+  const [paraBirimi, setParaBirimi] = useState(initialData?.paraBirimi || 'USD')
   const [bayiParaBirimi, setBayiParaBirimi] = useState('USD')
   const [marka, setMarka] = useState('')
+  const [modelKodu, setModelKodu] = useState(initialData?.kod || '')
   const [kullanimAlani, setKullanimAlani] = useState('')
-  const [stokAdedi, setStokAdedi] = useState('0')
+  const [stokAdedi, setStokAdedi] = useState(initialData?.stokAdedi || '0')
   const [kritikStok, setKritikStok] = useState('5')
+  const [taslakId] = useState(initialData?.taslakId || null)
   const [entries, setEntries] = useState<FileEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -43,6 +56,41 @@ export default function AdminAddProduct({ onAdded }: Props) {
   const [existingAlanlar, setExistingAlanlar] = useState<string[]>([])
   const [showMarkaSuggestions, setShowMarkaSuggestions] = useState(false)
   const [showAlanSuggestions, setShowAlanSuggestions] = useState(false)
+  const [suggestedImages, setSuggestedImages] = useState<string[]>([])
+  const [isScraping, setIsScraping] = useState(false)
+
+  const fetchSuggestedImages = async () => {
+    const query = `${marka} ${modelKodu} ${ad}`.trim()
+    if (!query || query.length < 3) return
+    setIsScraping(true)
+    setSuggestedImages([])
+    try {
+      const res = await fetch('/api/scrape-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      })
+      const data = await res.json()
+      if (data.images) setSuggestedImages(data.images)
+    } catch (e) {
+      console.error(e)
+    }
+    setIsScraping(false)
+  }
+
+  const addSuggestedImage = async (url: string) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const file = new File([blob], `suggested-${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
+      const preview = URL.createObjectURL(file);
+      setEntries(p => [...p, { file, preview, originalSize: file.size, compressing: false }]);
+      setSuggestedImages(p => p.filter(i => i !== url));
+    } catch (e) {
+      console.error('Failed to add image', e);
+      alert('Görsel eklenirken hata oluştu (CORS kısıtlaması olabilir). Lütfen resmi manuel indirip yükleyin.');
+    }
+  }
 
   useEffect(() => {
     const fetchExisting = async () => {
@@ -115,8 +163,13 @@ export default function AdminAddProduct({ onAdded }: Props) {
       para_birimi: paraBirimi,
       bayi_para_birimi: bayiParaBirimi,
       marka: marka.trim() || null,
+      model_kodu: modelKodu.trim() || null,
       kullanim_alani: kullanimAlani.trim() || null,
     })
+
+    if (!insertErr && taslakId) {
+      await supabase.from('wolvox_taslak').delete().eq('id', taslakId)
+    }
 
     setLoading(false)
     if (insertErr) { setError(`Eklenemedi: ${insertErr.message}`); return }
@@ -245,6 +298,10 @@ export default function AdminAddProduct({ onAdded }: Props) {
             </div>
           )}
         </div>
+        <div>
+          <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Model Kodu</label>
+          <input type="text" value={modelKodu} onChange={e => setModelKodu(e.target.value)} className="input-dark" placeholder="Örn: M7CL" />
+        </div>
         <div className="relative">
           <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Kullanım Alanı</label>
           <input 
@@ -324,9 +381,32 @@ export default function AdminAddProduct({ onAdded }: Props) {
 
       {/* Fotoğraflar */}
       <div>
-        <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">
-          Fotoğraflar <span className="text-white/20 normal-case tracking-normal font-body font-normal text-xs">(max 10)</span>
-        </label>
+        <div className="flex justify-between items-end mb-2">
+          <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block">
+            Fotoğraflar <span className="text-white/20 normal-case tracking-normal font-body font-normal text-xs">(max 10)</span>
+          </label>
+          <button 
+            onClick={fetchSuggestedImages} 
+            disabled={isScraping || (!marka && !modelKodu && !ad)}
+            className="text-[10px] uppercase font-bold bg-white/5 border border-white/10 px-3 py-1 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+          >
+            {isScraping ? 'Aranıyor...' : 'Görsel Önerisi Bul'}
+          </button>
+        </div>
+
+        {suggestedImages.length > 0 && (
+          <div className="mb-4 p-3 border border-brand-red/20 bg-brand-red/5 rounded-sm">
+            <h4 className="text-[10px] uppercase text-brand-red font-bold mb-2 tracking-widest">Önerilen Görseller (Tıklayarak Ekle)</h4>
+            <div className="grid grid-cols-4 gap-2">
+              {suggestedImages.map((img, i) => (
+                <button key={i} onClick={() => addSuggestedImage(img)} className="relative aspect-square border border-white/10 hover:border-brand-red overflow-hidden transition-colors">
+                  <img src={img} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {entries.length > 0 && (
           <div className="grid grid-cols-3 gap-2 mb-2">
             {entries.map(entry => (
