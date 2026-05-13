@@ -11,6 +11,7 @@ import ProductSearch from './ProductSearch'
 import { NEW_KATEGORI_HIYERARSI, type CategoryNode } from '@/lib/categories'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
+import { pullCartFromSupabase, setCartUserId } from '@/lib/cart'
 
 const navLinks = [
   { href: '/', label: 'Ana Sayfa' },
@@ -37,9 +38,15 @@ export default function Navbar() {
   const supabase = useRef(createClient()).current
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }: any) => setUser(data.session?.user ?? null))
+    supabase.auth.getSession().then(({ data }: any) => {
+      setUser(data.session?.user ?? null)
+      setCartUserId(data.session?.user?.id ?? null)
+      if (data.session?.user) pullCartFromSupabase()
+    })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e: any, session: any) => {
       setUser(session?.user ?? null)
+      setCartUserId(session?.user?.id ?? null)
+      if (session?.user) pullCartFromSupabase()
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -94,9 +101,8 @@ export default function Navbar() {
       </div>
 
       {/* Main nav */}
-      <nav className={`sticky top-0 z-50 transition-all duration-500 ${
-        scrolled ? 'bg-[#0F0F0F]/95 backdrop-blur-md border-b border-white/5 shadow-2xl' : 'bg-[#0F0F0F]'
-      }`}>
+      <nav className={`sticky top-0 z-50 transition-all duration-500 ${scrolled ? 'bg-[#0F0F0F]/95 backdrop-blur-md border-b border-white/5 shadow-2xl' : 'bg-[#0F0F0F]'
+        }`}>
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-20">
 
           {/* Logo */}
@@ -119,17 +125,15 @@ export default function Navbar() {
               >
                 <Link
                   href={link.href}
-                  className={`font-display font-semibold text-xs tracking-widest uppercase transition-colors duration-200 relative group flex items-center gap-1.5 ${
-                    pathname.startsWith(link.href) && (link.href !== '/' || pathname === '/') ? 'text-brand-red' : 'text-white/70 hover:text-white'
-                  }`}
+                  className={`font-display font-semibold text-xs tracking-widest uppercase transition-colors duration-200 relative group flex items-center gap-1.5 ${pathname.startsWith(link.href) && (link.href !== '/' || pathname === '/') ? 'text-brand-red' : 'text-white/70 hover:text-white'
+                    }`}
                 >
                   {link.label}
                   {link.hasMega && (
                     <ChevronDown size={12} className={`transition-transform duration-300 ${megaOpen ? 'rotate-180' : ''}`} />
                   )}
-                  <span className={`absolute -bottom-1 left-0 h-0.5 bg-brand-red transition-all duration-300 ${
-                    pathname.startsWith(link.href) && (link.href !== '/' || pathname === '/') ? 'w-full' : 'w-0 group-hover:w-full'
-                  }`} />
+                  <span className={`absolute -bottom-1 left-0 h-0.5 bg-brand-red transition-all duration-300 ${pathname.startsWith(link.href) && (link.href !== '/' || pathname === '/') ? 'w-full' : 'w-0 group-hover:w-full'
+                    }`} />
                 </Link>
               </div>
             ))}
@@ -163,8 +167,8 @@ export default function Navbar() {
               style={{ clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))' }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
               </svg>
               {user ? "HESABIM" : "BAYİ GİRİŞİ"}
             </Link>
@@ -181,9 +185,8 @@ export default function Navbar() {
           ref={megaRef}
           onMouseEnter={cancelClose}
           onMouseLeave={closeMega}
-          className={`hidden md:block absolute left-0 right-0 top-full transition-all duration-300 origin-top ${
-            megaOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-2 pointer-events-none'
-          }`}
+          className={`hidden md:block absolute left-0 right-0 top-full transition-all duration-300 origin-top ${megaOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-2 pointer-events-none'
+            }`}
         >
           <div className="bg-[#0F0F0F]/[0.98] backdrop-blur-xl border-b border-white/5 shadow-2xl">
             <div className="h-[2px] bg-gradient-to-r from-transparent via-brand-red to-transparent opacity-50" />
@@ -202,9 +205,8 @@ export default function Navbar() {
                       <button
                         key={kat.slug}
                         onMouseEnter={() => { setActiveAna(i); setActiveAlt(0) }}
-                        className={`w-full text-left px-6 py-4 flex items-center gap-4 transition-all duration-200 group relative ${
-                          isActive ? 'bg-brand-red/5 text-white' : 'text-white/40 hover:text-white/70 hover:bg-white/[0.02]'
-                        }`}
+                        className={`w-full text-left px-6 py-4 flex items-center gap-4 transition-all duration-200 group relative ${isActive ? 'bg-brand-red/5 text-white' : 'text-white/40 hover:text-white/70 hover:bg-white/[0.02]'
+                          }`}
                       >
                         <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-[2px] transition-all duration-300 ${isActive ? 'h-8 bg-brand-red' : 'h-0 bg-transparent'}`} />
                         <Icon size={16} className={isActive ? 'text-brand-red' : 'text-white/15 group-hover:text-white/30'} />
@@ -232,9 +234,8 @@ export default function Navbar() {
                         <button
                           key={sub.slug}
                           onMouseEnter={() => setActiveAlt(j)}
-                          className={`w-full text-left px-8 py-3.5 flex items-center justify-between transition-all duration-200 group ${
-                            isActive ? 'bg-white/[0.03] text-white' : 'text-white/30 hover:text-white/60'
-                          }`}
+                          className={`w-full text-left px-8 py-3.5 flex items-center justify-between transition-all duration-200 group ${isActive ? 'bg-white/[0.03] text-white' : 'text-white/30 hover:text-white/60'
+                            }`}
                         >
                           <span className="font-display font-semibold text-[13px] uppercase tracking-wide truncate">{sub.name}</span>
                           <ChevronRight size={13} className={isActive ? 'text-brand-red translate-x-1' : 'text-white/5'} />
@@ -283,7 +284,7 @@ export default function Navbar() {
         {/* MOBILE MENU */}
         <div className={`md:hidden transition-all duration-500 ease-in-out overflow-hidden bg-[#0A0A0A] border-t border-white/5 ${open ? 'max-h-screen' : 'max-h-0'}`}>
           <div className="px-6 py-8 space-y-6 overflow-y-auto max-h-[85vh]">
-            
+
             {/* Search Box Mobile */}
             <div className="relative">
               <ProductSearch fullPage />
@@ -292,7 +293,7 @@ export default function Navbar() {
             <div className="flex flex-col gap-1">
               {/* Ana Sayfa */}
               <Link href="/" className={`font-display font-black text-xs tracking-[0.3em] uppercase py-4 border-b border-white/5 ${pathname === '/' ? 'text-brand-red' : 'text-white/50'}`}>ANA SAYFA</Link>
-              
+
               {/* Ürünler Accordion */}
               <div className="border-b border-white/5">
                 <button onClick={() => setMobileKatOpen(!mobileKatOpen)} className={`w-full text-left font-display font-black text-xs tracking-[0.3em] uppercase py-4 flex items-center justify-between ${mobileKatOpen ? 'text-brand-red' : 'text-white/50'}`}>
@@ -343,15 +344,15 @@ export default function Navbar() {
             </div>
 
             <div className="pt-6 space-y-4">
-               <CartIcon />
-               <div className="flex items-center gap-4 pt-4 border-t border-white/5">
-                 <Link href="/favoriler" className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white/40"><Heart size={18} /></Link>
-                 <Link href="/karsilastir" className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white/40"><GitCompare size={18} /></Link>
-               </div>
-               <a href="tel:+903522316915" className="font-display font-bold text-xs tracking-widest uppercase text-white/50 py-3 flex items-center gap-2">
-                 <Phone size={13} />
-                 +90 352 231 69 15
-               </a>
+              <CartIcon />
+              <div className="flex items-center gap-4 pt-4 border-t border-white/5">
+                <Link href="/favoriler" className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white/40"><Heart size={18} /></Link>
+                <Link href="/karsilastir" className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white/40"><GitCompare size={18} /></Link>
+              </div>
+              <a href="tel:+903522316915" className="font-display font-bold text-xs tracking-widest uppercase text-white/50 py-3 flex items-center gap-2">
+                <Phone size={13} />
+                +90 352 231 69 15
+              </a>
             </div>
           </div>
         </div>

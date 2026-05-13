@@ -65,27 +65,27 @@ export default function ProductSearch({ fullPage = false }: { fullPage?: boolean
     <div className={`relative ${fullPage ? 'w-full' : 'w-full max-w-2xl mx-auto'}`}>
       <form onSubmit={handleSearch} className="relative flex items-center">
         <Search size={18} className="absolute left-4 text-brand-red" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => query && setOpen(true)}
-            onBlur={() => setTimeout(() => setOpen(false), 200)}
-            placeholder="Ürün arayın... (ses sistemi, hoparlör, zil...)"
-            className="w-full bg-[#141414] border border-white/10 text-white placeholder-white/20 pl-12 pr-14 py-4 focus:outline-none focus:border-brand-red transition-colors duration-200 font-body text-sm"
-          />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => query && setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 200)}
+          placeholder="Ürün arayın... (ses sistemi, hoparlör, zil...)"
+          className="w-full bg-[#141414] border border-white/10 text-white placeholder-white/20 pl-12 pr-14 py-4 focus:outline-none focus:border-brand-red transition-colors duration-200 font-body text-sm"
+        />
         {loading && (
           <div className="absolute right-12 w-4 h-4 border-2 border-brand-red/30 border-t-brand-red rounded-full animate-spin" />
         )}
         {query && !loading && (
           <div className="absolute right-4 flex items-center gap-2">
-             <button type="button" onClick={clear} className="text-white/20 hover:text-white transition-colors">
-               <X size={16} />
-             </button>
-             <button type="submit" className="text-brand-red hover:text-brand-red/80 transition-colors">
-               <ArrowRight size={18} />
-             </button>
+            <button type="button" onClick={clear} className="text-white/20 hover:text-white transition-colors">
+              <X size={16} />
+            </button>
+            <button type="submit" className="text-brand-red hover:text-brand-red/80 transition-colors">
+              <ArrowRight size={18} />
+            </button>
           </div>
         )}
       </form>

@@ -12,7 +12,93 @@ export interface CartItem {
   adet: number
 }
 
+import { createClient } from '@/lib/supabase'
+
 const CART_KEY = 'akdag-sepet'
+
+let syncTimeout: any = null
+let cachedUserId: string | null = null
+
+async function getUserId() {
+  if (cachedUserId) return cachedUserId
+  const supabase = createClient()
+  const { data } = await supabase.auth.getSession()
+  cachedUserId = data.session?.user?.id || null
+  return cachedUserId
+}
+
+// Global olarak kullanıcı değiştiğinde çağrılması için:
+export function setCartUserId(uid: string | null) {
+  cachedUserId = uid
+}
+
+export async function pullCartFromSupabase() {
+  const uid = await getUserId()
+  if (!uid) return
+  
+  const supabase = createClient()
+  const { data: sepetData } = await supabase.from('sepet').select('*, urunler(ad, kategori, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi)').eq('user_id', uid)
+  
+  if (sepetData && sepetData.length > 0) {
+    const localCart = getCart()
+    const merged = [...localCart]
+    let changed = false
+    
+    for (const dbItem of sepetData) {
+      const u = dbItem.urunler as any
+      if (!u) continue 
+      
+      const existing = merged.find(c => c.id === dbItem.urun_id)
+      if (!existing) {
+        merged.push({
+          id: dbItem.urun_id,
+          ad: u.ad,
+          kategori: u.kategori,
+          fotograf: u.fotograflar?.[0] || '',
+          fiyat: u.fiyat,
+          fiyat_doviz: u.fiyat,
+          para_birimi: u.para_birimi || 'TRY',
+          bayi_fiyati: u.bayi_fiyati,
+          bayi_fiyat_doviz: u.bayi_fiyati,
+          bayi_para_birimi: u.bayi_para_birimi || u.para_birimi || 'TRY',
+          adet: dbItem.adet
+        })
+        changed = true
+      } else if (existing.adet < dbItem.adet) {
+        existing.adet = dbItem.adet
+        changed = true
+      }
+    }
+    
+    if (changed) {
+      localStorage.setItem(CART_KEY, JSON.stringify(merged))
+      window.dispatchEvent(new Event('cart-updated'))
+      syncCartToSupabase(merged)
+    }
+  }
+}
+
+function syncCartToSupabase(items: CartItem[]) {
+  clearTimeout(syncTimeout)
+  syncTimeout = setTimeout(async () => {
+    const uid = await getUserId()
+    if (!uid) return 
+    
+    const supabase = createClient()
+    const itemIds = items.map(i => i.id)
+    
+    if (itemIds.length > 0) {
+      // Önce sepetten çıkarılan ürünleri temizle
+      await supabase.from('sepet').delete().eq('user_id', uid).not('urun_id', 'in', itemIds)
+      
+      // Sonra güncel ürünleri/adetleri kaydet
+      const upsertData = items.map(i => ({ user_id: uid, urun_id: i.id, adet: i.adet }))
+      await supabase.from('sepet').upsert(upsertData, { onConflict: 'user_id,urun_id' })
+    } else {
+      await supabase.from('sepet').delete().eq('user_id', uid)
+    }
+  }, 2000)
+}
 
 export function getCart(): CartItem[] {
   if (typeof window === 'undefined') return []
@@ -23,6 +109,7 @@ export function getCart(): CartItem[] {
 export function saveCart(items: CartItem[]) {
   localStorage.setItem(CART_KEY, JSON.stringify(items))
   window.dispatchEvent(new Event('cart-updated'))
+  syncCartToSupabase(items)
 }
 
 export function addToCart(item: Omit<CartItem, 'adet'>) {

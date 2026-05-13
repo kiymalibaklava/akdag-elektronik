@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Trash2, Package, Pencil, X, Check, Search, Upload } from 'lucide-react'
+import { Trash2, Package, Pencil, X, Check, Search, Upload, Download } from 'lucide-react'
 import { PARA_BIRIMLERI } from '@/lib/kur'
 import { createClient } from '@/lib/supabase'
 import { KATEGORILER, KATEGORI_HIYERARSI } from '@/lib/categories'
@@ -184,56 +184,127 @@ export default function AdminProductList({ products, onDeleted }: Props) {
   }
 
   const removeNewPhoto = (preview: string) => {
-    setNewPhotos(p => { 
+    setNewPhotos(p => {
       const e = p.find(x => x.preview === preview)
       if (e) URL.revokeObjectURL(e.preview)
-      return p.filter(x => x.preview !== preview) 
+      return p.filter(x => x.preview !== preview)
     })
   }
 
+  const [importing, setImporting] = useState(false)
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+    try {
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data, { type: 'array' })
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
+      const jsonData = XLSX.utils.sheet_to_json<any>(worksheet)
+
+      const upsertData = jsonData.map(row => ({
+        ...(row['ID'] || row['ID (SİSTEM)'] ? { id: row['ID'] || row['ID (SİSTEM)'] } : {}),
+        ad: row['ÜRÜN ADI'] || row['Ürün Adı'],
+        kategori: row['KATEGORİ'] || row['Kategori'],
+        marka: (row['MARKA'] || row['Marka']) !== '-' ? (row['MARKA'] || row['Marka']) : null,
+        model_kodu: row['STOK KODU'] || row['Stok Kodu'] || row['MODEL KODU'] || null,
+        fiyat: parseFloat(row['FİYAT'] || row['Fiyat']) || 0,
+        para_birimi: row['PARA BİRİMİ'] || row['Para Birimi'] || 'TRY',
+        bayi_fiyati: parseFloat(row['BAYİ FİYATI'] || row['Bayi Fiyatı']) || null,
+        bayi_para_birimi: row['BAYİ PARA BİRİMİ'] || row['Bayi Para Birimi'] || 'TRY',
+        stok_adedi: parseInt(row['STOK ADEDİ'] || row['Stok Adedi']) || 0,
+        stok_durumu: (row['STOK DURUMU'] || row['Stok Durumu']) === 'Stokta' ? 'stokta' : (row['STOK DURUMU'] || row['Stok Durumu']) === 'Tükendi' ? 'tukendi' : 'siparise_gore',
+        fiyat_guncelleme: new Date().toISOString()
+      })).filter(item => item.ad && item.kategori)
+
+      if (upsertData.length > 0) {
+        const supabase = createClient()
+        const { error } = await supabase.from('urunler').upsert(upsertData, { onConflict: 'id' })
+        if (error) throw error
+        alert(`${upsertData.length} ürün başarıyla güncellendi/eklendi!`)
+        onDeleted?.() 
+      }
+    } catch (err: any) {
+      alert('Excel yüklenirken hata oluştu: ' + err.message)
+    } finally {
+      setImporting(false)
+      e.target.value = ''
+    }
+  }
+
   const exportToExcel = () => {
+    // Veriyi hazırla
     const dataToExport = filtered.map(p => ({
-      'Ürün Adı': p.ad,
-      'Kategori': p.kategori,
-      'Marka': p.marka || '-',
-      'Stok Kodu': (p as any).model_kodu || '-',
-      'Fiyat': p.fiyat || 0,
-      'Para Birimi': p.para_birimi || 'TRY',
-      'Bayi Fiyatı': p.bayi_fiyati || 0,
-      'Bayi Para Birimi': p.bayi_para_birimi || 'TRY',
-      'Stok Adedi': p.stok_adedi || 0,
-      'Stok Durumu': p.stok_durumu === 'stokta' ? 'Stokta' : p.stok_durumu === 'tukendi' ? 'Tükendi' : 'Siparişe Göre',
-      'Son Güncelleme': p.fiyat_guncelleme ? new Date(p.fiyat_guncelleme).toLocaleDateString('tr-TR') : '-'
+      'STOK KODU': (p as any).model_kodu || '-',
+      'ÜRÜN ADI': p.ad,
+      'KATEGORİ': p.kategori,
+      'MARKA': p.marka || '-',
+      'FİYAT': p.fiyat || 0,
+      'PARA BİRİMİ': p.para_birimi || 'TRY',
+      'BAYİ FİYATI': p.bayi_fiyati || 0,
+      'BAYİ PARA BİRİMİ': p.bayi_para_birimi || 'TRY',
+      'STOK ADEDİ': p.stok_adedi || 0,
+      'STOK DURUMU': p.stok_durumu === 'stokta' ? 'Stokta' : p.stok_durumu === 'tukendi' ? 'Tükendi' : 'Siparişe Göre',
+      'SON GÜNCELLEME': p.fiyat_guncelleme ? new Date(p.fiyat_guncelleme).toLocaleDateString('tr-TR') : '-',
+      'ID (SİSTEM)': p.id,
     }))
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport)
+    
+    // Sütun genişlikleri (Profesyonel görünüm için kritik)
+    worksheet['!cols'] = [
+      { wch: 18 }, // Stok Kodu
+      { wch: 60 }, // Ürün Adı
+      { wch: 25 }, // Kategori
+      { wch: 15 }, // Marka
+      { wch: 12 }, // Fiyat
+      { wch: 12 }, // Para Birimi
+      { wch: 12 }, // Bayi Fiyatı
+      { wch: 15 }, // Bayi Para Birimi
+      { wch: 12 }, // Stok Adedi
+      { wch: 15 }, // Stok Durumu
+      { wch: 18 }, // Son Güncelleme
+      { wch: 38 }, // ID
+    ]
+
     const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Ürünler')
-    XLSX.writeFile(workbook, `Akdag_Elektronik_Urunler_${new Date().toISOString().split('T')[0]}.xlsx`)
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Akdağ Elektronik Ürün Listesi')
+    
+    const dateStr = new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')
+    XLSX.writeFile(workbook, `Akdag_Elektronik_Fiyat_Listesi_${dateStr}.xlsx`)
   }
 
   return (
     <>
-      <div className="relative mb-4">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-red" />
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder={`${products.length} ürün içinde ara...`}
-          className="input-dark pl-10 pr-10"
-        />
-        {search && (
-          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors">
-            <X size={14} />
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-red" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={`${products.length} ürün içinde ara...`}
+            className="input-dark pl-10 pr-10"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <label className={`cursor-pointer bg-blue-600/10 border border-blue-600/20 text-blue-500 px-4 py-2 rounded-sm text-[10px] font-bold uppercase hover:bg-blue-600/20 transition-all flex items-center gap-2 whitespace-nowrap ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+            <Upload size={12} /> {importing ? 'YÜKLENİYOR...' : 'EXCEL YÜKLE'}
+            <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} />
+          </label>
+          <button
+            onClick={exportToExcel}
+            className="bg-green-600/10 border border-green-600/20 text-green-500 px-4 py-2 rounded-sm text-[10px] font-bold uppercase hover:bg-green-600/20 transition-all flex items-center gap-2 whitespace-nowrap"
+          >
+            <Download size={12} /> Excel'e Aktar
           </button>
-        )}
-        <button 
-          onClick={exportToExcel}
-          className="absolute -right-36 top-1/2 -translate-y-1/2 bg-green-600/10 border border-green-600/20 text-green-500 px-4 py-2 rounded-sm text-[10px] font-bold uppercase hover:bg-green-600/20 transition-all flex items-center gap-2"
-        >
-          <Upload size={12} className="rotate-180" /> Excel&apos;e Aktar
-        </button>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
