@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
+import { getKurClient } from '@/lib/kur-client'
 import { Search, Plus, Trash2, FileText, User, Calendar, Info, RefreshCw, Printer, Download } from 'lucide-react'
 import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
 import * as XLSX from 'xlsx'
@@ -58,11 +59,8 @@ export default function AdminProposalManager() {
 
   const fetchKur = async () => {
     try {
-      const res = await fetch('/api/kur')
-      if (res.ok) {
-        const data = await res.json()
-        setKur({ USD: data.USD, EUR: data.EUR })
-      }
+      const data = await getKurClient()
+      setKur({ USD: data.USD, EUR: data.EUR })
     } catch {}
   }
 

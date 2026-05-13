@@ -12,6 +12,7 @@ import {
   type CartItem,
 } from '@/lib/cart'
 import { dovizToTL, type KurData } from '@/lib/kur'
+import { getKurClient } from '@/lib/kur-client'
 import { 
   ArrowLeft, Trash2, Minus, Plus, CreditCard, Building2, Loader2, MapPin, Truck, Store, 
   Info, Briefcase, User as UserIcon, Copy, Check, ExternalLink 
@@ -62,8 +63,7 @@ export default function SepetPage() {
   }, [refreshCart])
 
   useEffect(() => {
-    fetch('/api/kur')
-      .then(r => r.json())
+    getKurClient()
       .then((data: KurData) => {
         setKur(data)
       })

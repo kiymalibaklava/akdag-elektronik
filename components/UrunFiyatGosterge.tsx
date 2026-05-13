@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { dovizToTL, formatFiyat, type KurData } from '@/lib/kur'
-import { createClient } from '@/lib/supabase'
+import { getKurClient } from '@/lib/kur-client'
 import { Clock, MessageCircle } from 'lucide-react'
 
 interface Props {
@@ -19,40 +19,19 @@ export default function UrunFiyatGosterge({
   fiyat, bayiFiyati, paraBirimi, bayiParaBirimi, fiyatGuncelleme, isBayi = false, urunAdi = ''
 }: Props) {
   const [kur, setKur] = useState<KurData>({ USD: 32.5, EUR: 35.2, guncelleme: null })
-  const [isBayiUser, setIsBayiUser] = useState(isBayi)
-  const [showPrice, setShowPrice] = useState(isBayi)
 
   useEffect(() => {
-    fetch('/api/kur').then(r => r.json()).then(setKur).catch(() => {})
+    getKurClient().then(setKur).catch(() => {})
   }, [])
-
-  useEffect(() => {
-    setIsBayiUser(isBayi)
-    setShowPrice(isBayi)
-    if (isBayi) return
-    
-    const supabase = createClient()
-    supabase.auth.getSession().then((res: any) => {
-      const session = res.data?.session
-      if (session?.user) {
-        supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
-          .then(({ data }: any) => {
-            const isApproved = !!data?.onaylandi
-            setShowPrice(isApproved)
-            setIsBayiUser(isApproved)
-          })
-      }
-    })
-  }, [isBayi])
 
   if (!fiyat) return null
 
   const fiyatTL = dovizToTL(fiyat, paraBirimi, kur)
   const bayiFiyatTL = bayiFiyati ? dovizToTL(bayiFiyati, bayiParaBirimi, kur) : null
-  const gosterBayiFiyat = showPrice && isBayiUser && bayiFiyatTL && bayiFiyatTL < fiyatTL
+  const gosterBayiFiyat = isBayi && bayiFiyatTL && bayiFiyatTL < fiyatTL
 
   // Fiyat gizli — WhatsApp butonu
-  if (!showPrice) {
+  if (!isBayi) {
     return (
       <div className="mb-6 space-y-3">
         <div className="bg-[#1A1A1A] border border-white/5 p-4">

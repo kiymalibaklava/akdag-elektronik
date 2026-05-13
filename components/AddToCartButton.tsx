@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { ShoppingCart, Check, MessageCircle } from 'lucide-react'
 import { addToCart } from '@/lib/cart'
 import { dovizToTL, type KurData } from '@/lib/kur'
-import { createClient } from '@/lib/supabase'
+import { getKurClient } from '@/lib/kur-client'
 
 interface Props {
   urun: {
@@ -17,31 +17,15 @@ interface Props {
     para_birimi?: string
     bayi_para_birimi?: string
   }
+  isBayi: boolean
 }
 
-export default function AddToCartButton({ urun }: Props) {
+export default function AddToCartButton({ urun, isBayi }: Props) {
   const [added, setAdded] = useState(false)
   const [kur, setKur] = useState<KurData>({ USD: 32.5, EUR: 35.2, guncelleme: null })
-  const [isBayi, setIsBayi] = useState(false)
-  const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    fetch('/api/kur').then(r => r.json()).then(setKur).catch(() => {})
-    
-    // Bayi kontrolü
-    const supabase = createClient()
-    supabase.auth.getSession().then(({ data }: any) => {
-      const session = data.session
-      if (session?.user) {
-        supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
-          .then(({ data: bayi }: any) => {
-            setIsBayi(!!bayi?.onaylandi)
-            setChecking(false)
-          })
-      } else {
-        setChecking(false)
-      }
-    })
+    getKurClient().then(setKur).catch(() => {})
   }, [])
 
   const handleAdd = () => {
@@ -69,8 +53,6 @@ export default function AddToCartButton({ urun }: Props) {
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
   }
-
-  if (checking) return <div className="h-10 w-full bg-white/5 animate-pulse" />
 
   if (!isBayi) {
     return (

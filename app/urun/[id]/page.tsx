@@ -52,6 +52,13 @@ export default async function UrunDetayPage({ params }: Props) {
   const { data: product } = await getProduct(params.id)
   if (!product) notFound()
 
+  const { data: { session } } = await supabase.auth.getSession()
+  let isBayi = false
+  if (session?.user) {
+    const { data: bayi } = await supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
+    if (bayi?.onaylandi) isBayi = true
+  }
+
   const { data: related } = await supabase
     .from('urunler')
     .select('id, ad, kategori, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi')
@@ -124,6 +131,7 @@ export default async function UrunDetayPage({ params }: Props) {
               bayiParaBirimi={product.bayi_para_birimi || product.para_birimi || 'TRY'}
               fiyatGuncelleme={product.fiyat_guncelleme}
               urunAdi={product.ad}
+              isBayi={isBayi}
             />
 
             {/* Stok */}
@@ -156,7 +164,7 @@ export default async function UrunDetayPage({ params }: Props) {
                   bayi_fiyati: product.bayi_fiyati,
                   para_birimi: product.para_birimi || 'TRY',
                   bayi_para_birimi: product.bayi_para_birimi || product.para_birimi || 'TRY',
-                }} />
+                }} isBayi={isBayi} />
               ) : stok === 'tukendi' ? (
                 <div className="space-y-3">
                   <div className="font-display font-bold text-sm uppercase text-center text-white/30 tracking-widest py-3 border border-white/10 bg-white/[0.02]">
