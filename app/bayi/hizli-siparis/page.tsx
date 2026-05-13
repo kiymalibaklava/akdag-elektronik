@@ -54,7 +54,7 @@ export default function HizliSiparisPage() {
     setLoading(true)
     const { data } = await supabase
       .from('urunler')
-      .select('*')
+      .select('id, ad, kategori, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi')
       .ilike('ad', `%${q}%`)
       .limit(5)
     setResults(data || [])

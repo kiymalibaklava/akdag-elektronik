@@ -67,7 +67,7 @@ export default function AdminProposalManager() {
   }
 
   const loadHistory = async () => {
-    const { data } = await supabase.from('teklifler').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase.from('teklifler').select('id, teklif_no, musteri_adi, tarih, genel_toplam, kur_usd, kur_eur, ozel_not, urunler').order('created_at', { ascending: false }).limit(50)
     setPastProposals(data || [])
   }
 

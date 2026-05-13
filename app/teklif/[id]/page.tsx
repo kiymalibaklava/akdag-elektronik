@@ -14,7 +14,7 @@ function createAdminClient() {
 
 async function getProposal(id: string) {
   const supabase = createAdminClient()
-  const { data } = await supabase.from('teklifler').select('*').eq('id', id).single()
+  const { data } = await supabase.from('teklifler').select('id, teklif_no, musteri_adi, tarih, genel_toplam, ara_toplam, kdv, kur_usd, kur_eur, ozel_not, urunler').eq('id', id).single()
   return data
 }
 

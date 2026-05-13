@@ -65,7 +65,7 @@ export default function BayiPanel({ user }: { user: User }) {
   useEffect(() => {
     const load = async () => {
       const { data: bayiData } = await supabase
-        .from('bayiler').select('*').eq('user_id', user.id).maybeSingle()
+        .from('bayiler').select('id, firma_adi, yetkili_adi, telefon, sehir, indirim_orani, onaylandi').eq('user_id', user.id).maybeSingle()
       setBayi(bayiData ?? null)
 
       if (bayiData?.onaylandi) {

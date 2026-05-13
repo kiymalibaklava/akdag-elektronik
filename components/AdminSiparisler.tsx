@@ -83,7 +83,7 @@ export default function AdminSiparisler() {
 
     const { data } = await supabase
       .from('siparisler')
-      .select('*')
+      .select('id, siparis_no, ad_soyad, email, telefon, urunler, toplam_tutar, durum, odeme_tipi, odeme_durumu, notlar, teslimat_tipi, kargo_takip_no, dekont_url, fatura_tipi, firma_unvani, vergi_dairesi, vergi_no, teslimat_adresi, dolar_kuru, euro_kuru, created_at')
       .order('created_at', { ascending: false })
       .range(from, to)
     

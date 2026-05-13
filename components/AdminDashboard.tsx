@@ -42,8 +42,9 @@ export default function AdminDashboard() {
       const [{ data: sData }, { count: bCount }] = await Promise.all([
         supabase
           .from('siparisler')
-          .select('id, siparis_no, ad_soyad, toplam_tutar, durum, odeme_durumu, dekont_url, created_at, urunler')
-          .order('created_at', { ascending: false }),
+          .select('id, siparis_no, ad_soyad, telefon, odeme_tipi, toplam_tutar, durum, odeme_durumu, dekont_url, created_at, urunler')
+          .order('created_at', { ascending: false })
+          .limit(500),
         supabase.from('bayiler').select('*', { count: 'exact', head: true }).eq('onaylandi', true)
       ])
       setSiparisler(sData || [])

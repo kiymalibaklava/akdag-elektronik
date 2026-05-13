@@ -92,16 +92,17 @@ export default function HesabimPage() {
     // Siparişleri yükle
     const { data: orders } = await supabase
       .from('siparisler')
-      .select('*')
+      .select('id, siparis_no, created_at, toplam_tutar, durum, urunler, kargo_takip_no, fatura_url, odeme_durumu')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
+      .limit(30)
 
     setSiparisler(orders || [])
 
     // Bayi bilgilerini yükle
     const { data: bayiData } = await supabase
       .from('bayiler')
-      .select('*')
+      .select('id, firma_adi, yetkili_adi, telefon, sehir')
       .eq('user_id', session.user.id)
       .maybeSingle()
 

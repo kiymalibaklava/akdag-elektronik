@@ -53,20 +53,20 @@ export default function AdminBayiYonetim({ activeTab }: Props) {
   const loadAll = async () => {
     setLoading(true)
     const [{ data: b }, { data: bv }] = await Promise.all([
-      supabase.from('bayiler').select('id, firma_adi, yetkili_adi, telefon, sehir, onaylandi, created_at, user_id').order('created_at', { ascending: false }),
-      supabase.from('bayi_basvurular').select('id, firma_adi, yetkili_adi, telefon, email, sehir, mesaj, durum, created_at').order('created_at', { ascending: false }),
+      supabase.from('bayiler').select('id, firma_adi, yetkili_adi, telefon, sehir, onaylandi, created_at, user_id').order('created_at', { ascending: false }).limit(200),
+      supabase.from('bayi_basvurular').select('id, firma_adi, yetkili_adi, telefon, email, sehir, mesaj, durum, created_at').order('created_at', { ascending: false }).limit(200),
     ])
     setBayiler(b || [])
     setBasvurular(bv || [])
     setLoading(false)
   }
 
- const loadUrunFiyatlari = async () => {
+  const loadUrunFiyatlari = async (bayiId: string) => {
     // Verileri çekerken tip belirtiyoruz
     const { data: urunler } = await supabase.from('urunler').select('id, ad')
-    const { data: fiyatlar } = await supabase.from('urun_fiyatlari').select('*')
+    const { data: fiyatlar } = await supabase.from('urun_fiyatlari').select('urun_id, bayi_fiyati').eq('bayi_id', bayiId)
     
-    // (u) yerine (u: { id: string; ad: string }) yazarak tipi açıkça belirtiyoruz
+    // Sadece bu bayiye ait fiyatlar eşleştirilir
     const merged = (urunler || []).map((u: { id: string; ad: string }) => ({
       urun_id: u.id,
       ad: u.ad,
@@ -130,12 +130,13 @@ export default function AdminBayiYonetim({ activeTab }: Props) {
   }
 
   const saveFiyat = async (urun_id: string, fiyat: string) => {
+    if (!fiyatModal) return
     const val = parseFloat(fiyat)
     if (isNaN(val) || val <= 0) return
     await supabase
       .from('urun_fiyatlari')
-      .upsert({ urun_id, bayi_fiyati: val }, { onConflict: 'urun_id' })
-    await loadUrunFiyatlari()
+      .upsert({ urun_id, bayi_id: fiyatModal.id, bayi_fiyati: val }, { onConflict: 'urun_id, bayi_id' })
+    await loadUrunFiyatlari(fiyatModal.id)
   }
 
   if (loading) {
@@ -189,7 +190,7 @@ export default function AdminBayiYonetim({ activeTab }: Props) {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
-                      onClick={() => { setFiyatModal(bayi); loadUrunFiyatlari() }}
+                      onClick={() => { setFiyatModal(bayi); loadUrunFiyatlari(bayi.id) }}
                       className="flex items-center gap-1.5 px-3 py-1.5 border border-white/10 text-white/40 hover:border-brand-red/40 hover:text-brand-red transition-all text-xs font-display font-semibold uppercase tracking-widest"
                     >
                       <DollarSign size={12} />
