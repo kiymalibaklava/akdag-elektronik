@@ -54,13 +54,7 @@ interface Siparis {
 }
 
 export default function BayiPanel({ user }: { user: User }) {
-  const [bayi, setBayi] = useState<Bayi | null>({
-    id: user.id, // Fallback ID
-    firma_adi: user.user_metadata?.firma_adi || 'Bayi Profili',
-    yetkili_adi: user.user_metadata?.full_name || '',
-    onaylandi: true,
-    sehir: ''
-  })
+  const [bayi, setBayi] = useState<Bayi | null>(null)
   const [urunler, setUrunler] = useState<Urun[]>([])
   const [loading, setLoading] = useState(true)
   const [siparisler, setSiparisler] = useState<Siparis[]>([])
@@ -161,7 +155,9 @@ export default function BayiPanel({ user }: { user: User }) {
               <CheckCircle size={16} className="text-green-400" />
               <span className="font-display font-semibold text-xs tracking-[0.3em] uppercase text-green-400">Bayi Erişimi</span>
             </div>
-            <h1 className="font-display font-black text-3xl uppercase text-white">{bayi?.firma_adi || 'Bayi Paneli'}</h1>
+            <h1 className="font-display font-black text-3xl uppercase text-white">
+              {bayi?.firma_adi || user.user_metadata?.firma_adi || 'Bayi Paneli'}
+            </h1>
             <p className="font-body text-white/30 text-sm mt-1">{user.email}</p>
           </div>
           <button onClick={handleLogout}
@@ -275,8 +271,12 @@ export default function BayiPanel({ user }: { user: User }) {
           </div>
         )}
 
-        {activeTab === 'proposals' && <BayiTeklifOlusturucu bayiId={bayi?.id || user.id} />}
-        {activeTab === 'settings' && <BayiTeklifAyarlari bayiId={bayi?.id || user.id} />}
+        {activeTab === 'proposals' && (
+          bayi?.id ? <BayiTeklifOlusturucu bayiId={bayi.id} /> : <div className="p-10 text-center text-white/30">Bayi bilgileri yükleniyor...</div>
+        )}
+        {activeTab === 'settings' && (
+          bayi?.id ? <BayiTeklifAyarlari bayiId={bayi.id} /> : <div className="p-10 text-center text-white/30">Bayi bilgileri yükleniyor...</div>
+        )}
 
       </div>
     </div>
