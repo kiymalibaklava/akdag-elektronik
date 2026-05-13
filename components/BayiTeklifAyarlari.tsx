@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
-import { Save, Upload, X, Check, Building2, MapPin, Phone, Mail, Globe, Percent, Loader2, Info } from 'lucide-react'
+import { Save, Upload, X, Check, Building2, MapPin, Phone, Mail, Globe, Percent, Loader2, Info, Settings, FileText } from 'lucide-react'
 
 interface ProposalSettings {
   id?: string

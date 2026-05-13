@@ -27,7 +27,7 @@ export default function BayiPanelPage() {
 
     checkUser()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       if (!session) router.push('/bayi')
       else setUser(session.user)
     })
