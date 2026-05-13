@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { dovizToTL, formatFiyat, type KurData } from '@/lib/kur'
 import { getKurClient } from '@/lib/kur-client'
 import { Clock, MessageCircle } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
 
 interface Props {
   fiyat?: number
@@ -19,19 +20,37 @@ export default function UrunFiyatGosterge({
   fiyat, bayiFiyati, paraBirimi, bayiParaBirimi, fiyatGuncelleme, isBayi = false, urunAdi = ''
 }: Props) {
   const [kur, setKur] = useState<KurData>({ USD: 32.5, EUR: 35.2, guncelleme: null })
+  const [isBayiAuth, setIsBayiAuth] = useState(isBayi)
+  const [authChecked, setAuthChecked] = useState(false)
 
   useEffect(() => {
     getKurClient().then(setKur).catch(() => {})
-  }, [])
+    
+    // İstemci taraflı bayi kontrolü (Server-side bazen session kaçırabiliyor)
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
+      if (session?.user) {
+        supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
+          .then(({ data }: { data: any }) => {
+            if (data?.onaylandi) setIsBayiAuth(true)
+            setAuthChecked(true)
+          })
+      } else {
+        setAuthChecked(true)
+      }
+    })
+  }, [isBayi])
+
+  const activeIsBayi = isBayi || isBayiAuth
 
   if (!fiyat) return null
 
   const fiyatTL = dovizToTL(fiyat, paraBirimi, kur)
   const bayiFiyatTL = bayiFiyati ? dovizToTL(bayiFiyati, bayiParaBirimi, kur) : null
-  const gosterBayiFiyat = isBayi && bayiFiyatTL && bayiFiyatTL < fiyatTL
+  const gosterBayiFiyat = activeIsBayi && bayiFiyatTL && bayiFiyatTL < fiyatTL
 
   // Fiyat gizli — WhatsApp butonu
-  if (!isBayi) {
+  if (!activeIsBayi) {
     return (
       <div className="mb-6 space-y-3">
         <div className="bg-[#1A1A1A] border border-white/5 p-4">

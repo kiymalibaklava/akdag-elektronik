@@ -42,9 +42,9 @@ export default function AdminDashboard() {
       const [{ data: sData }, { count: bCount }] = await Promise.all([
         supabase
           .from('siparisler')
-          .select('id, siparis_no, ad_soyad, telefon, odeme_tipi, toplam_tutar, durum, odeme_durumu, dekont_url, created_at, urunler')
+          .select('id, toplam_tutar, durum, odeme_durumu, dekont_url, created_at, urunler')
           .order('created_at', { ascending: false })
-          .limit(500),
+          .limit(100),
         supabase.from('bayiler').select('*', { count: 'exact', head: true }).eq('onaylandi', true)
       ])
       setSiparisler(sData || [])
@@ -230,7 +230,7 @@ export default function AdminDashboard() {
             <div className="w-8 h-px bg-brand-red" />
             <h2 className="font-display font-bold text-sm tracking-[0.2em] uppercase text-white">Son 6 Aylık Ciro (₺)</h2>
           </div>
-          <div className="h-[300px] w-full min-h-[300px]">
+          <div className="h-[300px] w-full min-h-[300px] min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
@@ -258,7 +258,7 @@ export default function AdminDashboard() {
             <div className="h-[300px] flex items-center justify-center text-white/30 text-sm font-body">Bu tarihte veri bulunamadı.</div>
           ) : (
             <div className="grid sm:grid-cols-2 gap-6 h-[300px]">
-              <div className="h-[250px]">
+              <div className="h-[250px] min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie

@@ -34,12 +34,19 @@ interface Product {
 }
 
 interface Props {
-  products: Product[]
   onDeleted?: () => void
+  refreshTrigger?: number // Liste yenileme sinyali
 }
 
-export default function AdminProductList({ products, onDeleted }: Props) {
+const ITEMS_PER_PAGE = 20
+
+export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
+  const [products, setProducts] = useState<Product[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [deleting, setDeleting] = useState<string | null>(null)
   const [editProduct, setEditProduct] = useState<Product | null>(null)
   const [editAd, setEditAd] = useState('')
@@ -67,27 +74,59 @@ export default function AdminProductList({ products, onDeleted }: Props) {
   const [uploadError, setUploadError] = useState('')
   const [editLoading, setEditLoading] = useState(false)
 
-  useEffect(() => {
-    const fetchExisting = async () => {
-      const supabase = createClient()
-      const { data } = await supabase.from('urunler').select('marka, kullanim_alani').limit(200)
-      if (data) {
-        setExistingMarkalar(Array.from(new Set(data.map((x: any) => x.marka).filter(Boolean))))
-        setExistingAlanlar(Array.from(new Set(data.map((x: any) => x.kullanim_alani).filter(Boolean))))
-      }
+  const loadProducts = async () => {
+    setLoading(true)
+    const supabase = createClient()
+    let query = supabase.from('urunler').select('*', { count: 'exact' })
+    if (searchQuery) {
+      query = query.or(`ad.ilike.%${searchQuery}%,kategori.ilike.%${searchQuery}%,marka.ilike.%${searchQuery}%`)
     }
-    fetchExisting()
-  }, [])
+    const { data, count, error } = await query
+      .order('created_at', { ascending: false })
+      .range(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE - 1)
+    if (!error && data) {
+      setProducts(data)
+      setTotalCount(count || 0)
+    }
+    setLoading(false)
+  }
 
-  const filtered = products.filter(p =>
-    !search || p.ad.toLowerCase().includes(search.toLowerCase()) || p.kategori.toLowerCase().includes(search.toLowerCase())
-  )
+  useEffect(() => {
+    loadProducts()
+  }, [currentPage, searchQuery, refreshTrigger]) // refreshTrigger değişince de yükle
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(search)
+      setCurrentPage(0)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  const fetchMarkaSuggestions = async (val: string) => {
+    if (val.length < 2) return
+    const supabase = createClient()
+    const { data } = await supabase.from('urunler').select('marka').ilike('marka', `%${val}%`).limit(10)
+    if (data) setExistingMarkalar(Array.from(new Set(data.map((x: any) => x.marka).filter(Boolean))))
+  }
+
+  const fetchAlanSuggestions = async (val: string) => {
+    if (val.length < 2) return
+    const supabase = createClient()
+    const { data } = await supabase.from('urunler').select('kullanim_alani').ilike('kullanim_alani', `%${val}%`).limit(10)
+    if (data) setExistingAlanlar(Array.from(new Set(data.map((x: any) => x.kullanim_alani).filter(Boolean))))
+  }
+
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
 
   const openEdit = async (p: Product) => {
     setEditLoading(true)
     setEditProduct(p)
     const supabase = createClient()
-    const { data: fullProduct } = await supabase.from('urunler').select('*').eq('id', p.id).single()
+    const { data: fullProduct } = await supabase.from('urunler')
+      .select('id, ad, aciklama, kategori, alt_kategori, urun_tipi, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi, stok_durumu, stok_adedi, kritik_stok, marka, kullanim_alani')
+      .eq('id', p.id)
+      .single()
     const prod = fullProduct || p
     setEditAd(prod.ad)
     setEditAciklama(prod.aciklama || '')
@@ -118,7 +157,6 @@ export default function AdminProductList({ products, onDeleted }: Props) {
     const stokAdedi = Math.max(0, parseInt(editStokAdedi || '0'))
     const kritikStok = Math.max(0, parseInt(editKritikStok || '0'))
     const stokDurumu = stokAdedi <= 0 ? 'tukendi' : editStok
-
     const yeniUrls: string[] = []
     for (const entry of newPhotos) {
       const path = `urunler/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`
@@ -128,9 +166,7 @@ export default function AdminProductList({ products, onDeleted }: Props) {
         yeniUrls.push(data.publicUrl)
       }
     }
-
     const sonFotograflar = [...editFotograflar, ...yeniUrls]
-
     await supabase.from('urunler').update({
       ad: editAd.trim(),
       aciklama: editAciklama.trim(),
@@ -150,10 +186,10 @@ export default function AdminProductList({ products, onDeleted }: Props) {
       updated_at: new Date().toISOString(),
       ...(fiyatDegisti ? { fiyat_guncelleme: new Date().toISOString() } : {}),
     }).eq('id', editProduct.id)
-
+    fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: '/' }) }).catch(() => {})
     setSaving(false)
     setSaveSuccess(true)
-    setTimeout(() => { setEditProduct(null); onDeleted?.() }, 800)
+    setTimeout(() => { setEditProduct(null); loadProducts() }, 800)
   }
 
   const handleDelete = async (id: string) => {
@@ -162,7 +198,8 @@ export default function AdminProductList({ products, onDeleted }: Props) {
     const supabase = createClient()
     await supabase.from('urunler').delete().eq('id', id)
     setDeleting(null)
-    onDeleted?.()
+    fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: '/' }) }).catch(() => {})
+    loadProducts()
   }
 
   const handleNewFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,9 +209,7 @@ export default function AdminProductList({ products, onDeleted }: Props) {
       const preview = URL.createObjectURL(file)
       setNewPhotos(p => [...p, { file, preview, compressing: true }])
       const compressed = await compressImage(file)
-      setNewPhotos(p => p.map(e => e.preview === preview
-        ? { ...e, file: compressed, compressing: false }
-        : e))
+      setNewPhotos(p => p.map(e => e.preview === preview ? { ...e, file: compressed, compressing: false } : e))
     }
     e.target.value = ''
   }
@@ -202,7 +237,6 @@ export default function AdminProductList({ products, onDeleted }: Props) {
       const workbook = XLSX.read(data, { type: 'array' })
       const worksheet = workbook.Sheets[workbook.SheetNames[0]]
       const jsonData = XLSX.utils.sheet_to_json<any>(worksheet)
-
       const upsertData = jsonData.map(row => ({
         ...(row['ID'] || row['ID (SİSTEM)'] ? { id: row['ID'] || row['ID (SİSTEM)'] } : {}),
         ad: row['ÜRÜN ADI'] || row['Ürün Adı'],
@@ -217,13 +251,12 @@ export default function AdminProductList({ products, onDeleted }: Props) {
         stok_durumu: (row['STOK DURUMU'] || row['Stok Durumu']) === 'Stokta' ? 'stokta' : (row['STOK DURUMU'] || row['Stok Durumu']) === 'Tükendi' ? 'tukendi' : 'siparise_gore',
         fiyat_guncelleme: new Date().toISOString()
       })).filter(item => item.ad && item.kategori)
-
       if (upsertData.length > 0) {
         const supabase = createClient()
         const { error } = await supabase.from('urunler').upsert(upsertData, { onConflict: 'id' })
         if (error) throw error
         alert(`${upsertData.length} ürün başarıyla güncellendi/eklendi!`)
-        onDeleted?.() 
+        loadProducts()
       }
     } catch (err: any) {
       alert('Excel yüklenirken hata oluştu: ' + err.message)
@@ -233,9 +266,12 @@ export default function AdminProductList({ products, onDeleted }: Props) {
     }
   }
 
-  const exportToExcel = () => {
-    // Veriyi hazırla
-    const dataToExport = filtered.map(p => ({
+  const exportToExcel = async () => {
+    const supabase = createClient()
+    const { data: allProducts } = await supabase.from('urunler').select('*').order('ad')
+    if (!allProducts) return
+
+    const dataToExport = allProducts.map((p: Product) => ({
       'STOK KODU': (p as any).model_kodu || '-',
       'ÜRÜN ADI': p.ad,
       'KATEGORİ': p.kategori,
@@ -249,28 +285,13 @@ export default function AdminProductList({ products, onDeleted }: Props) {
       'SON GÜNCELLEME': p.fiyat_guncelleme ? new Date(p.fiyat_guncelleme).toLocaleDateString('tr-TR') : '-',
       'ID (SİSTEM)': p.id,
     }))
-
     const worksheet = XLSX.utils.json_to_sheet(dataToExport)
-    
-    // Sütun genişlikleri (Profesyonel görünüm için kritik)
     worksheet['!cols'] = [
-      { wch: 18 }, // Stok Kodu
-      { wch: 60 }, // Ürün Adı
-      { wch: 25 }, // Kategori
-      { wch: 15 }, // Marka
-      { wch: 12 }, // Fiyat
-      { wch: 12 }, // Para Birimi
-      { wch: 12 }, // Bayi Fiyatı
-      { wch: 15 }, // Bayi Para Birimi
-      { wch: 12 }, // Stok Adedi
-      { wch: 15 }, // Stok Durumu
-      { wch: 18 }, // Son Güncelleme
-      { wch: 38 }, // ID
+      { wch: 18 }, { wch: 60 }, { wch: 25 }, { wch: 15 }, { wch: 12 }, { wch: 12 },
+      { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 18 }, { wch: 38 },
     ]
-
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Akdağ Elektronik Ürün Listesi')
-    
     const dateStr = new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')
     XLSX.writeFile(workbook, `Akdag_Elektronik_Fiyat_Listesi_${dateStr}.xlsx`)
   }
@@ -284,7 +305,7 @@ export default function AdminProductList({ products, onDeleted }: Props) {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder={`${products.length} ürün içinde ara...`}
+            placeholder={`${totalCount} ürün içinde ara...`}
             className="input-dark pl-10 pr-10"
           />
           {search && (
@@ -298,107 +319,86 @@ export default function AdminProductList({ products, onDeleted }: Props) {
             <Upload size={12} /> {importing ? 'YÜKLENİYOR...' : 'EXCEL YÜKLE'}
             <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} />
           </label>
-          <button
-            onClick={exportToExcel}
-            className="bg-green-600/10 border border-green-600/20 text-green-500 px-4 py-2 rounded-sm text-[10px] font-bold uppercase hover:bg-green-600/20 transition-all flex items-center gap-2 whitespace-nowrap"
-          >
+          <button onClick={exportToExcel} className="bg-green-600/10 border border-green-600/20 text-green-500 px-4 py-2 rounded-sm text-[10px] font-bold uppercase hover:bg-green-600/20 transition-all flex items-center gap-2 whitespace-nowrap">
             <Download size={12} /> Excel'e Aktar
           </button>
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="border border-white/5 bg-[#141414] p-20 flex flex-col items-center justify-center space-y-4">
+          <div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" />
+          <p className="font-display font-bold text-[10px] tracking-[0.2em] uppercase text-white/20">Ürünler Yükleniyor...</p>
+        </div>
+      ) : products.length === 0 ? (
         <div className="border border-white/5 bg-[#141414] p-10 text-center">
-          {search ? (
-            <>
-              <Search size={40} className="text-white/5 mx-auto mb-4" />
-              <p className="font-display font-bold text-sm uppercase text-white/20 tracking-widest">
-                "{search}" için sonuç bulunamadı
-              </p>
-            </>
-          ) : (
-            <>
-              <Package size={40} className="text-white/5 mx-auto mb-4" />
-              <p className="font-display font-bold text-sm uppercase text-white/20 tracking-widest">
-                Henüz ürün eklenmemiş
-              </p>
-            </>
-          )}
+          <Search size={40} className="text-white/5 mx-auto mb-4" />
+          <p className="font-display font-bold text-sm uppercase text-white/20 tracking-widest">
+            {search ? `"${search}" için sonuç bulunamadı` : "Henüz ürün eklenmemiş"}
+          </p>
         </div>
       ) : (
-        <div className="space-y-1 overflow-y-auto max-h-[calc(100vh-250px)] pr-2 custom-scrollbar">
-          {filtered.map((product) => (
-            <div key={product.id} className="bg-[#141414] border border-white/5 p-3 flex items-center gap-4 hover:border-white/10 transition-colors group">
-              <div className="w-12 h-12 bg-black border border-white/5 flex-shrink-0 relative overflow-hidden">
-                {product.fotograflar?.[0] ? (
-                  <Image src={product.fotograflar[0]} alt={product.ad} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white/5"><Package size={20} /></div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-display font-bold text-sm uppercase text-white truncate tracking-wide">{product.ad}</div>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                  <span className="font-body text-white/40 text-[10px] uppercase tracking-wider">{product.kategori}</span>
-                  {product.fiyat && (
-                    <span className="font-display font-bold text-[10px] text-brand-red">
-                      {PARA_BIRIMLERI.find(p => p.value === product.para_birimi)?.symbol || ''} {product.fiyat.toLocaleString('tr-TR')} {product.para_birimi || 'TL'}
-                      {product.bayi_fiyati && (
-                        <span className="text-green-400/60 ml-1">
-                          / Bayi: {PARA_BIRIMLERI.find(p => p.value === product.bayi_para_birimi)?.symbol || ''} {product.bayi_fiyati.toLocaleString('tr-TR')} {product.bayi_para_birimi || 'TL'}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  {product.fiyat_guncelleme && (
-                    <span className="font-body text-white/20 text-xs">
-                      Fiyat: {new Date(product.fiyat_guncelleme).toLocaleDateString('tr-TR')}
-                    </span>
-                  )}
-                  {product.stok_durumu === 'tukendi' && (
-                    <span className="font-display font-semibold text-xs text-red-400/60 uppercase tracking-widest">Tükendi</span>
-                  )}
-                  {typeof product.stok_adedi === 'number' && (
-                    <span className={`font-body text-xs ${product.kritik_stok !== null && product.kritik_stok !== undefined && product.stok_adedi <= product.kritik_stok ? 'text-yellow-400' : 'text-white/30'}`}>
-                      Stok: {product.stok_adedi}
-                    </span>
+        <div className="space-y-4">
+          <div className="max-h-[calc(100vh-320px)] overflow-y-auto pr-2 custom-scrollbar space-y-1">
+            {products.map((product) => (
+              <div key={product.id} className="bg-[#141414] border border-white/5 p-3 flex items-center gap-4 hover:border-white/10 transition-colors group">
+                <div className="w-12 h-12 bg-black border border-white/5 flex-shrink-0 relative overflow-hidden">
+                  {product.fotograflar?.[0] ? (
+                    <Image src={product.fotograflar[0]} alt={product.ad} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white/5"><Package size={20} /></div>
                   )}
                 </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-display font-bold text-sm uppercase text-white truncate tracking-wide">{product.ad}</div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                    <span className="font-body text-white/40 text-[10px] uppercase tracking-wider">{product.kategori}</span>
+                    {product.fiyat && (
+                      <span className="font-display font-bold text-[10px] text-brand-red">
+                        {PARA_BIRIMLERI.find(p => p.value === product.para_birimi)?.symbol || ''} {product.fiyat.toLocaleString('tr-TR')} {product.para_birimi || 'TL'}
+                        {product.bayi_fiyati && (
+                          <span className="text-green-400/60 ml-1">
+                            / Bayi: {PARA_BIRIMLERI.find(p => p.value === product.bayi_para_birimi)?.symbol || ''} {product.bayi_fiyati.toLocaleString('tr-TR')} {product.bayi_para_birimi || 'TL'}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button onClick={() => openEdit(product)} className="w-9 h-9 border border-white/10 flex items-center justify-center text-white/20 hover:border-brand-red/40 hover:text-brand-red transition-all"><Pencil size={13} /></button>
+                  <button onClick={() => handleDelete(product.id)} disabled={deleting === product.id} className="w-9 h-9 border border-white/10 flex items-center justify-center text-white/20 hover:border-red-500/40 hover:text-red-500 transition-all disabled:opacity-40">
+                    {deleting === product.id ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" /> : <Trash2 size={13} />}
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => openEdit(product)}
-                  className="w-9 h-9 border border-white/10 flex items-center justify-center text-white/20 hover:border-brand-red/40 hover:text-brand-red transition-all"
-                  title="Düzenle">
-                  <Pencil size={13} />
-                </button>
-                <button onClick={() => handleDelete(product.id)} disabled={deleting === product.id}
-                  className="w-9 h-9 border border-white/10 flex items-center justify-center text-white/20 hover:border-red-500/40 hover:text-red-500 transition-all disabled:opacity-40"
-                  title="Sil">
-                  {deleting === product.id
-                    ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                    : <Trash2 size={13} />
-                  }
-                </button>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t border-white/5">
+              <div className="text-[10px] font-display font-bold text-white/20 uppercase tracking-widest">
+                Sayfa {currentPage + 1} / {totalPages} — Toplam {totalCount} Ürün
+              </div>
+              <div className="flex gap-2">
+                <button disabled={currentPage === 0 || loading} onClick={() => setCurrentPage(prev => prev - 1)} className="px-4 py-2 bg-white/5 border border-white/10 text-white/40 text-[10px] font-bold uppercase hover:bg-white/10 hover:text-white transition-all disabled:opacity-20">Önceki</button>
+                <button disabled={currentPage >= totalPages - 1 || loading} onClick={() => setCurrentPage(prev => prev + 1)} className="px-4 py-2 bg-white/5 border border-white/10 text-white/40 text-[10px] font-bold uppercase hover:bg-white/10 hover:text-white transition-all disabled:opacity-20">Sonraki</button>
               </div>
             </div>
-          ))}
+          )}
         </div>
       )}
 
       {editProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#141414] border border-white/10 w-full max-w-lg flex flex-col"
-            style={{ clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%)', maxHeight: 'calc(100vh - 80px)' }}>
+          <div className="bg-[#141414] border border-white/10 w-full max-w-lg flex flex-col" style={{ clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%)', maxHeight: 'calc(100vh - 80px)' }}>
             <div className="flex items-center justify-between p-6 border-b border-white/5 flex-shrink-0">
               <div>
                 <div className="font-display font-black text-lg uppercase text-white">Ürün Düzenle</div>
                 <div className="font-body text-white/30 text-xs mt-0.5 truncate max-w-xs">{editProduct.ad}</div>
               </div>
-              <button onClick={() => setEditProduct(null)} className="text-white/20 hover:text-white transition-colors p-1">
-                <X size={20} />
-              </button>
+              <button onClick={() => setEditProduct(null)} className="text-white/20 hover:text-white transition-colors p-1"><X size={20} /></button>
             </div>
-
             <div className="p-6 pb-32 space-y-4 overflow-y-auto flex-1">
               {editLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 space-y-4">
@@ -411,7 +411,6 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                     <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Ürün Adı *</label>
                     <input type="text" value={editAd} onChange={e => setEditAd(e.target.value)} className="input-dark" />
                   </div>
-
                   <div className="border border-white/5 bg-[#1A1A1A] p-3 space-y-2">
                     <span className="font-display font-semibold text-xs tracking-widest uppercase text-white/40">Kategori Hiyerarşisi</span>
                     <div className="grid grid-cols-3 gap-2">
@@ -437,12 +436,10 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                       </div>
                     </div>
                   </div>
-
                   <div>
                     <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Açıklama *</label>
                     <textarea value={editAciklama} onChange={e => setEditAciklama(e.target.value)} rows={4} className="input-dark resize-none" />
                   </div>
-
                   <div className="grid grid-cols-2 gap-3">
                     <div className="relative">
                       <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Fiyat</label>
@@ -459,7 +456,6 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                       </select>
                     </div>
                   </div>
-
                   <div className="grid grid-cols-2 gap-3">
                     <div className="relative">
                       <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Stok Adedi</label>
@@ -470,11 +466,10 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                       <input type="number" value={editKritikStok} onChange={e => setEditKritikStok(e.target.value)} className="input-dark" />
                     </div>
                   </div>
-
                   <div className="grid grid-cols-2 gap-3">
                     <div className="relative">
                       <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Marka</label>
-                      <input type="text" value={editMarka} onChange={e => setEditMarka(e.target.value)} onFocus={() => setShowMarkaSuggestions(true)} onBlur={() => setTimeout(() => setShowMarkaSuggestions(false), 200)} className="input-dark" />
+                      <input type="text" value={editMarka} onChange={e => { setEditMarka(e.target.value); fetchMarkaSuggestions(e.target.value) }} onFocus={() => setShowMarkaSuggestions(true)} onBlur={() => setTimeout(() => setShowMarkaSuggestions(false), 200)} className="input-dark" />
                       {showMarkaSuggestions && existingMarkalar.length > 0 && (
                         <div className="absolute z-10 w-full mt-1 bg-[#1A1A1A] border border-white/10 max-h-32 overflow-y-auto">
                           {existingMarkalar.filter(m => m.toLowerCase().includes(editMarka.toLowerCase())).map(m => (
@@ -485,7 +480,7 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                     </div>
                     <div className="relative">
                       <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Kullanım Alanı</label>
-                      <input type="text" value={editKullanim} onChange={e => setEditKullanim(e.target.value)} onFocus={() => setShowAlanSuggestions(true)} onBlur={() => setTimeout(() => setShowAlanSuggestions(false), 200)} className="input-dark" />
+                      <input type="text" value={editKullanim} onChange={e => { setEditKullanim(e.target.value); fetchAlanSuggestions(e.target.value) }} onFocus={() => setShowAlanSuggestions(true)} onBlur={() => setTimeout(() => setShowAlanSuggestions(false), 200)} className="input-dark" />
                       {showAlanSuggestions && existingAlanlar.length > 0 && (
                         <div className="absolute z-10 w-full mt-1 bg-[#1A1A1A] border border-white/10 max-h-32 overflow-y-auto">
                           {existingAlanlar.filter(a => a.toLowerCase().includes(editKullanim.toLowerCase())).map(a => (
@@ -495,29 +490,22 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                       )}
                     </div>
                   </div>
-
                   <div className="space-y-3">
                     <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block">Fotoğraflar (En fazla 10)</label>
                     <div className="grid grid-cols-5 gap-2">
                       {editFotograflar.map((url, i) => (
                         <div key={i} className="aspect-square relative group bg-black border border-white/5">
                           <Image src={url} alt="" fill className="object-cover" />
-                          <button onClick={() => removeExistingPhoto(url)} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                            <X size={12} />
-                          </button>
+                          <button onClick={() => removeExistingPhoto(url)} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
                         </div>
                       ))}
                       {newPhotos.map((p, i) => (
                         <div key={i} className="aspect-square relative group bg-black border border-white/10">
                           <Image src={p.preview} alt="" fill className={`object-cover ${p.compressing ? 'opacity-30' : ''}`} />
                           {p.compressing ? (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="w-4 h-4 border-2 border-white/10 border-t-white rounded-full animate-spin" />
-                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center"><div className="w-4 h-4 border-2 border-white/10 border-t-white rounded-full animate-spin" /></div>
                           ) : (
-                            <button onClick={() => removeNewPhoto(p.preview)} className="absolute -top-1 -right-1 w-5 h-5 bg-brand-red text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                              <X size={12} />
-                            </button>
+                            <button onClick={() => removeNewPhoto(p.preview)} className="absolute -top-1 -right-1 w-5 h-5 bg-brand-red text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
                           )}
                         </div>
                       ))}
@@ -533,12 +521,9 @@ export default function AdminProductList({ products, onDeleted }: Props) {
                 </>
               )}
             </div>
-
             <div className="flex gap-3 px-6 pb-6 pt-3 border-t border-white/5 flex-shrink-0 bg-[#141414]">
-              <button onClick={handleSave} disabled={saving || !editAd || !editAciklama || newPhotos.some(n => n.compressing)}
-                className={`btn-primary flex-1 justify-center text-sm disabled:opacity-40 ${saveSuccess ? '!bg-green-600' : ''}`}>
-                {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  : saveSuccess ? <Check size={15} /> : null}
+              <button onClick={handleSave} disabled={saving || !editAd || !editAciklama || newPhotos.some(n => n.compressing)} className={`btn-primary flex-1 justify-center text-sm disabled:opacity-40 ${saveSuccess ? '!bg-green-600' : ''}`}>
+                {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : saveSuccess ? <Check size={15} /> : null}
                 {saving ? 'Kaydediliyor...' : saveSuccess ? 'Kaydedildi!' : 'Kaydet'}
               </button>
               <button onClick={() => setEditProduct(null)} className="btn-outline text-sm px-5">İptal</button>

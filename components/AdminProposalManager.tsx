@@ -37,7 +37,7 @@ const VARSAYILAN_ACIKLAMALAR = [
 export default function AdminProposalManager() {
   const [items, setItems] = useState<ProposalItem[]>([])
   const [customerName, setCustomerName] = useState('')
-  const [proposalDate, setProposalDate] = useState(new Date().toISOString().split('T')[0])
+  const [proposalDate, setProposalDate] = useState('') // Başta boş, useEffect ile dolacak
   const [customNote, setCustomNote] = useState('')
   const [notes, setNotes] = useState(VARSAYILAN_ACIKLAMALAR)
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -50,11 +50,12 @@ export default function AdminProposalManager() {
   const [currentProposalId, setCurrentProposalId] = useState<string | null>(null)
   const [currentProposalNo, setCurrentProposalNo] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = useRef(createClient()).current
 
   useEffect(() => {
     fetchKur()
     loadHistory()
+    setProposalDate(new Date().toISOString().split('T')[0]) // İstemci tarafında set et
   }, [])
 
   const fetchKur = async () => {
@@ -64,8 +65,17 @@ export default function AdminProposalManager() {
     } catch {}
   }
 
+
   const loadHistory = async () => {
-    const { data } = await supabase.from('teklifler').select('id, teklif_no, musteri_adi, tarih, genel_toplam, kur_usd, kur_eur, ozel_not, urunler').order('created_at', { ascending: false }).limit(50)
+    const { data, error } = await supabase
+      .from('teklifler')
+      .select('id, teklif_no, musteri_adi, tarih, genel_toplam, kur_usd, kur_eur, ozel_not, urunler, created_at')
+      .order('created_at', { ascending: false })
+      .limit(100)
+    
+    if (error) {
+      console.error("TEKLİF ARŞİVİ YÜKLEME HATASI (403 mü?):", error)
+    }
     setPastProposals(data || [])
   }
 
@@ -103,10 +113,10 @@ export default function AdminProposalManager() {
       let result;
       if (isNewVersion || !currentProposalId) {
         // Yeni kayıt (Insert)
-        result = await supabase.from('teklifler').insert([payload]).select().single()
+        result = await supabase.from('teklifler').insert([payload]).select('id, teklif_no').single()
       } else {
         // Mevcut kaydı güncelle (Update)
-        result = await supabase.from('teklifler').update(payload).eq('id', currentProposalId).select().single()
+        result = await supabase.from('teklifler').update(payload).eq('id', currentProposalId).select('id, teklif_no').single()
       }
 
       if (result.error) throw result.error
@@ -297,10 +307,10 @@ export default function AdminProposalManager() {
               {items.length === 0 ? <div className="text-center py-10 text-white/20">Ürün eklenmedi.</div> : (
                 <div className="space-y-4">
                   {items.map((item, idx) => (
-                    <div key={item.id} className="flex items-center gap-4 p-4 bg-white/[0.02] border border-white/5">
+                    <div key={item.id || idx} className="flex items-center gap-4 p-4 bg-white/[0.02] border border-white/5">
                       <div className="w-12 h-12 flex-shrink-0 bg-white/5"><img src={item.gorsel} className="w-full h-full object-cover"/></div>
                       <div className="flex-1 min-w-0">
-                        {item.id.toString().startsWith('manual') ? (
+                        {item.id?.toString().startsWith('manual') ? (
                           <input value={item.ad} onChange={e => updateManualItem(idx, 'ad', e.target.value)} className="w-full bg-white/5 border border-white/10 text-white text-xs p-1 outline-none"/>
                         ) : <div className="text-xs font-bold text-white truncate">{item.ad}</div>}
                         <div className="text-[10px] text-white/40">{item.marka} | {item.kod}</div>
@@ -416,7 +426,7 @@ export default function AdminProposalManager() {
               <input
                 type="text"
                 value={archiveSearch}
-                onChange={e => setArchiveSearch(e.target.value)}
+                onChange={(e) => setArchiveSearch(e.target.value)}
                 placeholder="Müşteri adı veya teklif no ile ara..."
                 className="w-full bg-white/5 border border-white/10 p-3 text-white text-xs outline-none focus:border-brand-red placeholder:text-white/20"
               />
@@ -446,10 +456,29 @@ export default function AdminProposalManager() {
                     }`}
                     onClick={() => {
                       setCustomerName(p.musteri_adi)
-                      setItems(p.urunler)
-                      setProposalDate(p.tarih)
+                      // Ürünleri normalize et (Bayi vs Admin formatı farkı)
+                      const normalizedItems = (p.urunler || []).map((u: any) => {
+                        const birimFiyat = u.fiyat_doviz || u.birim_fiyat || 0
+                        const paraBirimi = u.para_birimi || 'TRY'
+                        const adet = u.miktar || u.adet || 1
+                        const kur = paraBirimi === 'USD' ? (p.kur_usd || 33) : paraBirimi === 'EUR' ? (p.kur_eur || 36) : 1
+                        
+                        return {
+                          id: u.id || u.urun_id || `legacy-${Math.random()}`,
+                          ad: u.ad,
+                          marka: u.marka || '-',
+                          kod: u.kod || u.model_kodu || '-',
+                          gorsel: u.gorsel || u.fotograf || 'https://via.placeholder.com/150',
+                          miktar: adet,
+                          fiyat_doviz: birimFiyat,
+                          para_birimi: paraBirimi,
+                          tutar_tl: u.tutar_tl || (birimFiyat * adet * kur) || 0
+                        }
+                      })
+                      setItems(normalizedItems)
+                      setProposalDate(p.tarih || p.created_at?.split('T')[0])
                       setCustomNote(p.ozel_not || '')
-                      setKur({ USD: p.kur_usd, EUR: p.kur_eur })
+                      setKur({ USD: p.kur_usd || 33, EUR: p.kur_eur || 36 })
                       setCurrentProposalId(p.id)
                       setCurrentProposalNo(p.teklif_no)
                       setShowHistory(false)
@@ -479,7 +508,7 @@ export default function AdminProposalManager() {
                       <div>
                         <div className="text-white font-bold text-sm">{p.musteri_adi}</div>
                         <div className="text-white/30 text-[10px] mt-0.5">
-                          {new Date(p.tarih).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {new Date(p.tarih || p.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
                           {' • '}{p.urunler?.length || 0} kalem
                         </div>
                       </div>

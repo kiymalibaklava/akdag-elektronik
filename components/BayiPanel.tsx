@@ -58,6 +58,7 @@ export default function BayiPanel({ user }: { user: User }) {
   const [urunler, setUrunler] = useState<Urun[]>([])
   const [loading, setLoading] = useState(true)
   const [siparisler, setSiparisler] = useState<Siparis[]>([])
+  const [counts, setCounts] = useState({ total: 0, withPrice: 0, recent: 0 })
   const [repeatMsg, setRepeatMsg] = useState('')
   const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'proposals' | 'settings'>('dashboard')
   const supabase = useRef(createClient()).current
@@ -75,13 +76,18 @@ export default function BayiPanel({ user }: { user: User }) {
         setBayi(bayiData)
       }
 
-      // Ürünleri sadece istatistikler için çek (Tüm kolonlar yerine sadece gerekli olanlar)
-      const { data: urunData } = await supabase
-        .from('urunler')
-        .select('id, bayi_fiyati, fiyat_guncelleme')
-        .order('created_at', { ascending: false })
-        .limit(200)
-      setUrunler(urunData as Urun[] || [])
+      // İstatistikleri çek (Veriyi indirmeden sadece say)
+      const [{ count: total }, { count: withPrice }, { count: recent }] = await Promise.all([
+        supabase.from('urunler').select('*', { count: 'exact', head: true }),
+        supabase.from('urunler').select('*', { count: 'exact', head: true }).not('bayi_fiyati', 'is', null),
+        supabase.from('urunler').select('*', { count: 'exact', head: true }).gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      ])
+      
+      setCounts({ 
+        total: total || 0, 
+        withPrice: withPrice || 0, 
+        recent: recent || 0 
+      })
 
       // Siparişlerde 'urunler' blob'unu ilk etapta çekme (Veri tasarrufu)
       const { data: siparisData } = await supabase
@@ -204,9 +210,9 @@ export default function BayiPanel({ user }: { user: User }) {
             {/* İstatistikler */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { val: urunler.length, label: 'Toplam Ürün', color: 'border-l-brand-red' },
-                { val: urunler.filter(u => u.bayi_fiyati).length, label: 'Bayi Fiyatlı', color: 'border-l-green-500' },
-                { val: recentCount, label: 'Yeni Güncellenen', color: 'border-l-yellow-500' },
+                { val: counts.total, label: 'Toplam Ürün', color: 'border-l-brand-red' },
+                { val: counts.withPrice, label: 'Bayi Fiyatlı', color: 'border-l-green-500' },
+                { val: counts.recent, label: 'Yeni Güncellenen', color: 'border-l-yellow-500' },
                 { val: siparisler.length, label: 'Sipariş Sayısı', color: 'border-l-blue-500' },
               ].map(s => (
                 <div key={s.label} className={`bg-[#141414] border border-white/5 p-4 border-l-2 ${s.color}`}>

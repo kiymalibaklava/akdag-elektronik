@@ -31,7 +31,7 @@ export default function AdminCategoryManager() {
 
   const loadCategories = async () => {
     setLoading(true)
-    const { data } = await supabase.from('categories').select('*').order('name')
+    const { data } = await supabase.from('categories').select('id, name, slug, parent_id').order('name')
     setCategories(data || [])
     setLoading(false)
   }

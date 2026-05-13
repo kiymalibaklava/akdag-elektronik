@@ -76,13 +76,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Mevcut yılları getir (filtre için)
+  // Mevcut yılları getir (filtre için) - Optimizasyon: Sadece benzersiz yılları çek
   const { data: yillar } = await supabaseAdmin
     .from('wolvox_taslak')
     .select('yil')
     .or('is_processed.eq.false,is_processed.is.null')
     .not('yil', 'is', null)
     .order('yil', { ascending: false })
+    .limit(100) // Aşırı veri çekimini engellemek için limit koyuldu (genelde zaten 3-5 farklı yıl olur)
 
   const uniqueYillar = Array.from(new Set((yillar || []).map(r => r.yil).filter(Boolean)))
 

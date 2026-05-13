@@ -92,17 +92,20 @@ export default function AdminAddProduct({ onAdded, initialData }: Props) {
     }
   }
 
-  useEffect(() => {
-    const fetchExisting = async () => {
-      const supabase = createClient()
-      const { data: m } = await supabase.from('urunler').select('marka').not('marka', 'is', null)
-      const { data: a } = await supabase.from('urunler').select('kullanim_alani').not('kullanim_alani', 'is', null)
-      
-      if (m) setExistingMarkalar(Array.from(new Set(m.map((x: any) => x.marka).filter(Boolean))))
-      if (a) setExistingAlanlar(Array.from(new Set(a.map((x: any) => x.kullanim_alani).filter(Boolean))))
-    }
-    fetchExisting()
-  }, [])
+  // Önerileri kullanıcı yazdıkça (on-demand) çekiyoruz - Optimizasyon: Büyük veri çekimi kaldırıldı.
+  const fetchMarkaSuggestions = async (val: string) => {
+    if (val.length < 2) return
+    const supabase = createClient()
+    const { data } = await supabase.from('urunler').select('marka').ilike('marka', `%${val}%`).limit(10)
+    if (data) setExistingMarkalar(Array.from(new Set(data.map((x: any) => x.marka).filter(Boolean))))
+  }
+
+  const fetchAlanSuggestions = async (val: string) => {
+    if (val.length < 2) return
+    const supabase = createClient()
+    const { data } = await supabase.from('urunler').select('kullanim_alani').ilike('kullanim_alani', `%${val}%`).limit(10)
+    if (data) setExistingAlanlar(Array.from(new Set(data.map((x: any) => x.kullanim_alani).filter(Boolean))))
+  }
 
   // Hiyerarşi seçenekleri
   const altKategoriler = anaCat?.children || []
@@ -169,6 +172,11 @@ export default function AdminAddProduct({ onAdded, initialData }: Props) {
 
     if (!insertErr && taslakId) {
       await supabase.from('wolvox_taslak').delete().eq('id', taslakId)
+    }
+
+    // Önbelleği temizle (Anında Yayınlama)
+    if (!insertErr) {
+      fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: '/' }) }).catch(() => {})
     }
 
     setLoading(false)
@@ -278,7 +286,7 @@ export default function AdminAddProduct({ onAdded, initialData }: Props) {
           <input 
             type="text" 
             value={marka} 
-            onChange={(e) => setMarka(e.target.value)} 
+            onChange={(e) => { setMarka(e.target.value); fetchMarkaSuggestions(e.target.value) }} 
             onFocus={() => setShowMarkaSuggestions(true)}
             onBlur={() => setTimeout(() => setShowMarkaSuggestions(false), 200)}
             className="input-dark" 
@@ -307,7 +315,7 @@ export default function AdminAddProduct({ onAdded, initialData }: Props) {
           <input 
             type="text" 
             value={kullanimAlani} 
-            onChange={(e) => setKullanimAlani(e.target.value)} 
+            onChange={(e) => { setKullanimAlani(e.target.value); fetchAlanSuggestions(e.target.value) }} 
             onFocus={() => setShowAlanSuggestions(true)}
             onBlur={() => setTimeout(() => setShowAlanSuggestions(false), 200)}
             className="input-dark" 

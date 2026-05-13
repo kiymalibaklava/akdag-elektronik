@@ -61,20 +61,46 @@ export default function AdminBayiYonetim({ activeTab }: Props) {
     setLoading(false)
   }
 
-  const loadUrunFiyatlari = async (bayiId: string) => {
-    // Verileri çekerken tip belirtiyoruz
-    const { data: urunler } = await supabase.from('urunler').select('id, ad')
+  const [priceSearch, setPriceSearch] = useState('')
+  const [pricePage, setPricePage] = useState(1)
+  const PRICE_PER_PAGE = 20
+
+  const loadUrunFiyatlari = async (bayiId: string, search = '', page = 1) => {
+    const from = (page - 1) * PRICE_PER_PAGE
+    const to = from + PRICE_PER_PAGE - 1
+
+    let q = supabase.from('urunler').select('id, ad', { count: 'exact' })
+    if (search) q = q.ilike('ad', `%${search}%`)
+    
+    const { data: urunler, count } = await q.order('ad', { ascending: true }).range(from, to)
     const { data: fiyatlar } = await supabase.from('urun_fiyatlari').select('urun_id, bayi_fiyati').eq('bayi_id', bayiId)
     
-    // Sadece bu bayiye ait fiyatlar eşleştirilir
-    const merged = (urunler || []).map((u: { id: string; ad: string }) => ({
+    const merged = (urunler || []).map((u: any) => ({
       urun_id: u.id,
       ad: u.ad,
-      bayi_fiyati: fiyatlar?.find((f: { urun_id: string; bayi_fiyati: number }) => f.urun_id === u.id)?.bayi_fiyati ?? null,
+      bayi_fiyati: fiyatlar?.find((f: any) => f.urun_id === u.id)?.bayi_fiyati ?? null,
     }))
     
     setUrunFiyatlari(merged)
   }
+
+  // Arama değişince fiyatları yeniden yükle
+  useEffect(() => {
+    if (fiyatModal) {
+      const timer = setTimeout(() => {
+        loadUrunFiyatlari(fiyatModal.id, priceSearch, 1)
+        setPricePage(1)
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [priceSearch])
+
+  // Sayfa değişince fiyatları yeniden yükle
+  useEffect(() => {
+    if (fiyatModal && pricePage > 1) {
+      loadUrunFiyatlari(fiyatModal.id, priceSearch, pricePage)
+    }
+  }, [pricePage])
 
   const toggleOnay = async (bayi: Bayi) => {
     setActionLoading(bayi.id)
@@ -323,6 +349,37 @@ export default function AdminBayiYonetim({ activeTab }: Props) {
               <button onClick={() => setFiyatModal(null)} className="text-white/20 hover:text-white transition-colors p-1">
                 <X size={20} />
               </button>
+            </div>
+
+            <div className="p-4 border-b border-white/5 space-y-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Ürün adı ile ara..."
+                  value={priceSearch}
+                  onChange={(e) => setPriceSearch(e.target.value)}
+                  className="w-full bg-[#0F0F0F] border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-brand-red transition-colors"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-white/30 text-xs">Sayfa {pricePage}</span>
+                <div className="flex gap-2">
+                  <button
+                    disabled={pricePage === 1}
+                    onClick={() => setPricePage(p => p - 1)}
+                    className="px-3 py-1 bg-white/5 border border-white/10 text-white text-xs disabled:opacity-30 hover:bg-white/10 transition-colors"
+                  >
+                    Önceki
+                  </button>
+                  <button
+                    onClick={() => setPricePage(p => p + 1)}
+                    disabled={urunFiyatlari.length < PRICE_PER_PAGE}
+                    className="px-3 py-1 bg-white/5 border border-white/10 text-white text-xs disabled:opacity-30 hover:bg-white/10 transition-colors"
+                  >
+                    Sonraki
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div className="overflow-y-auto flex-1 p-4 space-y-2">

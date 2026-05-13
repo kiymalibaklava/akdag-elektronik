@@ -74,51 +74,48 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
   const max = searchParams.max ? Number(searchParams.max) : null
   const sirala = searchParams.sirala || 'yeni'
 
-  let query = supabase
-    .from('urunler')
-    .select(LIGHT_PRODUCT_FIELDS, { count: 'exact' })
+  // Ürünleri getiren ana fonksiyonu cache-liyoruz
+  const getProducts = unstable_cache(
+    async (from: number, to: number, filters: any) => {
+      const sb = await createServerSupabaseClient()
+      let q = sb.from('urunler').select(LIGHT_PRODUCT_FIELDS, { count: 'exact' })
+      
+      if (filters.q) q = q.ilike('ad', `%${filters.q}%`)
+      if (filters.activeCategory) {
+        if (filters.slugLength === 1) q = q.eq('kategori', filters.activeCategory.name)
+        else if (filters.slugLength === 2) q = q.eq('alt_kategori', filters.activeCategory.name)
+        else if (filters.slugLength === 3) q = q.eq('urun_tipi', filters.activeCategory.name)
+      }
+      if (filters.min) q = q.gte('fiyat', filters.min)
+      if (filters.max) q = q.lte('fiyat', filters.max)
+      if (filters.stok && filters.stok !== 'tum') q = q.eq('stok_durumu', filters.stok)
+      if (filters.marka && filters.marka !== 'tum') q = q.eq('marka', filters.marka)
+      if (filters.kullanim && filters.kullanim !== 'tum') q = q.eq('kullanim_alani', filters.kullanim)
 
-  // Sıralama Mantığı
-  if (sirala === 'yeni') query = query.order('created_at', { ascending: false })
-  else if (sirala === 'fiyat_artan') query = query.order('fiyat', { ascending: true })
-  else if (sirala === 'fiyat_azalan') query = query.order('fiyat', { ascending: false })
-  else if (sirala === 'ad_asc') query = query.order('ad', { ascending: true })
-  
-  query = query.range(from, to)
+      if (filters.sirala === 'yeni') q = q.order('created_at', { ascending: false })
+      else if (filters.sirala === 'fiyat_artan') q = q.order('fiyat', { ascending: true })
+      else if (filters.sirala === 'fiyat_azalan') q = q.order('fiyat', { ascending: false })
+      else if (filters.sirala === 'ad_asc') q = q.order('ad', { ascending: true })
 
-  // Filtreleme
-  if (searchParams.q) {
-    query = query.ilike('ad', `%${searchParams.q}%`)
-  }
+      return q.range(from, to)
+    },
+    ['product-list-cache'],
+    { revalidate: 3600, tags: ['products'] }
+  )
 
-  // Kategori Filtresi (Hiyerarşik)
-  if (activeCategory) {
-    if (slugArray.length === 1) {
-      query = query.eq('kategori', activeCategory.name)
-    } else if (slugArray.length === 2) {
-      query = query.eq('alt_kategori', activeCategory.name)
-    } else if (slugArray.length === 3) {
-      query = query.eq('urun_tipi', activeCategory.name)
-    }
-  }
-
-  if (min !== null && !Number.isNaN(min)) {
-    query = query.gte('fiyat', min)
-  }
-  if (max !== null && !Number.isNaN(max)) {
-    query = query.lte('fiyat', max)
-  }
-  if (searchParams.stok && searchParams.stok !== 'tum') {
-    query = query.eq('stok_durumu', searchParams.stok)
-  }
-  if (searchParams.marka && searchParams.marka !== 'tum') {
-    query = query.eq('marka', searchParams.marka)
-  }
-  if (searchParams.kullanim && searchParams.kullanim !== 'tum') {
-    query = query.eq('kullanim_alani', searchParams.kullanim)
+  const filters = {
+    q: searchParams.q,
+    activeCategory,
+    slugLength: slugArray.length,
+    min,
+    max,
+    stok: searchParams.stok,
+    marka: searchParams.marka,
+    kullanim: searchParams.kullanim,
+    sirala
   }
 
-  const { data: products, count } = await query as any
+  const { data: products, count } = await getProducts(from, to, filters) as any
   const totalPages = Math.ceil((count || 0) / PER_PAGE)
 
   // Cache'den filtreleri çek

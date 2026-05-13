@@ -70,6 +70,7 @@ export default function AdminSiparisler() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [updatingKargo, setUpdatingKargo] = useState<string | null>(null)
   const [kargoInputs, setKargoInputs] = useState<Record<string, string>>({})
+  const [loadingItems, setLoadingItems] = useState<Record<string, boolean>>({})
   const supabase = useRef(createClient()).current
 
   useEffect(() => { loadSiparisler(0) }, [])
@@ -83,7 +84,7 @@ export default function AdminSiparisler() {
 
     const { data } = await supabase
       .from('siparisler')
-      .select('id, siparis_no, ad_soyad, email, telefon, urunler, toplam_tutar, durum, odeme_tipi, odeme_durumu, notlar, teslimat_tipi, kargo_takip_no, dekont_url, fatura_tipi, firma_unvani, vergi_dairesi, vergi_no, teslimat_adresi, dolar_kuru, euro_kuru, created_at')
+      .select('id, siparis_no, ad_soyad, email, telefon, toplam_tutar, durum, odeme_tipi, odeme_durumu, notlar, teslimat_tipi, kargo_takip_no, dekont_url, fatura_tipi, firma_unvani, vergi_dairesi, vergi_no, teslimat_adresi, dolar_kuru, euro_kuru, created_at')
       .order('created_at', { ascending: false })
       .range(from, to)
     
@@ -137,6 +138,36 @@ export default function AdminSiparisler() {
       alert('Hata: Kargo bilgisi güncellenemedi.')
     } finally {
       setUpdatingKargo(null)
+    }
+  }
+
+  const toggleExpand = async (id: string) => {
+    if (expandedId === id) {
+      setExpandedId(null)
+      return
+    }
+
+    setExpandedId(id)
+    
+    // Eğer ürünler zaten yüklüyse tekrar çekme
+    const siparis = siparisler.find(s => s.id === id)
+    if (siparis?.urunler && Array.isArray(siparis.urunler) && siparis.urunler.length > 0) return
+
+    setLoadingItems(prev => ({ ...prev, [id]: true }))
+    try {
+      const { data } = await supabase
+        .from('siparisler')
+        .select('urunler')
+        .eq('id', id)
+        .single()
+      
+      if (data?.urunler) {
+        setSiparisler(prev => prev.map(s => s.id === id ? { ...s, urunler: data.urunler } : s))
+      }
+    } catch (err) {
+      console.error('Ürünler yüklenemedi:', err)
+    } finally {
+      setLoadingItems(prev => ({ ...prev, [id]: false }))
     }
   }
 
@@ -262,12 +293,12 @@ export default function AdminSiparisler() {
                 <div className="text-right flex-shrink-0">
                   <div className="font-display font-black text-lg text-brand-red">{siparis.toplam_tutar?.toLocaleString('tr-TR')} ₺</div>
                   <div className="font-body text-white/30 text-[10px] uppercase font-bold tracking-tighter">
-                    $ {siparis.dolar_kuru ? (siparis.toplam_tutar / siparis.dolar_kuru).toFixed(2) : (siparis.toplam_tutar / 32.5).toFixed(2)}
+                    $ {siparis.dolar_kuru ? (siparis.toplam_tutar / siparis.dolar_kuru).toFixed(2) : (siparis.toplam_tutar / 34.5).toFixed(2)}
                   </div>
                   <div className="font-body text-white/20 text-[10px]">{Array.isArray(siparis.urunler) ? siparis.urunler.reduce((s, u) => s + u.adet, 0) : 0} ürün</div>
                 </div>
 
-                <button onClick={() => setExpandedId(expanded ? null : siparis.id)}
+                <button onClick={() => toggleExpand(siparis.id)}
                   className="w-8 h-8 border border-white/10 flex items-center justify-center text-white/30 hover:border-brand-red/40 hover:text-brand-red transition-all flex-shrink-0">
                   {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </button>
@@ -370,15 +401,24 @@ export default function AdminSiparisler() {
                         <Package size={12} className="text-brand-red" /> Ürünler
                       </h4>
                       <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 scrollbar-hide">
-                        {Array.isArray(siparis.urunler) && siparis.urunler.map((u, i) => (
-                          <div key={i} className="flex items-center gap-3 bg-white/3 p-2">
-                            {u.fotograf && <img src={u.fotograf} alt={u.ad} className="w-10 h-10 object-cover bg-black flex-shrink-0" />}
-                            <div className="flex-1 min-w-0">
-                              <div className="font-display font-bold text-[10px] uppercase text-white truncate">{u.ad}</div>
-                              <div className="font-body text-white/30 text-[10px]">×{u.adet} — {u.fiyat?.toLocaleString('tr-TR')} ₺</div>
-                            </div>
+                        {loadingItems[siparis.id] ? (
+                          <div className="flex items-center gap-2 py-4 text-white/20">
+                            <RefreshCw size={14} className="animate-spin" />
+                            <span className="text-[10px] font-display uppercase tracking-widest">Yükleniyor...</span>
                           </div>
-                        ))}
+                        ) : Array.isArray(siparis.urunler) && siparis.urunler.length > 0 ? (
+                          siparis.urunler.map((u, i) => (
+                            <div key={i} className="flex items-center gap-3 bg-white/3 p-2">
+                              {u.fotograf && <img src={u.fotograf} alt={u.ad} className="w-10 h-10 object-cover bg-black flex-shrink-0" />}
+                              <div className="flex-1 min-w-0">
+                                <div className="font-display font-bold text-[10px] uppercase text-white truncate">{u.ad}</div>
+                                <div className="font-body text-white/30 text-[10px]">×{u.adet} — {u.fiyat?.toLocaleString('tr-TR')} ₺</div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-[10px] text-white/20 italic py-4">Ürün bilgisi bulunamadı.</div>
+                        )}
                       </div>
                       <div className="mt-4 pt-3 border-t border-white/10 flex justify-between items-center">
                          <span className="font-display font-bold text-xs uppercase text-white/40">Toplam Tutar</span>

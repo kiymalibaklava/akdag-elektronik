@@ -33,7 +33,7 @@ type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'teklif' | 'bayiler' | 'basv
 
 export default function AdminClient({ onSuccess }: AdminClientProps) {
   const [user, setUser] = useState<User | null>(null)
-  const [products, setProducts] = useState<Product[]>([])
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
   const [bekleyenSiparis, setBekleyenSiparis] = useState(0)
@@ -44,13 +44,12 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
       const session = response.data.session
       setUser(session?.user ?? null)
       setLoading(false)
-      if (session) { loadProducts(); loadBekleyenSiparis() }
+      if (session) { loadBekleyenSiparis() }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setUser(session?.user ?? null)
       if (session) { 
-        loadProducts(); 
         loadBekleyenSiparis()
         if (onSuccess) onSuccess() 
       }
@@ -60,14 +59,6 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
     return () => subscription.unsubscribe()
   }, [onSuccess])
 
-  const loadProducts = async () => {
-    const { data } = await supabase
-      .from('urunler')
-      .select(LIGHT_PRODUCT_FIELDS)
-      .order('created_at', { ascending: false })
-    setProducts(data || [])
-  }
-
   const loadBekleyenSiparis = async () => {
     const { count } = await supabase.from('siparisler').select('*', { count: 'exact', head: true }).eq('durum', 'beklemede')
     setBekleyenSiparis(count || 0)
@@ -76,7 +67,6 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setUser(null)
-    setProducts([])
   }
 
   if (loading) {
@@ -111,7 +101,6 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
                 const session = response.data.session;
                 if (session) { 
                   setUser(session.user); 
-                  loadProducts(); 
                   loadBekleyenSiparis()
                   if (onSuccess) onSuccess()
                 }
@@ -132,6 +121,7 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
     { id: 'bayiler'   as Tab, label: 'Bayiler',     icon: Users },
     { id: 'basvurular'as Tab, label: 'Başvurular',  icon: FileText },
   ]
+
 
   return (
     <div className="min-h-screen pb-24">
@@ -185,13 +175,13 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
           <div className="grid lg:grid-cols-3 gap-12">
             <div className="lg:col-span-1">
               <h2 className="font-display font-bold text-xl uppercase tracking-wide text-white mb-6 red-line">Yeni Ürün Ekle</h2>
-              <AdminAddProduct onAdded={loadProducts} />
+              <AdminAddProduct onAdded={() => setRefreshTrigger(prev => prev + 1)} />
             </div>
             <div className="lg:col-span-2">
               <h2 className="font-display font-bold text-xl uppercase tracking-wide text-white mb-6 red-line">
-                Mevcut Ürünler ({products.length})
+                Mevcut Ürünler
               </h2>
-              <AdminProductList products={products} onDeleted={loadProducts} />
+              <AdminProductList refreshTrigger={refreshTrigger} />
             </div>
           </div>
         )}

@@ -5,6 +5,7 @@ import { ShoppingCart, Check, MessageCircle } from 'lucide-react'
 import { addToCart } from '@/lib/cart'
 import { dovizToTL, type KurData } from '@/lib/kur'
 import { getKurClient } from '@/lib/kur-client'
+import { createClient } from '@/lib/supabase'
 
 interface Props {
   urun: {
@@ -23,13 +24,27 @@ interface Props {
 export default function AddToCartButton({ urun, isBayi }: Props) {
   const [added, setAdded] = useState(false)
   const [kur, setKur] = useState<KurData>({ USD: 32.5, EUR: 35.2, guncelleme: null })
+  const [isBayiAuth, setIsBayiAuth] = useState(isBayi)
 
   useEffect(() => {
     getKurClient().then(setKur).catch(() => {})
-  }, [])
+
+    // İstemci taraflı bayi kontrolü
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
+      if (session?.user) {
+        supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
+          .then(({ data }: { data: any }) => {
+            if (data?.onaylandi) setIsBayiAuth(true)
+          })
+      }
+    })
+  }, [isBayi])
+
+  const activeIsBayi = isBayi || isBayiAuth
 
   const handleAdd = () => {
-    if (!isBayi) return
+    if (!activeIsBayi) return
     
     const pb = urun.para_birimi || 'TRY'
     const bayiPb = urun.bayi_para_birimi || pb
@@ -54,7 +69,7 @@ export default function AddToCartButton({ urun, isBayi }: Props) {
     setTimeout(() => setAdded(false), 2000)
   }
 
-  if (!isBayi) {
+  if (!activeIsBayi) {
     return (
       <a
         href={`https://wa.me/905323934370?text=${encodeURIComponent(`Merhaba, ${urun.ad} ürünü hakkında bilgi almak ve sipariş vermek istiyorum.`)}`}
