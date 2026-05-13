@@ -162,7 +162,7 @@ export default function Navbar() {
               </Link>
             )}
             <Link
-              href={user ? "/hesabim" : "/bayi"}
+              href={user ? "/bayi/panel" : "/bayi"}
               className="font-display font-bold text-xs tracking-widest uppercase px-5 py-2.5 bg-brand-red text-white hover:bg-brand-red-dark transition-all duration-200 flex items-center gap-2"
               style={{ clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))' }}
             >

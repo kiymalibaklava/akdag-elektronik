@@ -3,13 +3,14 @@
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
-// HATA BURADAYDI: 'lucide-center' yerine 'lucide-react' olmalı
-import { LogOut, Package, Phone, Clock, CheckCircle, XCircle, Search, X, RotateCcw } from 'lucide-react'
+import { LogOut, Package, Phone, Clock, CheckCircle, XCircle, Search, X, RotateCcw, FileText, Settings, LayoutDashboard, Box } from 'lucide-react'
 import { ProductCard } from './ProductGrid'
 import type { User } from '@supabase/supabase-js'
 import { addManyToCart } from '@/lib/cart'
 import { TUM_KATEGORILER } from '@/lib/categories'
 import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
+import BayiTeklifAyarlari from './BayiTeklifAyarlari'
+import BayiTeklifOlusturucu from './BayiTeklifOlusturucu'
 
 const KATEGORILER = TUM_KATEGORILER
 
@@ -53,36 +54,50 @@ interface Siparis {
 }
 
 export default function BayiPanel({ user }: { user: User }) {
-  const [bayi, setBayi] = useState<Bayi | null | undefined>(undefined)
+  const [bayi, setBayi] = useState<Bayi | null>({
+    id: user.id, // Fallback ID
+    firma_adi: user.user_metadata?.firma_adi || 'Bayi Profili',
+    yetkili_adi: user.user_metadata?.full_name || '',
+    onaylandi: true,
+    sehir: ''
+  })
   const [urunler, setUrunler] = useState<Urun[]>([])
   const [loading, setLoading] = useState(true)
-  const [kategori, setKategori] = useState('Tümü')
-  const [search, setSearch] = useState('')
   const [siparisler, setSiparisler] = useState<Siparis[]>([])
   const [repeatMsg, setRepeatMsg] = useState('')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'proposals' | 'settings'>('dashboard')
   const supabase = useRef(createClient()).current
 
   useEffect(() => {
     const load = async () => {
+      // Bayi bilgilerini çekmeyi dene ama bulamazsan da hata verme
       const { data: bayiData } = await supabase
-        .from('bayiler').select('id, firma_adi, yetkili_adi, telefon, sehir, indirim_orani, onaylandi').eq('user_id', user.id).maybeSingle()
-      setBayi(bayiData ?? null)
-
-      if (bayiData?.onaylandi) {
-        const { data } = await supabase
-          .from('urunler')
-          .select(LIGHT_PRODUCT_FIELDS)
-          .order('created_at', { ascending: false })
-        setUrunler(data || [])
-
-        const { data: siparisData } = await supabase
-          .from('siparisler')
-          .select('id, siparis_no, created_at, toplam_tutar, durum, urunler')
-          .eq('bayi_id', bayiData.id)
-          .order('created_at', { ascending: false })
-          .limit(25)
-        setSiparisler((siparisData || []) as Siparis[])
+        .from('bayiler')
+        .select('id, firma_adi, yetkili_adi, telefon, sehir, indirim_orani, onaylandi')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      
+      if (bayiData) {
+        setBayi(bayiData)
       }
+
+      // Ürünleri sadece istatistikler için çek (Tüm kolonlar yerine sadece gerekli olanlar)
+      const { data: urunData } = await supabase
+        .from('urunler')
+        .select('id, bayi_fiyati, fiyat_guncelleme')
+        .order('created_at', { ascending: false })
+        .limit(200)
+      setUrunler(urunData as Urun[] || [])
+
+      // Siparişlerde 'urunler' blob'unu ilk etapta çekme (Veri tasarrufu)
+      const { data: siparisData } = await supabase
+        .from('siparisler')
+        .select('id, siparis_no, created_at, toplam_tutar, durum')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      setSiparisler((siparisData || []) as Siparis[])
+      
       setLoading(false)
     }
     load()
@@ -93,69 +108,36 @@ export default function BayiPanel({ user }: { user: User }) {
     window.location.reload()
   }
 
-  if (loading || bayi === undefined) {
-    return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
-  }
-
-  if (bayi === null) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
-        <div className="text-center max-w-md">
-          <XCircle size={48} className="text-brand-red/40 mx-auto mb-4" />
-          <h2 className="font-display font-black text-2xl uppercase text-white mb-3">Bayi Kaydı Bulunamadı</h2>
-          <p className="font-body text-white/40 text-sm mb-2"><strong className="text-white">{user.email}</strong> ile kayıtlı bayi profili yok.</p>
-          <p className="font-body text-white/30 text-sm mb-8">Başvurunuz onaylandıktan sonra giriş yapabilirsiniz.</p>
-          <div className="flex gap-3 justify-center flex-wrap">
-            <Link href="/bayi/basvuru" className="btn-primary text-sm">Başvuru Yap</Link>
-            <button onClick={handleLogout} className="btn-outline text-sm"><LogOut size={13} />Çıkış</button>
-          </div>
+        <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" />
         </div>
-      </div>
     )
   }
 
-  if (!bayi.onaylandi) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-6">
-        <div className="text-center max-w-md">
-          <div className="w-20 h-20 bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mx-auto mb-6">
-            <Clock size={36} className="text-yellow-500" />
-          </div>
-          <h2 className="font-display font-black text-2xl uppercase text-white mb-3">Başvurunuz İnceleniyor</h2>
-          <p className="font-body text-white/40 text-sm leading-relaxed mb-6">
-            <strong className="text-white">{bayi.firma_adi}</strong> adına yaptığınız başvuru inceleme aşamasındadır.
-          </p>
-          <div className="bg-[#141414] border border-yellow-500/20 p-4 text-left mb-6">
-            <div className="font-display font-semibold text-xs uppercase tracking-widest text-yellow-500/60 mb-3">Başvuru Bilgileri</div>
-            <div className="space-y-1 text-sm font-body text-white/50">
-              <div>Firma: <span className="text-white">{bayi.firma_adi}</span></div>
-              <div>Yetkili: <span className="text-white">{bayi.yetkili_adi}</span></div>
-              <div>Şehir: <span className="text-white">{bayi.sehir}</span></div>
-            </div>
-          </div>
-          <div className="flex gap-3 justify-center">
-            <a href="tel:+903522316915" className="btn-primary text-sm"><Phone size={14} />Bilgi Al</a>
-            <button onClick={handleLogout} className="btn-outline text-sm"><LogOut size={14} />Çıkış</button>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
-  const filtered = urunler.filter(u => {
-    const katMatch = kategori === 'Tümü' || u.kategori === kategori
-    const searchMatch = !search || u.ad.toLowerCase().includes(search.toLowerCase())
-    return katMatch && searchMatch
-  })
 
   const recentCount = urunler.filter(u =>
     u.fiyat_guncelleme && (Date.now() - new Date(u.fiyat_guncelleme).getTime()) < 7 * 24 * 60 * 60 * 1000
   ).length
 
-  const handleRepeatOrder = (siparis: Siparis) => {
-    if (!Array.isArray(siparis.urunler) || siparis.urunler.length === 0) return
+  const handleRepeatOrder = async (siparis: Siparis) => {
+    // Sipariş ürünlerini sadece tıklandığında çek (Tasarruf için)
+    setRepeatMsg('Sipariş içeriği alınıyor...')
+    const { data } = await supabase
+      .from('siparisler')
+      .select('urunler')
+      .eq('id', siparis.id)
+      .single()
+
+    if (!data?.urunler || !Array.isArray(data.urunler)) {
+      setRepeatMsg('Hata: Ürünler bulunamadı.')
+      return
+    }
+
     addManyToCart(
-      siparis.urunler.map((u, i) => ({
+      data.urunler.map((u: any, i: number) => ({
         id: u.urun_id || `${siparis.id}-${i}`,
         ad: u.ad,
         kategori: 'Tekrar Sipariş',
@@ -170,17 +152,17 @@ export default function BayiPanel({ user }: { user: User }) {
   }
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen pb-24 bg-[#0A0A0A]">
       {/* Header */}
-      <div className="bg-[#0A0A0A] border-b border-white/5 py-10">
+      <div className="bg-[#0A0A0A] border-b border-white/5 py-10 no-print">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <CheckCircle size={16} className="text-green-400" />
-              <span className="font-display font-semibold text-xs tracking-[0.3em] uppercase text-green-400">Onaylı Bayi</span>
+              <span className="font-display font-semibold text-xs tracking-[0.3em] uppercase text-green-400">Bayi Erişimi</span>
             </div>
-            <h1 className="font-display font-black text-3xl uppercase text-white">{bayi.firma_adi}</h1>
-            <p className="font-body text-white/30 text-sm mt-1">{user.email} • {bayi.sehir}</p>
+            <h1 className="font-display font-black text-3xl uppercase text-white">{bayi?.firma_adi || 'Bayi Paneli'}</h1>
+            <p className="font-body text-white/30 text-sm mt-1">{user.email}</p>
           </div>
           <button onClick={handleLogout}
             className="flex items-center gap-2 text-white/30 hover:text-brand-red font-display font-semibold text-xs tracking-widest uppercase transition-colors">
@@ -189,123 +171,113 @@ export default function BayiPanel({ user }: { user: User }) {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 pt-8">
-        {/* İstatistikler */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
-          {[
-            { val: urunler.length, label: 'Toplam Ürün', color: 'border-l-brand-red' },
-            { val: urunler.filter(u => u.bayi_fiyati).length, label: 'Bayi Fiyatlı', color: 'border-l-green-500' },
-            { val: recentCount, label: 'Son 7 Gün Güncellendi', color: 'border-l-yellow-500' },
-            { val: urunler.filter(u => u.stok_durumu === 'tukendi').length, label: 'Tükenen Ürün', color: 'border-l-red-500' },
-          ].map(s => (
-            <div key={s.label} className={`bg-[#141414] border border-white/5 p-4 border-l-2 ${s.color}`}>
-              <div className="font-display font-black text-2xl text-white">{s.val}</div>
-              <div className="font-body text-white/30 text-xs mt-1">{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Arama + Filtre */}
-        <div className="flex flex-col md:flex-row gap-3 mb-6">
-          <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-red" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Ürün ara..."
-              className="input-dark pl-10 pr-10"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-white">
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
-            {KATEGORILER.map(k => (
-              <button key={k} onClick={() => setKategori(k)}
-                className={`font-display font-semibold text-xs tracking-widest uppercase px-3 py-2 border transition-all duration-200 ${
-                  kategori === k ? 'bg-brand-red border-brand-red text-white' : 'border-white/10 text-white/40 hover:border-brand-red/40 hover:text-white'
-                }`}>
-                {k === 'Tümü' ? 'Tümü' : k.replace(' Sistemleri', '')}
-              </button>
-            ))}
+      {/* Navigation Tabs */}
+      <div className="bg-[#0A0A0A] border-b border-white/5 sticky top-0 z-40 no-print">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex gap-8">
+            {[
+              { id: 'dashboard', label: 'Özet', icon: LayoutDashboard },
+              { id: 'orders', label: 'Sipariş Geçmişi', icon: Clock },
+              { id: 'proposals', label: 'Teklif Hazırla', icon: FileText },
+              { id: 'settings', label: 'Teklif Ayarları', icon: Settings },
+            ].map(tab => {
+              const Icon = tab.icon
+              const active = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center gap-2 py-5 font-display font-bold text-[10px] tracking-[0.2em] uppercase transition-all relative ${
+                    active ? 'text-brand-red' : 'text-white/40 hover:text-white'
+                  }`}
+                >
+                  <Icon size={14} />
+                  {tab.label}
+                  {active && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red" />}
+                </button>
+              )
+            })}
           </div>
         </div>
+      </div>
 
-        {/* Sonuç sayısı */}
-        <div className="font-body text-white/30 text-sm mb-6">
-          {filtered.length} ürün
-          {search && <span> — "<span className="text-white">{search}</span>"</span>}
-        </div>
-        {repeatMsg && (
-          <div className="mb-6 border border-green-500/30 bg-green-500/10 px-4 py-3 text-green-300 text-sm font-body">
-            {repeatMsg}
-          </div>
-        )}
-
-        {/* Ürün grid */}
-        {filtered.length === 0 ? (
-          <div className="text-center py-16 border border-white/5 bg-[#141414]">
-            <Package size={40} className="text-white/10 mx-auto mb-3" />
-            <p className="font-display font-semibold text-sm uppercase text-white/20 tracking-widest">Ürün Bulunamadı</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1">
-            {filtered.map(u => (
-              <ProductCard 
-                key={u.id} 
-                product={{ 
-                  ...u, 
-                  bayi_fiyati: u.bayi_fiyati ?? undefined,
-                  fiyat_guncelleme: u.fiyat_guncelleme ?? undefined 
-                }} 
-                isBayi={true} 
-              />
-            ))}
-          </div>
-        )}
-
-        {/* CTA */}
-        <div className="mt-16 border border-brand-red/20 bg-[#141414] p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div>
-            <div className="font-display font-black text-xl uppercase text-white mb-1">Sipariş vermek ister misiniz?</div>
-            <p className="font-body text-white/40 text-sm">Bayi özel fiyatlarınızla sipariş için bizi arayın.</p>
-          </div>
-          <a href="tel:+903522316915" className="btn-primary text-sm flex-shrink-0">
-            <Phone size={15} />+90 352 231 69 15
-          </a>
-        </div>
-
-        <div className="mt-10">
-          <h2 className="font-display font-bold text-xl uppercase tracking-wide text-white mb-4 red-line">Sipariş Geçmişi</h2>
-          {siparisler.length === 0 ? (
-            <div className="border border-white/5 bg-[#141414] p-6 text-white/35 text-sm">Henüz bayi siparişi bulunmuyor.</div>
-          ) : (
-            <div className="space-y-2">
-              {siparisler.map((s) => (
-                <div key={s.id} className="border border-white/5 bg-[#141414] p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div>
-                    <div className="font-display font-bold text-white">{s.siparis_no}</div>
-                    <div className="font-body text-xs text-white/35">
-                      {new Date(s.created_at).toLocaleDateString('tr-TR')} • {s.urunler?.length || 0} kalem • {s.toplam_tutar?.toLocaleString('tr-TR')} ₺
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-body text-xs text-white/35 uppercase">{s.durum}</span>
-                    <button type="button" className="btn-outline text-xs" onClick={() => handleRepeatOrder(s)}>
-                      <RotateCcw size={12} />
-                      Tekrar Sepete Ekle
-                    </button>
-                    <Link href="/sepet" className="btn-primary text-xs">Sepete Git</Link>
-                  </div>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        
+        {activeTab === 'dashboard' && (
+          <div className="space-y-10">
+            {/* İstatistikler */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { val: urunler.length, label: 'Toplam Ürün', color: 'border-l-brand-red' },
+                { val: urunler.filter(u => u.bayi_fiyati).length, label: 'Bayi Fiyatlı', color: 'border-l-green-500' },
+                { val: recentCount, label: 'Yeni Güncellenen', color: 'border-l-yellow-500' },
+                { val: siparisler.length, label: 'Sipariş Sayısı', color: 'border-l-blue-500' },
+              ].map(s => (
+                <div key={s.label} className={`bg-[#141414] border border-white/5 p-4 border-l-2 ${s.color}`}>
+                  <div className="font-display font-black text-2xl text-white">{s.val}</div>
+                  <div className="font-body text-white/30 text-xs mt-1">{s.label}</div>
                 </div>
               ))}
             </div>
-          )}
-        </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2">
+                <h2 className="font-display font-bold text-xl uppercase tracking-wide text-white mb-4 red-line">Son Siparişler</h2>
+                {siparisler.length === 0 ? (
+                  <div className="border border-white/5 bg-[#141414] p-6 text-white/35 text-sm">Henüz siparişiniz bulunmuyor.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {siparisler.slice(0, 5).map((s) => (
+                      <div key={s.id} className="border border-white/5 bg-[#141414] p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                          <div className="font-display font-bold text-white">{s.siparis_no}</div>
+                          <div className="font-body text-xs text-white/35">{new Date(s.created_at).toLocaleDateString('tr-TR')} • {s.toplam_tutar?.toLocaleString('tr-TR')} ₺</div>
+                        </div>
+                        <Link href="/sepet" className="btn-outline text-[10px] px-4 py-2">Detay</Link>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-4">
+                <h2 className="font-display font-bold text-xl uppercase tracking-wide text-white mb-4 red-line">Hızlı İşlemler</h2>
+                <Link href="/bayi/hizli-siparis" className="block p-6 bg-brand-red/5 border border-brand-red/20 hover:bg-brand-red/10 transition-all group">
+                   <div className="font-display font-black text-brand-red group-hover:translate-x-1 transition-transform uppercase tracking-widest text-sm mb-1">HIZLI SİPARİŞ →</div>
+                   <p className="text-white/40 text-xs">Excel veya stok kodu ile hızlıca sepeti doldur.</p>
+                </Link>
+                <button onClick={() => setActiveTab('proposals')} className="w-full text-left p-6 bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
+                   <div className="font-display font-black text-white group-hover:translate-x-1 transition-transform uppercase tracking-widest text-sm mb-1">TEKLİF OLUŞTUR →</div>
+                   <p className="text-white/40 text-xs">Müşterine kendi logunla profesyonel teklif yap.</p>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+
+
+        {activeTab === 'orders' && (
+          <div className="space-y-4">
+            {siparisler.map((s) => (
+              <div key={s.id} className="border border-white/5 bg-[#141414] p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div>
+                  <div className="font-display font-bold text-lg text-white mb-1">{s.siparis_no}</div>
+                  <div className="font-body text-sm text-white/35">
+                    {new Date(s.created_at).toLocaleDateString('tr-TR')} • {s.toplam_tutar?.toLocaleString('tr-TR')} ₺
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-display font-bold text-[10px] tracking-widest uppercase px-3 py-1 bg-white/5 text-white/40 border border-white/10">{s.durum}</span>
+                  <button onClick={() => handleRepeatOrder(s)} className="btn-outline text-xs"><RotateCcw size={12} /> Tekrarla</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'proposals' && <BayiTeklifOlusturucu bayiId={bayi?.id || user.id} />}
+        {activeTab === 'settings' && <BayiTeklifAyarlari bayiId={bayi?.id || user.id} />}
+
       </div>
     </div>
   )

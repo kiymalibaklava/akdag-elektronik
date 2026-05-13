@@ -31,7 +31,7 @@ export default function BayiPage() {
   // Bayi giriş yapmışsa ürünler sayfasına yönlendir — Trendyol tarzı
   useEffect(() => {
     if (!loading && user) {
-      router.push('/urunler')
+      router.push('/bayi/panel')
     }
   }, [user, loading, router])
 
@@ -76,8 +76,8 @@ export default function BayiPage() {
         <div className="bg-[#141414] border border-white/8 p-8"
           style={{ clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%)' }}>
           <BayiLoginForm onSuccess={() => {
-            // Giriş başarılı — ürünler sayfasına yönlendir
-            router.push('/urunler')
+            // Giriş başarılı — panel sayfasına yönlendir
+            router.push('/bayi/panel')
           }} />
         </div>
 
