@@ -67,7 +67,7 @@ export default function BayiPanel({ user }: { user: User }) {
       // Bayi bilgilerini çekmeyi dene ama bulamazsan da hata verme
       const { data: bayiData } = await supabase
         .from('bayiler')
-        .select('id, firma_adi, yetkili_adi, telefon, sehir, indirim_orani, onaylandi')
+        .select('id, firma_adi, yetkili_adi, telefon, sehir, onaylandi')
         .eq('user_id', user.id)
         .maybeSingle()
       
