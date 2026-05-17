@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { TrendingUp, Package, Users, Clock, Download, Calendar, FileText } from 'lucide-react'
-import * as XLSX from 'xlsx'
 
 interface Siparis {
   id: string
@@ -33,7 +32,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadData()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadData = async () => {
@@ -59,7 +58,7 @@ export default function AdminDashboard() {
   // Tarih Filtresi Mantığı
   const filteredSiparisler = useMemo(() => {
     const now = new Date()
-    
+
     // Bu hafta başlangıcını bir kere hesapla (Pazartesi bazlı)
     const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const day = startOfWeek.getDay()
@@ -94,7 +93,7 @@ export default function AdminDashboard() {
   // En Çok Satan Ürünler (Top 5)
   const topProducts = useMemo(() => {
     const urunMap: Record<string, { ad: string, adet: number, ciro: number }> = {}
-    
+
     filteredSiparisler
       .filter(s => s.odeme_durumu === 'odendi' || s.durum === 'teslim_edildi')
       .forEach(s => {
@@ -107,7 +106,7 @@ export default function AdminDashboard() {
           })
         }
       })
-    
+
     return Object.values(urunMap)
       .sort((a, b) => b.adet - a.adet)
       .slice(0, 5)
@@ -130,8 +129,7 @@ export default function AdminDashboard() {
     return grafik
   }, [siparisler])
 
-  // Excel İndirme
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     const data = filteredSiparisler.map(s => ({
       'Sipariş No': s.siparis_no,
       'Müşteri Adı': s.ad_soyad,
@@ -142,8 +140,9 @@ export default function AdminDashboard() {
       'Toplam Tutar (₺)': s.toplam_tutar
     }))
 
+    const XLSX = await import('xlsx')
     const ws = XLSX.utils.json_to_sheet(data)
-    
+
     // Sütun genişlikleri ayarı
     ws['!cols'] = [
       { wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
@@ -160,12 +159,12 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8 pb-10">
-      
+
       {/* Kontrol Çubuğu */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#141414] border border-white/5 p-4">
         <div className="flex items-center gap-3">
           <Calendar size={18} className="text-white/40" />
-          <select 
+          <select
             className="bg-transparent border border-white/10 text-white text-sm font-display uppercase tracking-widest p-2 outline-none focus:border-brand-red"
             value={timeFilter}
             onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
@@ -178,7 +177,7 @@ export default function AdminDashboard() {
           </select>
         </div>
 
-        <button 
+        <button
           onClick={exportToExcel}
           className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-display font-bold uppercase tracking-widest transition-colors"
         >
@@ -223,7 +222,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
+
         {/* Sol Sütun: Grafik */}
         <div className="bg-[#141414] border border-white/5 p-6">
           <div className="flex items-center gap-3 mb-8">
@@ -236,7 +235,7 @@ export default function AdminDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                 <XAxis dataKey="isim" stroke="#ffffff40" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#ffffff40" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value / 1000}k`} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ backgroundColor: '#0F0F0F', border: '1px solid #ffffff10', borderRadius: '0' }}
                   itemStyle={{ color: '#DA291C', fontWeight: 'bold' }}
                   formatter={(value: any) => [`${Number(value).toLocaleString('tr-TR')} ₺`, 'Ciro']}
@@ -253,7 +252,7 @@ export default function AdminDashboard() {
             <div className="w-8 h-px bg-brand-red" />
             <h2 className="font-display font-bold text-sm tracking-[0.2em] uppercase text-white">En Çok Satan Ürünler</h2>
           </div>
-          
+
           {topProducts.length === 0 ? (
             <div className="h-[300px] flex items-center justify-center text-white/30 text-sm font-body">Bu tarihte veri bulunamadı.</div>
           ) : (
@@ -277,7 +276,7 @@ export default function AdminDashboard() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip 
+                    <Tooltip
                       contentStyle={{ backgroundColor: '#0F0F0F', border: '1px solid #ffffff10', borderRadius: '0', color: 'white' }}
                       itemStyle={{ color: 'white', fontSize: '12px' }}
                       formatter={(value: any) => [`${value} Adet`, 'Satış']}

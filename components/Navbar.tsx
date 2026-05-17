@@ -85,7 +85,7 @@ export default function Navbar() {
       {/* Top bar */}
       <div className="bg-brand-red text-white text-[10px] sm:text-xs font-body tracking-wider z-[60] relative">
         <div className="max-w-7xl mx-auto px-6 py-2 flex justify-between items-center">
-          <span className="opacity-80 hidden sm:block uppercase font-bold tracking-[0.2em]">Kayseri'nin Ses ve Işık Sistemleri Uzmanı</span>
+          <span className="hidden sm:block uppercase font-bold tracking-[0.2em]">Kayseri'nin Ses ve Işık Sistemleri Uzmanı</span>
           <a href="tel:+903522316915" className="flex items-center gap-1.5 font-semibold hover:opacity-80 transition-opacity">
             <Phone size={11} />
             +90 352 231 69 15
@@ -125,7 +125,7 @@ export default function Navbar() {
               >
                 <Link
                   href={link.href}
-                  className={`font-display font-semibold text-xs tracking-widest uppercase transition-colors duration-200 relative group flex items-center gap-1.5 ${pathname.startsWith(link.href) && (link.href !== '/' || pathname === '/') ? 'text-brand-red' : 'text-white/70 hover:text-white'
+                  className={`font-display font-semibold text-xs tracking-widest uppercase transition-colors duration-200 relative group flex items-center gap-1.5 ${pathname.startsWith(link.href) && (link.href !== '/' || pathname === '/') ? 'text-brand-red' : 'text-white/80 hover:text-white'
                     }`}
                 >
                   {link.label}
@@ -141,10 +141,10 @@ export default function Navbar() {
 
           {/* Right Area */}
           <div className="hidden md:flex items-center gap-4">
-            <Link href="/favoriler" className="text-white/50 hover:text-white transition-colors duration-200">
+            <Link href="/favoriler" aria-label="Favorilerim" className="text-white/50 hover:text-white transition-colors duration-200">
               <Heart size={16} />
             </Link>
-            <Link href="/karsilastir" className="text-white/50 hover:text-white transition-colors duration-200">
+            <Link href="/karsilastir" aria-label="Karşılaştırma Listesi" className="text-white/50 hover:text-white transition-colors duration-200">
               <GitCompare size={16} />
             </Link>
             <Link
@@ -175,7 +175,7 @@ export default function Navbar() {
           </div>
 
           {/* Hamburger */}
-          <button className="md:hidden text-white p-2" onClick={() => setOpen(!open)}>
+          <button className="md:hidden text-white p-2" aria-label="Menüyü Aç" onClick={() => setOpen(!open)}>
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
@@ -346,8 +346,8 @@ export default function Navbar() {
             <div className="pt-6 space-y-4">
               <CartIcon />
               <div className="flex items-center gap-4 pt-4 border-t border-white/5">
-                <Link href="/favoriler" className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white/40"><Heart size={18} /></Link>
-                <Link href="/karsilastir" className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white/40"><GitCompare size={18} /></Link>
+                <Link href="/favoriler" aria-label="Favorilerim" className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white/40"><Heart size={18} /></Link>
+                <Link href="/karsilastir" aria-label="Karşılaştırma Listesi" className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white/40"><GitCompare size={18} /></Link>
               </div>
               <a href="tel:+903522316915" className="font-display font-bold text-xs tracking-widest uppercase text-white/50 py-3 flex items-center gap-2">
                 <Phone size={13} />

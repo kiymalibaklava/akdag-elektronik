@@ -11,7 +11,7 @@ export default function BrandMarquee() {
     <section className="py-14 bg-[#0A0A0A] border-y border-white/5 overflow-hidden">
       <div className="flex items-center gap-3 justify-center mb-10">
         <div className="h-px w-12 bg-brand-red/40" />
-        <span className="font-display font-semibold text-xs tracking-[0.3em] uppercase text-white/20">
+        <span className="font-display font-semibold text-xs tracking-[0.3em] uppercase text-white/50">
           Çalıştığımız Markalar
         </span>
         <div className="h-px w-12 bg-brand-red/40" />

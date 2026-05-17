@@ -14,8 +14,25 @@ function createAdminClient() {
 
 async function getProposal(id: string) {
   const supabase = createAdminClient()
-  const { data } = await supabase.from('teklifler').select('id, teklif_no, musteri_adi, tarih, genel_toplam, ara_toplam, kdv, kur_usd, kur_eur, ozel_not, urunler').eq('id', id).single()
-  return data
+  const { data: proposal } = await supabase
+    .from('teklifler')
+    .select('id, teklif_no, musteri_adi, tarih, genel_toplam, ara_toplam, kdv, kur_usd, kur_eur, ozel_not, urunler, bayi_id')
+    .eq('id', id)
+    .single()
+
+  if (proposal && proposal.bayi_id) {
+    const { data: bayiAyarlari } = await supabase
+      .from('bayi_teklif_ayarlari')
+      .select('logo_url, firma_adi, adres, telefon, email, web_sitesi, teklif_notu')
+      .eq('bayi_id', proposal.bayi_id)
+      .maybeSingle()
+    
+    return {
+      ...proposal,
+      bayiAyarlari: bayiAyarlari || null
+    }
+  }
+  return proposal
 }
 
 export default async function ProposalPage({ params }: { params: { id: string } }) {

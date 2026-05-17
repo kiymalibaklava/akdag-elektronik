@@ -45,13 +45,13 @@ export default function KurGostergesi() {
     <div className="flex items-center gap-4 flex-wrap md:flex-nowrap">
       {/* USD/TRY */}
       <div className="flex items-center gap-1.5">
-        <span className="font-display font-bold text-xs text-white/30 tracking-wider">USD</span>
+        <span className="font-display font-bold text-xs text-white/60 tracking-wider">USD</span>
         <span className={`font-display font-black text-sm ${
           usdYon === 'up' ? 'text-red-400' : usdYon === 'down' ? 'text-green-400' : 'text-white/70'
         }`}>
           {kur.USD.toFixed(2)}
         </span>
-        <span className="font-body text-white/20 text-xs">₺</span>
+        <span className="font-body text-white/50 text-xs">₺</span>
         {usdYon === 'up'   && <span className="text-red-400 text-xs">▲</span>}
         {usdYon === 'down' && <span className="text-green-400 text-xs">▼</span>}
       </div>
@@ -60,13 +60,13 @@ export default function KurGostergesi() {
 
       {/* EUR/TRY */}
       <div className="flex items-center gap-1.5">
-        <span className="font-display font-bold text-xs text-white/30 tracking-wider">EUR</span>
+        <span className="font-display font-bold text-xs text-white/60 tracking-wider">EUR</span>
         <span className={`font-display font-black text-sm ${
           eurYon === 'up' ? 'text-red-400' : eurYon === 'down' ? 'text-green-400' : 'text-white/70'
         }`}>
           {kur.EUR.toFixed(2)}
         </span>
-        <span className="font-body text-white/20 text-xs">₺</span>
+        <span className="font-body text-white/50 text-xs">₺</span>
         {eurYon === 'up'   && <span className="text-red-400 text-xs">▲</span>}
         {eurYon === 'down' && <span className="text-green-400 text-xs">▼</span>}
       </div>
@@ -74,7 +74,7 @@ export default function KurGostergesi() {
       {/* Canlı göstergesi */}
       <div className="flex items-center gap-1">
         <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-        <span className="font-body text-white/15 text-[10px]">Canlı</span>
+        <span className="font-body text-white/50 text-[10px]">Canlı</span>
       </div>
     </div>
   )

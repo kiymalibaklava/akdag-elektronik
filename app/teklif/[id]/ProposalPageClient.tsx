@@ -18,6 +18,7 @@ interface Proposal {
   id: string; teklif_no: string; musteri_adi: string; tarih: string
   ozel_not?: string; urunler: any[]; ara_toplam: number; kdv: number
   genel_toplam: number; kur_usd: number; kur_eur: number
+  bayiAyarlari?: any
 }
 
 export default function ProposalPageClient({ proposal: p }: { proposal: Proposal }) {
@@ -28,6 +29,35 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
     setTimeout(() => setCopied(false), 2000)
   }
 
+  // JSONB metadata parsing for backward compatibility
+  let parsedNot = p.ozel_not || ''
+  let discountPercent = 0
+  let themeColor = 'black' // default
+  
+  try {
+    if (p.ozel_not && p.ozel_not.trim().startsWith('{')) {
+      const meta = JSON.parse(p.ozel_not)
+      parsedNot = meta.teklif_notu || ''
+      discountPercent = Number(meta.iskonto_orani) || 0
+      themeColor = meta.tema_rengi || 'black'
+    }
+  } catch (e) {
+    // fallback
+  }
+
+  const THEME_COLORS: Record<string, string> = {
+    black: '#000000',
+    red: '#c00000',
+    blue: '#1e3a8a',
+    green: '#064e3b',
+    amber: '#78350f'
+  }
+  const themeHex = THEME_COLORS[themeColor] || '#000000'
+
+  const rawAraToplam = discountPercent > 0 ? (p.ara_toplam / (1 - discountPercent / 100)) : p.ara_toplam
+  const discountAmount = discountPercent > 0 ? (rawAraToplam - p.ara_toplam) : 0
+
+
   return (
     <div style={{ background: '#f0f0f0', minHeight: '100vh', fontFamily: 'Arial, sans-serif' }}>
 
@@ -35,7 +65,13 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
       <div className="no-print" style={{ position: 'sticky', top: 0, zIndex: 50, background: 'white', borderBottom: '1px solid rgba(0,0,0,0.1)', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <img src="/logo.png" alt="Akdağ Elektronik" style={{ height: 32, objectFit: 'contain' }} />
+            {p.bayiAyarlari?.logo_url ? (
+              <img src={p.bayiAyarlari.logo_url} alt={p.bayiAyarlari.firma_adi || 'Logo'} style={{ height: 32, objectFit: 'contain' }} />
+            ) : p.bayiAyarlari?.firma_adi ? (
+              <div style={{ fontWeight: 900, fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 }}>{p.bayiAyarlari.firma_adi}</div>
+            ) : (
+              <img src="/logo.png" alt="Akdağ Elektronik" style={{ height: 32, objectFit: 'contain' }} />
+            )}
             <div style={{ borderLeft: '1px solid rgba(0,0,0,0.1)', paddingLeft: 12 }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(0,0,0,0.4)', textTransform: 'uppercase', letterSpacing: 2 }}>Fiyat Teklifi</div>
               <div style={{ fontSize: 14, fontWeight: 900, color: '#c00000' }}>{p.teklif_no}</div>
@@ -46,7 +82,7 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
               {copied ? <Check size={13} color="green" /> : <Copy size={13} />}
               {copied ? 'Kopyalandı' : 'Linki Kopyala'}
             </button>
-            <button onClick={() => window.print()} style={{ background: 'black', color: 'white', padding: '7px 18px', fontSize: 11, fontWeight: 900, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, borderRadius: 4, textTransform: 'uppercase', letterSpacing: 1 }}>
+            <button onClick={() => window.print()} style={{ background: themeHex, color: 'white', padding: '7px 18px', fontSize: 11, fontWeight: 900, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, borderRadius: 4, textTransform: 'uppercase', letterSpacing: 1 }}>
               <Printer size={13} /> Yazdır / PDF
             </button>
           </div>
@@ -57,18 +93,39 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
       <div id="print-area" style={{ maxWidth: 900, margin: '24px auto', background: 'white', borderRadius: 12, boxShadow: '0 4px 32px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
 
         {/* HEADER */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '28px 32px 22px', borderBottom: '2px solid black', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '28px 32px 22px', borderBottom: `2px solid ${themeHex}`, gap: 16, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            <img src="/logo.png" alt="Akdağ Elektronik" style={{ height: 56, objectFit: 'contain' }} />
-            <div>
-              <div style={{ fontWeight: 900, fontSize: 18, letterSpacing: -0.5, lineHeight: 1 }}>AKDAĞ ELEKTRONİK</div>
-              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 4, marginTop: 6, opacity: 0.35, textTransform: 'uppercase' }}>SES VE IŞIK SİSTEMLERİ</div>
-            </div>
+            {p.bayiAyarlari?.logo_url ? (
+              <img src={p.bayiAyarlari.logo_url} alt={p.bayiAyarlari.firma_adi || 'Logo'} style={{ height: 56, objectFit: 'contain' }} />
+            ) : p.bayiAyarlari?.firma_adi ? (
+              <div>
+                <div style={{ fontWeight: 900, fontSize: 18, letterSpacing: -0.5, lineHeight: 1 }}>{p.bayiAyarlari.firma_adi}</div>
+                <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 4, marginTop: 6, opacity: 0.35, textTransform: 'uppercase' }}>FİYAT TEKLİF FORMU</div>
+              </div>
+            ) : (
+              <>
+                <img src="/logo.png" alt="Akdağ Elektronik" style={{ height: 56, objectFit: 'contain' }} />
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: 18, letterSpacing: -0.5, lineHeight: 1 }}>AKDAĞ ELEKTRONİK</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 4, marginTop: 6, opacity: 0.35, textTransform: 'uppercase' }}>SES VE IŞIK SİSTEMLERİ</div>
+                </div>
+              </>
+            )}
           </div>
           <div style={{ textAlign: 'right', fontSize: 9, fontWeight: 600, opacity: 0.5, lineHeight: 1.9 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}><MapPin size={9} /> Cumhuriyet Mh. Sur Cd. No: 17/A Melikgazi / KAYSERİ</div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}><Phone size={9} /> (352) 231 69 15 — (532) 393 43 70</div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}><Globe size={9} /> akdagelektronik.com</div>
+            {p.bayiAyarlari ? (
+              <>
+                {p.bayiAyarlari.adres && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}><MapPin size={9} /> {p.bayiAyarlari.adres}</div>}
+                {p.bayiAyarlari.telefon && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}><Phone size={9} /> {p.bayiAyarlari.telefon}</div>}
+                {p.bayiAyarlari.web_sitesi && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}><Globe size={9} /> {p.bayiAyarlari.web_sitesi}</div>}
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}><MapPin size={9} /> Cumhuriyet Mh. Sur Cd. No: 17/A Melikgazi / KAYSERİ</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}><Phone size={9} /> (352) 231 69 15 — (532) 393 43 70</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}><Globe size={9} /> akdagelektronik.com</div>
+              </>
+            )}
           </div>
         </div>
 
@@ -76,10 +133,10 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '20px 32px', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <div style={{ fontSize: 8, fontWeight: 700, textTransform: 'uppercase', opacity: 0.3, letterSpacing: 3, marginBottom: 4 }}>SAYIN / KURUM</div>
-            <div style={{ fontSize: 20, fontWeight: 900, textTransform: 'uppercase', borderLeft: '4px solid black', paddingLeft: 12, lineHeight: 1.2 }}>{p.musteri_adi}</div>
-            {p.ozel_not && (
-              <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(0,0,0,0.03)', borderLeft: '2px solid rgba(0,0,0,0.15)', fontStyle: 'italic', fontSize: 10, color: 'rgba(0,0,0,0.6)', lineHeight: 1.5 }}>
-                &quot;{p.ozel_not}&quot;
+            <div style={{ fontSize: 20, fontWeight: 900, textTransform: 'uppercase', borderLeft: `4px solid ${themeHex}`, paddingLeft: 12, lineHeight: 1.2 }}>{p.musteri_adi}</div>
+            {parsedNot && (
+              <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(0,0,0,0.03)', borderLeft: `2px solid ${themeHex}`, fontStyle: 'italic', fontSize: 10, color: 'rgba(0,0,0,0.6)', lineHeight: 1.5 }}>
+                &quot;{parsedNot}&quot;
               </div>
             )}
           </div>
@@ -137,7 +194,7 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
 
         {/* TOPLAM + KUR */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0 32px 24px', gap: 24, flexWrap: 'wrap' }}>
-          <div style={{ minWidth: 180, padding: 14, background: 'rgba(0,0,0,0.02)', borderLeft: '4px solid black', fontSize: 10 }}>
+          <div style={{ minWidth: 180, padding: 14, background: 'rgba(0,0,0,0.02)', borderLeft: `4px solid ${themeHex}`, fontSize: 10 }}>
             <div style={{ fontWeight: 700, textTransform: 'uppercase', opacity: 0.4, letterSpacing: 2, fontSize: 8, marginBottom: 8 }}>Kur (Teklif Tarihi)</div>
             <div style={{ fontWeight: 900, lineHeight: 1.9 }}>
               <div>1 USD = <span style={{ color: '#c00000' }}>{p.kur_usd} ₺</span></div>
@@ -148,13 +205,25 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
           <div style={{ width: 280, fontSize: 11 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid rgba(0,0,0,0.07)' }}>
               <span style={{ opacity: 0.5, fontSize: 9, textTransform: 'uppercase', letterSpacing: 1 }}>Ara Toplam (KDV Hariç)</span>
-              <strong>{p.ara_toplam.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</strong>
+              <strong>{rawAraToplam.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</strong>
             </div>
+            {discountPercent > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid rgba(0,0,0,0.07)', color: '#c00000' }}>
+                <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>İskonto (%{discountPercent})</span>
+                <strong>-{discountAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</strong>
+              </div>
+            )}
+            {discountPercent > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid rgba(0,0,0,0.07)' }}>
+                <span style={{ opacity: 0.5, fontSize: 9, textTransform: 'uppercase', letterSpacing: 1 }}>İskonto Sonrası Tutar</span>
+                <strong>{p.ara_toplam.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</strong>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid rgba(0,0,0,0.07)' }}>
               <span style={{ opacity: 0.5, fontSize: 9, textTransform: 'uppercase', letterSpacing: 1 }}>%20 KDV</span>
               <strong>{p.kdv.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', background: 'black', color: 'white', padding: '12px 14px', fontWeight: 900, marginTop: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', background: themeHex, color: 'white', padding: '12px 14px', fontWeight: 900, marginTop: 4 }}>
               <span style={{ textTransform: 'uppercase', letterSpacing: 2, fontSize: 11 }}>GENEL TOPLAM</span>
               <span style={{ fontSize: 17 }}>{p.genel_toplam.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span>
             </div>
@@ -178,8 +247,12 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
         <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '16px 32px 28px' }}>
           <div style={{ textAlign: 'center', width: 160 }}>
             <div style={{ border: '1px solid rgba(0,0,0,0.1)', height: 64, marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontStyle: 'italic', opacity: 0.2 }}>Kaşe / İmza</div>
-            <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 2 }}>Akdağ Elektronik</div>
-            <div style={{ fontSize: 8, opacity: 0.4, marginTop: 2, textTransform: 'uppercase' }}>Satış Departmanı</div>
+            <div style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 2 }}>
+              {p.bayiAyarlari?.firma_adi || 'Akdağ Elektronik'}
+            </div>
+            <div style={{ fontSize: 8, opacity: 0.4, marginTop: 2, textTransform: 'uppercase' }}>
+              {p.bayiAyarlari?.firma_adi ? 'Firma Yetkilisi' : 'Satış Departmanı'}
+            </div>
           </div>
         </div>
       </div>
@@ -187,45 +260,53 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
       {/* PRINT CSS */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
-          @page {
-            size: A4;
-            margin: 1cm 1.2cm;
+          /* Koyu tema arka planlarının yazdırılmasını engelle */
+          html, body, main, section, article {
+            background: transparent !important;
+            background-color: transparent !important;
           }
-
-          /* Gri arka planı ve üst barı gizle */
-          .no-print {
-            display: none !important;
+          /* Sadece dış kapsayıcı div'lerin arka planını transparan yap */
+          body > div, body > div > div, body > div > main, .min-h-screen {
+            background: transparent !important;
+            background-color: transparent !important;
           }
-
-          /* Gri dış kapsayıcıyı sıfırla */
-          body > div {
-            background: white !important;
-            min-height: unset !important;
-            padding: 0 !important;
+          /* Herşeyi gizle */
+          body * {
+            visibility: hidden;
           }
-
-          body {
-            background: white !important;
-            margin: 0 !important;
-            padding: 0 !important;
+          /* Sadece print-area'yı ve çocuklarını göster */
+          #print-area, #print-area * {
+            visibility: visible !important;
           }
-
-          /* Kart stilini sıfırla */
           #print-area {
-            max-width: none !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            display: block !important;
+            background: white !important;
+            background-color: white !important;
+            padding: 0 !important;
             margin: 0 !important;
-            border-radius: 0 !important;
             box-shadow: none !important;
             border: none !important;
             overflow: visible !important;
           }
-
-          /* Tablo sayfa sonu kontrolü */
+          .no-print, nav, footer, header {
+            display: none !important;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          @page {
+            size: A4;
+            margin: 1cm 1.2cm;
+          }
           table { page-break-inside: auto; width: 100% !important; }
           tr { page-break-inside: avoid; page-break-after: auto; }
           thead { display: table-header-group; }
-
-          /* Link URL gösterme */
           a::after { content: none !important; }
         }
       `}} />

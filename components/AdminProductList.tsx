@@ -7,7 +7,7 @@ import { PARA_BIRIMLERI } from '@/lib/kur'
 import { createClient } from '@/lib/supabase'
 import { KATEGORILER, KATEGORI_HIYERARSI } from '@/lib/categories'
 import { compressImage } from './ImageCompressor'
-import * as XLSX from 'xlsx'
+import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
 
 interface FileEntry {
   file: File
@@ -77,7 +77,7 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
   const loadProducts = async () => {
     setLoading(true)
     const supabase = createClient()
-    let query = supabase.from('urunler').select('*', { count: 'exact' })
+    let query = supabase.from('urunler').select(LIGHT_PRODUCT_FIELDS, { count: 'exact' })
     if (searchQuery) {
       query = query.or(`ad.ilike.%${searchQuery}%,kategori.ilike.%${searchQuery}%,marka.ilike.%${searchQuery}%`)
     }
@@ -186,7 +186,7 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
       updated_at: new Date().toISOString(),
       ...(fiyatDegisti ? { fiyat_guncelleme: new Date().toISOString() } : {}),
     }).eq('id', editProduct.id)
-    fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: '/' }) }).catch(() => {})
+    fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: '/' }) }).catch(() => { })
     setSaving(false)
     setSaveSuccess(true)
     setTimeout(() => { setEditProduct(null); loadProducts() }, 800)
@@ -198,7 +198,7 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
     const supabase = createClient()
     await supabase.from('urunler').delete().eq('id', id)
     setDeleting(null)
-    fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: '/' }) }).catch(() => {})
+    fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: '/' }) }).catch(() => { })
     loadProducts()
   }
 
@@ -234,6 +234,7 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
     setImporting(true)
     try {
       const data = await file.arrayBuffer()
+      const XLSX = await import('xlsx')
       const workbook = XLSX.read(data, { type: 'array' })
       const worksheet = workbook.Sheets[workbook.SheetNames[0]]
       const jsonData = XLSX.utils.sheet_to_json<any>(worksheet)
@@ -268,8 +269,10 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
 
   const exportToExcel = async () => {
     const supabase = createClient()
-    const { data: allProducts } = await supabase.from('urunler').select('*').order('ad')
+    const { data: allProducts } = await supabase.from('urunler').select('id, model_kodu, ad, kategori, marka, fiyat, para_birimi, bayi_fiyati, bayi_para_birimi, stok_adedi, stok_durumu, fiyat_guncelleme').order('ad')
     if (!allProducts) return
+
+    const XLSX = await import('xlsx')
 
     const dataToExport = allProducts.map((p: Product) => ({
       'STOK KODU': (p as any).model_kodu || '-',

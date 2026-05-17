@@ -115,7 +115,7 @@ export default function HomePage() {
               {/* Başlık display + ghost alt yazı (#6) */}
               <h2 className="font-display font-black text-5xl md:text-6xl uppercase tracking-tight leading-none text-white">
                 UZMAN<br />
-                <span className="text-white/15">ÇÖZÜMLERİMİZ</span>
+                <span className="text-white/35">ÇÖZÜMLERİMİZ</span>
               </h2>
             </div>
             <Link href="/urunler" className="flex items-center gap-2 text-brand-red font-display font-semibold text-sm tracking-widest uppercase hover:gap-4 transition-all duration-300 group">
@@ -344,7 +344,7 @@ export default function HomePage() {
                   '🎯 Teknik Destek',
                   '🤝 Bölgesel Temsil',
                 ].map((item) => (
-                  <div key={item} className="flex items-center gap-2 text-sm font-body text-white/50">
+                  <div key={item} className="flex items-center gap-2 text-sm font-body text-white/70">
                     <span>{item}</span>
                   </div>
                 ))}
@@ -368,7 +368,7 @@ export default function HomePage() {
               ].map((item) => (
                 <div key={item.label} className="bg-[#141414] border border-white/5 p-6 hover:border-brand-red/20 transition-colors">
                   <div className="font-display font-black text-4xl text-brand-red mb-2">{item.num}</div>
-                  <div className="font-body text-white/40 text-sm">{item.label}</div>
+                  <div className="font-body text-white/60 text-sm">{item.label}</div>
                 </div>
               ))}
             </div>
@@ -403,7 +403,7 @@ export default function HomePage() {
               <span className="text-brand-red">ALIN</span>
             </h2>
             {/* Tagline italic serif kontrast (#6) */}
-            <p className="font-body text-white/40 text-lg leading-relaxed mb-10 max-w-xl mx-auto">
+            <p className="font-body text-white/60 text-lg leading-relaxed mb-10 max-w-xl mx-auto">
               Uzman ekibimiz ihtiyaçlarınızı analiz edip{' '}
               <em className="silver-text not-italic font-medium">en uygun çözümü</em> sunsun.
             </p>

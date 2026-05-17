@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase'
 import { getKurClient } from '@/lib/kur-client'
 import { Search, Plus, Trash2, FileText, User, Calendar, Info, RefreshCw, Printer, Download } from 'lucide-react'
 import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
-import * as XLSX from 'xlsx'
 
 interface ProposalItem {
   id: string
@@ -49,6 +48,7 @@ export default function AdminProposalManager() {
   const [archiveSearch, setArchiveSearch] = useState('')
   const [currentProposalId, setCurrentProposalId] = useState<string | null>(null)
   const [currentProposalNo, setCurrentProposalNo] = useState<string | null>(null)
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
 
   const supabase = useRef(createClient()).current
 
@@ -57,6 +57,25 @@ export default function AdminProposalManager() {
     loadHistory()
     setProposalDate(new Date().toISOString().split('T')[0]) // İstemci tarafında set et
   }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  useEffect(() => {
+    if (debouncedSearchQuery.length < 2) {
+      setSearchResults([])
+      return
+    }
+    const runSearch = async () => {
+      const { data } = await supabase.from('urunler').select(LIGHT_PRODUCT_FIELDS).ilike('ad', `%${debouncedSearchQuery}%`).limit(5)
+      setSearchResults(data || [])
+    }
+    runSearch()
+  }, [debouncedSearchQuery])
 
   const fetchKur = async () => {
     try {
@@ -160,29 +179,23 @@ export default function AdminProposalManager() {
     fetchKur()
   }
 
-  const exportToExcel = () => {
-    if (items.length === 0) return
-    
-    const data = items.map(i => {
-      const k = i.para_birimi === 'USD' ? kur.USD : i.para_birimi === 'EUR' ? kur.EUR : 1
-      const birimTl = i.fiyat_doviz * k
-      return {
-        'Marka': i.marka,
-        'Kod': i.kod,
-        'Ürün Adı': i.ad,
-        'Miktar': i.miktar,
-        'Birim Fiyat (Döviz)': i.fiyat_doviz,
-        'Para Birimi': i.para_birimi,
-        'Birim Fiyat (TL)': birimTl,
-        'Toplam (TL)': birimTl * i.miktar
-      }
-    })
+  const exportToExcel = async () => {
+    const data = items.map(item => ({
+      "Ürün Kodu": item.kod,
+      "Marka": item.marka,
+      "Ürün Adı": item.ad,
+      "Miktar": item.miktar,
+      "Para Birimi": item.para_birimi,
+      "Birim Fiyat": item.fiyat_doviz,
+      "Toplam Döviz": item.fiyat_doviz * item.miktar,
+      "Toplam TL": item.tutar_tl
+    }))
 
+    const XLSX = await import('xlsx')
     const worksheet = XLSX.utils.json_to_sheet(data)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Teklif")
     
-    // Sütun genişliklerini ayarla
     worksheet['!cols'] = [
       { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 10 }, 
       { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 15 }
@@ -191,14 +204,8 @@ export default function AdminProposalManager() {
     XLSX.writeFile(workbook, `${customerName || 'Teklif'}_${new Date().toISOString().split('T')[0]}.xlsx`)
   }
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = (query: string) => {
     setSearchQuery(query)
-    if (query.length < 2) {
-      setSearchResults([])
-      return
-    }
-    const { data } = await supabase.from('urunler').select(LIGHT_PRODUCT_FIELDS).ilike('ad', `%${query}%`).limit(5)
-    setSearchResults(data || [])
   }
 
   const addItem = (product: any) => {

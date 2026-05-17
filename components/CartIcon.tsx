@@ -16,7 +16,7 @@ export default function CartIcon() {
   }, [])
 
   return (
-    <Link href="/sepet" className="relative flex items-center gap-1.5 text-white/50 hover:text-white transition-colors duration-200">
+    <Link href="/sepet" aria-label="Sepetim" className="relative flex items-center gap-1.5 text-white/50 hover:text-white transition-colors duration-200">
       <ShoppingCart size={18} />
       {count > 0 && (
         <span className="absolute -top-2 -right-2 w-4 h-4 bg-brand-red text-white text-[9px] font-bold flex items-center justify-center rounded-full">

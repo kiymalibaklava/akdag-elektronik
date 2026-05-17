@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, memo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, GitCompare, Heart, MessageCircle, Package, Search, ShoppingCart, Check, Tag } from 'lucide-react'
@@ -135,7 +135,7 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
   )
 }
 
-export function ProductCard({ product, isBayi = false, kur, showPrice = false }: { product: Product; isBayi?: boolean; kur?: KurData; showPrice?: boolean }) {
+export const ProductCard = memo(function ProductCard({ product, isBayi = false, kur, showPrice = false }: { product: Product; isBayi?: boolean; kur?: KurData; showPrice?: boolean }) {
   const kurData = kur || { USD: 32.5, EUR: 35.2, guncelleme: null }
   const pb = product.para_birimi || 'TRY'
   const bayiPb = product.bayi_para_birimi || pb
@@ -412,4 +412,4 @@ export function ProductCard({ product, isBayi = false, kur, showPrice = false }:
       <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-brand-red group-hover:w-full transition-all duration-500" />
     </div>
   )
-}
+})

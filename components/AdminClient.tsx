@@ -2,15 +2,32 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
-import AdminAddProduct from './AdminAddProduct'
-import AdminProductList from './AdminProductList'
-import AdminLoginForm from './AdminLoginForm'
-import AdminBayiYonetim from './AdminBayiYonetim'
-import AdminSiparisler from './AdminSiparisler'
-import AdminDashboard from './AdminDashboard'
-import AdminProposalManager from './AdminProposalManager'
-import AdminWolvoxQueue from './AdminWolvoxQueue'
 import { LogOut, Package, Users, FileText, ShoppingBag, LayoutDashboard, Layers, Database } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+const AdminDashboard = dynamic(() => import('./AdminDashboard'), {
+  loading: () => <div className="py-10 flex justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
+})
+const AdminSiparisler = dynamic(() => import('./AdminSiparisler'), {
+  loading: () => <div className="py-10 flex justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
+})
+const AdminAddProduct = dynamic(() => import('./AdminAddProduct'), {
+  loading: () => <div className="py-10 flex justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
+})
+const AdminProductList = dynamic(() => import('./AdminProductList'), {
+  loading: () => <div className="py-10 flex justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
+})
+const AdminProposalManager = dynamic(() => import('./AdminProposalManager'), {
+  loading: () => <div className="py-10 flex justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
+})
+const AdminWolvoxQueue = dynamic(() => import('./AdminWolvoxQueue'), {
+  loading: () => <div className="py-10 flex justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
+})
+const AdminBayiYonetim = dynamic(() => import('./AdminBayiYonetim'), {
+  loading: () => <div className="py-10 flex justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
+})
+
+import AdminLoginForm from './AdminLoginForm'
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
 
