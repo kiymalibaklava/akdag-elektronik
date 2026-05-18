@@ -90,7 +90,7 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
       </div>
 
       {/* TEKLIF KARTI — ekranda kart gibi, print'te düz sayfa */}
-      <div id="print-area" style={{ maxWidth: 900, margin: '24px auto', background: 'white', borderRadius: 12, boxShadow: '0 4px 32px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+      <div id="print-area" style={{ maxWidth: 900, margin: '24px auto', background: 'white', borderRadius: 12, boxShadow: '0 4px 32px rgba(0,0,0,0.1)', overflow: 'hidden', color: '#1A1A1A' }}>
 
         {/* HEADER */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '28px 32px 22px', borderBottom: `2px solid ${themeHex}`, gap: 16, flexWrap: 'wrap' }}>
@@ -169,7 +169,18 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
                   <tr key={idx} style={{ background: idx % 2 === 0 ? 'white' : 'rgba(0,0,0,0.01)', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
                     <td style={{ padding: '10px 8px', verticalAlign: 'top', border: '1px solid rgba(0,0,0,0.05)' }}>
                       <div style={{ width: 34, height: 34, background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                        {item.gorsel ? <img src={item.gorsel} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} alt="" /> : <span style={{ fontSize: 8, color: 'rgba(0,0,0,0.2)' }}>—</span>}
+                        {item.gorsel ? (
+                          <img 
+                            src={item.gorsel} 
+                            style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} 
+                            alt="" 
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="10" fill="%239ca3af">Görsel Yok</text></svg>';
+                            }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: 8, color: 'rgba(0,0,0,0.2)' }}>—</span>
+                        )}
                       </div>
                     </td>
                     <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 900, verticalAlign: 'top', border: '1px solid rgba(0,0,0,0.05)' }}>{item.miktar} Adet</td>
@@ -277,6 +288,11 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
           /* Sadece print-area'yı ve çocuklarını göster */
           #print-area, #print-area * {
             visibility: visible !important;
+            color: #1A1A1A !important;
+          }
+          #print-area [style*="color: white"], #print-area [style*="color:white"],
+          #print-area [style*="color: rgb(255, 255, 255)"], #print-area [style*="color:rgb(255,255,255)"] {
+            color: #ffffff !important;
           }
           #print-area {
             position: absolute !important;
