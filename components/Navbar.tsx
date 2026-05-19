@@ -49,7 +49,7 @@ export default function Navbar() {
       if (session?.user) pullCartFromSupabase()
     })
     return () => subscription.unsubscribe()
-  }, [])
+  }, [supabase])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
@@ -85,7 +85,7 @@ export default function Navbar() {
       {/* Top bar */}
       <div className="bg-brand-red text-white text-[10px] sm:text-xs font-body tracking-wider z-[60] relative">
         <div className="max-w-7xl mx-auto px-6 py-2 flex justify-between items-center">
-          <span className="hidden sm:block uppercase font-bold tracking-[0.2em]">Kayseri'nin Ses ve Işık Sistemleri Uzmanı</span>
+          <span className="hidden sm:block uppercase font-bold tracking-[0.2em]">Kayseri&apos;nin Ses ve Işık Sistemleri Uzmanı</span>
           <a href="tel:+903522316915" className="flex items-center gap-1.5 font-semibold hover:opacity-80 transition-opacity">
             <Phone size={11} />
             +90 352 231 69 15

@@ -151,13 +151,12 @@ export default function AdminAddProduct({ onAdded, initialData }: Props) {
     const kritikStokNum = Math.max(0, parseInt(kritikStok || '0'))
     const stokDurumu = stokAdetNum <= 0 ? 'tukendi' : stok
 
-    const { error: insertErr } = await supabase.from('urunler').insert({
+    const payload: any = {
       ad: ad.trim(), 
       aciklama: aciklama.trim(),
       kategori: anaCat.name,
       alt_kategori: altCat?.name || null,
       urun_tipi: detayCat?.name || null,
-      fotograflar,
       fiyat: parseFloat(fiyat),
       bayi_fiyati: bayi_fiyati ? parseFloat(bayi_fiyati) : null,
       stok_durumu: stokDurumu,
@@ -168,19 +167,57 @@ export default function AdminAddProduct({ onAdded, initialData }: Props) {
       marka: marka.trim() || null,
       model_kodu: modelKodu.trim() || null,
       kullanim_alani: kullanimAlani.trim() || null,
-    })
+    }
 
-    if (!insertErr && taslakId) {
+    // Aynı model koduna (stok koduna) sahip bir ürün olup olmadığını kontrol et
+    let existingUrun: any = null
+    if (modelKodu.trim()) {
+      const { data } = await supabase
+        .from('urunler')
+        .select('id, fotograflar')
+        .eq('model_kodu', modelKodu.trim())
+        .maybeSingle()
+      existingUrun = data
+    }
+
+    let dbErr = null
+
+    if (existingUrun) {
+      // Eğer yeni bir fotoğraf yüklenmediyse ve eski fotoğraflar varsa, eski fotoğrafları koru
+      if (fotograflar.length === 0 && existingUrun.fotograflar) {
+        payload.fotograflar = existingUrun.fotograflar
+      } else {
+        payload.fotograflar = fotograflar
+      }
+      payload.updated_at = new Date().toISOString()
+      
+      const { error } = await supabase
+        .from('urunler')
+        .update(payload)
+        .eq('id', existingUrun.id)
+      dbErr = error
+    } else {
+      payload.fotograflar = fotograflar
+      const { error } = await supabase
+        .from('urunler')
+        .insert(payload)
+      dbErr = error
+    }
+
+    if (!dbErr && taslakId) {
       await supabase.from('wolvox_taslak').delete().eq('id', taslakId)
     }
 
     // Önbelleği temizle (Anında Yayınlama)
-    if (!insertErr) {
+    if (!dbErr) {
       fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: '/' }) }).catch(() => {})
+      if (existingUrun?.id) {
+        fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: `/urun/${existingUrun.id}` }) }).catch(() => {})
+      }
     }
 
     setLoading(false)
-    if (insertErr) { setError(`Eklenemedi: ${insertErr.message}`); return }
+    if (dbErr) { setError(`Kaydedilemedi: ${dbErr.message}`); return }
     setSuccess(true)
     setAd(''); setAciklama(''); setAnaCat(NEW_KATEGORI_HIYERARSI[0]); setAltCat(null); setDetayCat(null)
     setFiyat(''); setBayiF(''); setStok('stokta'); setParaBirimi('USD'); setBayiParaBirimi('USD')

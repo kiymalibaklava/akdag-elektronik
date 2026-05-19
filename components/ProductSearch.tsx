@@ -22,7 +22,7 @@ export default function ProductSearch({ fullPage = false }: { fullPage?: boolean
   const [open, setOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useRef(createClient()).current
 
   useEffect(() => {
     if (!query.trim()) {
@@ -45,7 +45,7 @@ export default function ProductSearch({ fullPage = false }: { fullPage?: boolean
     }, 350)
 
     return () => clearTimeout(timer)
-  }, [query, fullPage])
+  }, [query, fullPage, supabase])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -139,7 +139,7 @@ export default function ProductSearch({ fullPage = false }: { fullPage?: boolean
       {open && query && results.length === 0 && !loading && (
         <div className="absolute top-full left-0 right-0 z-50 bg-[#141414] border border-white/10 border-t-0 p-6 text-center shadow-2xl">
           <p className="font-body text-white/30 text-sm">
-            "<span className="text-white">{query}</span>" için sonuç bulunamadı.
+            &ldquo;<span className="text-white">{query}</span>&rdquo; için sonuç bulunamadı.
           </p>
         </div>
       )}

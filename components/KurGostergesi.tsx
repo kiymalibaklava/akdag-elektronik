@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { TrendingUp, RefreshCw } from 'lucide-react'
 import { getKurClient } from '@/lib/kur-client'
 
@@ -11,21 +11,23 @@ export default function KurGostergesi() {
   const [yukleniyor, setYukleniyor] = useState(true)
   const [son, setSon] = useState<Kur | null>(null) // önceki kur (yön oku için)
 
-  const fetchKur = async () => {
+  const fetchKur = useCallback(async () => {
     try {
       const data = await getKurClient()
-      setSon(kur)
-      setKur(data as any)
+      setKur(prev => {
+        setSon(prev)
+        return data as any
+      })
     } catch {}
     finally { setYukleniyor(false) }
-  }
+  }, [])
 
   useEffect(() => {
     fetchKur()
     // Her 5 dakikada güncelle
     const interval = setInterval(fetchKur, 5 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [])
+  }, [fetchKur])
 
   if (yukleniyor) {
     return (

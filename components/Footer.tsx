@@ -17,7 +17,7 @@ export default function Footer() {
             </div>
           </div>
           <p className="text-white/40 text-sm leading-relaxed font-body">
-            Kayseri'nin lider ses, ışık ve görüntü sistemleri firması. Profesyonel çözümler, güvenilir hizmet.
+            Kayseri&apos;nin lider ses, ışık ve görüntü sistemleri firması. Profesyonel çözümler, güvenilir hizmet.
           </p>
           <div className="flex gap-3 mt-6">
             <a href="https://facebook.com/kayseriakdagelektronik" target="_blank" rel="noopener noreferrer" aria-label="Facebook"

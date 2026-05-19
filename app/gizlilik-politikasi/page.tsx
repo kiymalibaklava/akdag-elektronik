@@ -6,7 +6,6 @@ export const metadata = {
   description: 'Akdağ Elektronik kişisel verilerin korunması ve gizlilik politikası — KVKK aydınlatma metni.',
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function Section({ title, num, icon: Icon, children }: { title: string; num: string; icon: any; children: React.ReactNode }) {
   return (
     <div className="relative">

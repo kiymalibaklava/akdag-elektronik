@@ -35,7 +35,7 @@ export default function KvkkBanner() {
                 <a href="/gizlilik-politikasi" className="text-brand-red hover:underline">
                   KVKK Aydınlatma Metni
                 </a>
-                'ni kabul etmiş sayılırsınız.
+                &apos;ni kabul etmiş sayılırsınız.
               </p>
             </div>
           </div>
