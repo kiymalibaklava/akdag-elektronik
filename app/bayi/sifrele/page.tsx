@@ -1,7 +1,7 @@
 'use client'
 
-import { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { Eye, EyeOff, CheckCircle, AlertCircle, Loader } from 'lucide-react'
 
@@ -15,82 +15,28 @@ export default function SifreBelirle() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
-  const [isRecovery, setIsRecovery] = useState(false)
   const supabase = useRef(createClient()).current
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    let isMounted = true;
-
-    const checkHashAndSession = async () => {
-      const hash = typeof window !== 'undefined' ? window.location.hash : ''
-      const hasToken = hash.includes('access_token=')
-      
-      if (hash.includes('type=recovery')) {
-        setIsRecovery(true)
-      }
-      
-      // Eğer hash'te token varsa, Supabase'in otomatik almasını beklemeden biz manuel ayarlıyoruz.
-      if (hasToken) {
-        const hashParams = new URLSearchParams(hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-        
-        if (accessToken && refreshToken) {
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken
-          });
-          
-          if (!error) {
-            if (isMounted) setStatus('ready');
-            return;
-          }
-        }
-      }
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session && isMounted) {
-        setStatus('ready');
-      } else if (!hasToken && !session && isMounted) {
-        // Token yok ve oturum yoksa direkt hata ver, bekletme
-        setErrorMsg('Geçersiz veya süresi dolmuş bir davet bağlantısı kullandınız. Lütfen e-postanızdaki butona tekrar tıklayın.');
-        setStatus('error');
-      }
-    };
-    checkHashAndSession();
-
-    // 2. Auth değişimlerini dinle
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {      
-      if (!isMounted) return;
-      
-      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
-        setStatus('ready');
-      }
-    });
-
-    // 3. Sadece token varsa ve henüz ready olmadıysa timeout bekle
-    const timeout = setTimeout(async () => {
-      if (!isMounted) return;
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setStatus(s => {
-          if (s === 'loading') {
-            setErrorMsg('Bağlantı doğrulanamadı. İnternet bağlantınızı kontrol edip e-postanızdaki linke tekrar tıklayın.');
-            return 'error';
-          }
-          return s;
-        });
-      }
-    }, 10000);
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-      clearTimeout(timeout);
+    // Callback'ten gelen hata parametresi
+    const urlError = searchParams.get('error')
+    if (urlError) {
+      setErrorMsg('Geçersiz veya süresi dolmuş bir bağlantı kullandınız. Lütfen şifre sıfırlama işlemini tekrar başlatın.')
+      setStatus('error')
+      return
     }
-  }, [supabase.auth])
+
+    // Callback oturumu zaten kurmuş olmalı — sadece kontrol et
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: import('@supabase/supabase-js').Session | null } }) => {
+      if (session) {
+        setStatus('ready')
+      } else {
+        setErrorMsg('Oturum bulunamadı. Lütfen e-postanızdaki bağlantıya tekrar tıklayın veya yeni bir şifre sıfırlama isteği gönderin.')
+        setStatus('error')
+      }
+    })
+  }, [supabase, searchParams])
 
   const handleSubmit = async () => {
     setFormError('')
@@ -122,11 +68,11 @@ export default function SifreBelirle() {
             <div className="w-8 h-px bg-brand-red" />
           </div>
           <h1 className="font-display font-black text-3xl uppercase text-white">
-            {status === 'success' ? (isRecovery ? 'Şifre Yenilendi' : 'Şifre Belirlendi') : (isRecovery ? 'Yeni Şifre Belirle' : 'Şifre Oluştur')}
+            {status === 'success' ? 'Şifre Güncellendi' : 'Yeni Şifre Belirle'}
           </h1>
           <p className="font-body text-white/30 text-sm mt-2">
-            {status === 'loading' ? 'Bağlantı doğrulanıyor...' :
-             status === 'ready' ? (isRecovery ? 'Hesabınız için yeni bir şifre belirleyin.' : 'Bayi hesabınız için yeni bir şifre oluşturun.') :
+            {status === 'loading' ? 'Oturum doğrulanıyor...' :
+             status === 'ready' ? 'Hesabınız için güçlü bir şifre belirleyin.' :
              status === 'success' ? 'Panele yönlendiriliyorsunuz...' :
              'Bir sorun oluştu.'}
           </p>
@@ -152,7 +98,10 @@ export default function SifreBelirle() {
               <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-sm text-center w-full">
                 <p className="font-body text-red-400/90 text-sm leading-relaxed">{errorMsg}</p>
               </div>
-              <a href="/bayi" className="btn-outline text-sm mt-4 w-full justify-center">Giriş Sayfasına Dön</a>
+              <a href="/bayi/sifre-sifirla" className="btn-primary text-sm mt-2 w-full text-center justify-center">
+                Yeni Sıfırlama Bağlantısı İste
+              </a>
+              <a href="/bayi" className="btn-outline text-sm w-full justify-center">Giriş Sayfasına Dön</a>
             </div>
           )}
 
@@ -224,7 +173,7 @@ export default function SifreBelirle() {
                 className="btn-primary w-full flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
-                {saving ? 'Kaydediliyor...' : (isRecovery ? 'Şifremi Yenile ve Giriş Yap' : 'Şifremi Kaydet ve Giriş Yap')}
+                {saving ? 'Kaydediliyor...' : 'Şifremi Kaydet ve Giriş Yap'}
               </button>
             </div>
           )}

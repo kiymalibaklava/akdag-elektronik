@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
     )
 
     const { data: inviteData, error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${siteUrl}/bayi/sifrele`,
+      // PKCE akışı: /auth/callback üzerinden geçer, sonra /bayi/sifrele'ye yönlenir
+      redirectTo: `${siteUrl}/auth/callback?next=/bayi/sifrele`,
       data: { firma_adi, yetkili_adi: yetkili_adi || '' },
     })
 

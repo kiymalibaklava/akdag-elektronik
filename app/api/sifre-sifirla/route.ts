@@ -28,7 +28,9 @@ export async function POST(req: NextRequest) {
     const siteUrl = origin.replace(/\/$/, '')
     
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectTo || `${siteUrl}/bayi/sifrele`,
+      // PKCE akışı: önce /auth/callback'e gelir, code oturuma çevrilir,
+      // sonra next parametresiyle /bayi/sifrele'ye yönlendirilir.
+      redirectTo: redirectTo || `${siteUrl}/auth/callback?next=/bayi/sifrele`,
     })
 
     if (error) {

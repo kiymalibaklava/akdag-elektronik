@@ -104,7 +104,26 @@ export default function AdminBayiYonetim({ activeTab }: Props) {
 
   const toggleOnay = async (bayi: Bayi) => {
     setActionLoading(bayi.id)
-    await supabase.from('bayiler').update({ onaylandi: !bayi.onaylandi }).eq('id', bayi.id)
+    const yeniDurum = !bayi.onaylandi
+
+    await supabase.from('bayiler').update({ onaylandi: yeniDurum }).eq('id', bayi.id)
+
+    // Bayiye e-posta bildirimi gönder
+    try {
+      await fetch('/api/bayi-durum-bildirim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bayi_id: bayi.id,
+          firma_adi: bayi.firma_adi,
+          yetkili_adi: bayi.yetkili_adi,
+          onaylandi: yeniDurum,
+        }),
+      })
+    } catch (e) {
+      console.error('Bayi durum bildirimi gönderilemedi:', e)
+    }
+
     await loadAll()
     setActionLoading(null)
   }

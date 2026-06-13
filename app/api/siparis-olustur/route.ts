@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { musterionayHTML, adminBildirimHTML } from '@/lib/email'
+import { sendEmail } from '@/lib/send-email'
 import { siparisOlusturSchema } from '@/lib/api-schemas'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/request-ip'
@@ -10,32 +11,7 @@ const supabaseAdmin = () =>
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-async function sendEmail(to: string, subject: string, html: string) {
-  const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) {
-    console.warn('RESEND_API_KEY yok, e-posta atlandı')
-    return
-  }
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'Akdağ Elektronik <siparis@akdagelektronik.com>',
-      to,
-      subject,
-      html,
-    }),
-  })
-
-  if (!res.ok) {
-    const err = await res.text()
-    console.error('Resend hata:', err)
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
