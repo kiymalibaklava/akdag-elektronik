@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
@@ -7,7 +8,7 @@ import { Eye, EyeOff, CheckCircle, AlertCircle, Loader } from 'lucide-react'
 
 type Status = 'loading' | 'ready' | 'error' | 'success'
 
-export default function SifreBelirle() {
+function SifreBelirleContent() {
   const [status, setStatus] = useState<Status>('loading')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -180,5 +181,18 @@ export default function SifreBelirle() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Next.js 14 — useSearchParams() Suspense boundary gerektirir
+export default function SifreBelirle() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A]">
+        <Loader size={32} className="text-brand-red animate-spin" />
+      </div>
+    }>
+      <SifreBelirleContent />
+    </Suspense>
   )
 }
