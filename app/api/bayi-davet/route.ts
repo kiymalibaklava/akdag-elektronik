@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { bayiDavetSchema } from '@/lib/api-schemas'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/request-ip'
+import { bayiOnaylandiHTML } from '@/lib/email'
+import { sendEmail } from '@/lib/send-email'
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,6 +30,7 @@ export async function POST(req: NextRequest) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
+    // Supabase davet e-postası gönder (yeni kullanıcılar için)
     const { data: inviteData, error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       // PKCE akışı: /auth/callback üzerinden geçer, sonra /bayi/sifrele'ye yönlenir
       redirectTo: `${siteUrl}/auth/callback?next=/bayi/sifrele`,
@@ -35,6 +38,7 @@ export async function POST(req: NextRequest) {
     })
 
     if (inviteErr) {
+      // Kullanıcı zaten kayıtlı — bayi kaydını oluştur/güncelle ve onay e-postası gönder
       if (inviteErr.message.includes('already been registered')) {
         const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers()
         const user = existingUser?.users.find((u) => u.email === email)
@@ -50,7 +54,19 @@ export async function POST(req: NextRequest) {
             },
             { onConflict: 'user_id' }
           )
-          return NextResponse.json({ success: true, note: 'Mevcut kullanıcı güncellendi' })
+
+          // Mevcut kullanıcıya onay e-postası gönder
+          await sendEmail(
+            email,
+            'Bayi Hesabınız Onaylandı 🎉 | Akdağ Elektronik',
+            bayiOnaylandiHTML({
+              firma_adi,
+              yetkili_adi: yetkili_adi || '',
+              panel_url: `${siteUrl}/bayi/panel`,
+            })
+          )
+
+          return NextResponse.json({ success: true, note: 'Mevcut kullanıcı güncellendi ve bilgilendirildi' })
         }
       }
       return NextResponse.json({ error: inviteErr.message }, { status: 400 })
@@ -60,6 +76,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Davet oluşturulamadı' }, { status: 400 })
     }
 
+    // Yeni kullanıcı — bayi kaydı oluştur
     const { error: dbErr } = await supabaseAdmin.from('bayiler').insert({
       user_id: inviteData.user.id,
       firma_adi,
@@ -72,6 +89,17 @@ export async function POST(req: NextRequest) {
     if (dbErr) {
       return NextResponse.json({ error: dbErr.message }, { status: 400 })
     }
+
+    // Yeni kullanıcıya da onay e-postası gönder (Supabase'in davet maili + bizim markalı mailimiz)
+    await sendEmail(
+      email,
+      'Bayi Hesabınız Onaylandı 🎉 | Akdağ Elektronik',
+      bayiOnaylandiHTML({
+        firma_adi,
+        yetkili_adi: yetkili_adi || '',
+        panel_url: `${siteUrl}/bayi/panel`,
+      })
+    )
 
     return NextResponse.json({ success: true })
   } catch (e) {
