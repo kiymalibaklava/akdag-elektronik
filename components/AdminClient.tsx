@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
-import { LogOut, Package, Users, FileText, ShoppingBag, LayoutDashboard, Layers, Database } from 'lucide-react'
+import { LogOut, Package, Users, FileText, ShoppingBag, LayoutDashboard, Layers, Database, Mail } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const AdminDashboard = dynamic(() => import('./AdminDashboard'), {
@@ -26,6 +26,9 @@ const AdminWolvoxQueue = dynamic(() => import('./AdminWolvoxQueue'), {
 const AdminBayiYonetim = dynamic(() => import('./AdminBayiYonetim'), {
   loading: () => <div className="py-10 flex justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
 })
+const AdminCampaignManager = dynamic(() => import('./AdminCampaignManager'), {
+  loading: () => <div className="py-10 flex justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
+})
 
 import AdminLoginForm from './AdminLoginForm'
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
@@ -46,7 +49,7 @@ interface Product {
   fiyat_guncelleme?: string
 }
 
-type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'teklif' | 'bayiler' | 'basvurular' | 'wolvox'
+type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'teklif' | 'bayiler' | 'basvurular' | 'wolvox' | 'kampanya'
 
 export default function AdminClient({ onSuccess }: AdminClientProps) {
   const [user, setUser] = useState<User | null>(null)
@@ -137,6 +140,7 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
     { id: 'teklif'    as Tab, label: 'Teklif Hazırla', icon: FileText },
     { id: 'bayiler'   as Tab, label: 'Bayiler',     icon: Users },
     { id: 'basvurular'as Tab, label: 'Başvurular',  icon: FileText },
+    { id: 'kampanya'  as Tab, label: 'Toplu Mail',  icon: Mail },
   ]
 
 
@@ -207,6 +211,8 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
         {activeTab === 'teklif' && <AdminProposalManager />}
         
         {activeTab === 'wolvox' && <AdminWolvoxQueue />}
+
+        {activeTab === 'kampanya' && <AdminCampaignManager />}
 
         {(activeTab === 'bayiler' || activeTab === 'basvurular') && (
           <AdminBayiYonetim activeTab={activeTab} />

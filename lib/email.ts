@@ -534,3 +534,47 @@ export function bayiAskiyaAlindiHTML(data: {
   `)
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// BAYİ E-POSTASI — Toplu Kampanya / Duyuru
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export function kampanyaHTML(data: {
+  baslik: string
+  icerik: string
+  resim_url?: string
+  link_url?: string
+}): string {
+  const resimSection = data.resim_url ? `
+    <div style="margin-bottom:20px;text-align:center">
+      <img src="${data.resim_url}" alt="${data.baslik}" style="max-width:100%;height:auto;border-radius:4px;border:1px solid #222" />
+    </div>
+  ` : ''
+
+  const linkSection = data.link_url ? `
+    <div style="margin-top:24px;text-align:center">
+      <a href="${data.link_url}" style="display:inline-block;padding:14px 32px;background:#DA291C;color:#fff;text-decoration:none;font-weight:900;font-size:15px;border-radius:2px;text-transform:uppercase;letter-spacing:0.05em">
+        Hemen İncele →
+      </a>
+    </div>
+  ` : ''
+
+  // İçerik satır sonlarını (newline) <br> tag'ine çevirelim
+  const formatliIcerik = data.icerik.replace(/\\n/g, '<br>')
+
+  return emailShell(`
+    ${header(data.baslik, 'Özel Kampanya ve Duyuru')}
+    
+    <div style="background:#141414;border:1px solid #222;padding:24px;margin-bottom:16px">
+      ${resimSection}
+      
+      <div style="color:#ddd;font-size:15px;line-height:1.8;white-space:pre-wrap;">${formatliIcerik}</div>
+      
+      ${linkSection}
+    </div>
+    
+    <div style="text-align:center;margin-top:20px;margin-bottom:10px">
+      <div style="color:#888;font-size:12px">Bizi tercih ettiğiniz için teşekkür ederiz.</div>
+      <div style="color:#DA291C;font-size:14px;font-weight:700;margin-top:4px">Akdağ Elektronik B2B Bayi Portalı</div>
+    </div>
+  `)
+}
