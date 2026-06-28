@@ -151,8 +151,21 @@ export default function AdminAddProduct({ onAdded, initialData }: Props) {
     const kritikStokNum = Math.max(0, parseInt(kritikStok || '0'))
     const stokDurumu = stokAdetNum <= 0 ? 'tukendi' : stok
 
+    const generateSlug = (text: string) => {
+      const trMap: { [key: string]: string } = {
+        'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
+        'Ç': 'C', 'Ğ': 'G', 'İ': 'I', 'Ö': 'O', 'Ş': 'S', 'Ü': 'U'
+      }
+      return text
+        .replace(/[çğıöşüÇĞİÖŞÜ]/g, match => trMap[match])
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+    }
+
     const payload: any = {
-      ad: ad.trim(), 
+      ad: ad.trim(),
+      slug: generateSlug(ad.trim()),
       aciklama: aciklama.trim(),
       kategori: anaCat.name,
       alt_kategori: altCat?.name || null,

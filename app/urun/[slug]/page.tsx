@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Phone, Mail, ChevronRight, Bell } from 'lucide-react'
 import Link from 'next/link'
@@ -14,15 +14,15 @@ import { getBreadcrumbs } from '@/lib/categories'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-import { getProduct } from '@/lib/product-service'
+import { getProductBySlug } from '@/lib/product-service'
 
-interface Props { params: { id: string } }
+interface Props { params: { slug: string } }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { data: product } = await getProduct(params.id)
+  const { data: product } = await getProductBySlug(params.slug)
   if (!product) return { title: 'Ürün Bulunamadı | Akdağ Elektronik' }
 
-  const url = `${getSiteUrl()}/urun/${product.id}`
+  const url = `${getSiteUrl()}/urun/${product.slug}`
   const description = product.aciklama?.slice(0, 160) || `${product.ad} ürünü hakkında detaylı bilgi ve fiyatlar.`
   const image = product.fotograflar?.[0] || `${getSiteUrl()}/og-image.jpg`
 
@@ -49,8 +49,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function UrunDetayPage({ params }: Props) {
   const supabase = await createServerSupabaseClient()
-  const { data: product } = await getProduct(params.id)
+  const { data: product } = await getProductBySlug(params.slug)
   if (!product) notFound()
+
+  // SEO için: Eğer link UUID ile girilmişse ve ürünün bir slug'ı varsa, slug linkine yönlendir (301)
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.slug)
+  if (isUUID && product.slug) {
+    redirect(`/urun/${product.slug}`)
+  }
 
   const { data: { session } } = await supabase.auth.getSession()
   let isBayi = false
@@ -61,7 +67,7 @@ export default async function UrunDetayPage({ params }: Props) {
 
   const { data: related } = await supabase
     .from('urunler')
-    .select('id, ad, kategori, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi')
+    .select('id, slug, ad, kategori, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi')
     .eq('kategori', product.kategori).neq('id', product.id).limit(4)
 
   const stok = product.stok_durumu || 'stokta'
@@ -87,7 +93,7 @@ export default async function UrunDetayPage({ params }: Props) {
             stok === 'tukendi'
               ? 'https://schema.org/OutOfStock'
               : 'https://schema.org/InStock',
-          url: `${base}/urun/${product.id}`,
+          url: `${base}/urun/${product.slug}`,
         }
       : undefined,
   }
@@ -202,7 +208,7 @@ export default async function UrunDetayPage({ params }: Props) {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-1">
               {related.map((r: any) => (
-                <Link key={r.id} href={`/urun/${r.id}`}
+                <Link key={r.id} href={`/urun/${r.slug}`}
                   className="product-card group bg-[#141414] border border-white/5 overflow-hidden hover:border-brand-red/30">
                   <div className="aspect-square bg-[#1A1A1A] relative overflow-hidden">
                     {r.fotograflar?.[0] ? (

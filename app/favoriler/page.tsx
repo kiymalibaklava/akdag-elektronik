@@ -48,7 +48,7 @@ export default function FavorilerPage() {
                   <div className="font-display text-white mb-4">{formatFiyat(x.fiyat, x.para_birimi || 'TRY')}</div>
                 )}
                 <div className="flex gap-2">
-                  <Link href={`/urun/${x.id}`} className="btn-outline text-xs flex-1 justify-center">Detay</Link>
+                  <Link href={`/urun/${x.slug || x.id}`} className="btn-outline text-xs flex-1 justify-center">Detay</Link>
                   <button
                     type="button"
                     className="btn-outline text-xs"

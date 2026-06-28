@@ -1,5 +1,6 @@
 export interface SavedProduct {
   id: string
+  slug?: string
   ad: string
   kategori: string
   fiyat?: number

@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase'
 
 interface Product {
   id: string
+  slug?: string
   ad: string
   aciklama?: string
   kategori: string
@@ -220,7 +221,7 @@ export const ProductCard = memo(function ProductCard({ product, isBayi = false, 
   return (
     <div className="product-card group relative bg-[#141414] border border-white/5 overflow-hidden hover:border-brand-red/30 flex flex-col">
       {/* Tıklanabilir alan — Link ile sarılı (SEO + navigasyon) */}
-      <Link href={`/urun/${product.id}`} className="flex flex-col flex-1">
+      <Link href={`/urun/${product.slug || product.id}`} className="flex flex-col flex-1">
         {/* Görsel */}
         <div className="aspect-square bg-[#1A1A1A] relative overflow-hidden">
           {product.fotograflar?.[0] ? (
