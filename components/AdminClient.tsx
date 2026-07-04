@@ -29,6 +29,9 @@ const AdminBayiYonetim = dynamic(() => import('./AdminBayiYonetim'), {
 const AdminCampaignManager = dynamic(() => import('./AdminCampaignManager'), {
   loading: () => <div className="py-10 flex justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
 })
+const AdminBanners = dynamic(() => import('./AdminBanners'), {
+  loading: () => <div className="py-10 flex justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
+})
 
 import AdminLoginForm from './AdminLoginForm'
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
@@ -49,7 +52,7 @@ interface Product {
   fiyat_guncelleme?: string
 }
 
-type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'teklif' | 'bayiler' | 'basvurular' | 'wolvox' | 'kampanya'
+type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'teklif' | 'bayiler' | 'basvurular' | 'wolvox' | 'kampanya' | 'banner'
 
 export default function AdminClient({ onSuccess }: AdminClientProps) {
   const [user, setUser] = useState<User | null>(null)
@@ -141,6 +144,7 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
     { id: 'bayiler'   as Tab, label: 'Bayiler',     icon: Users },
     { id: 'basvurular'as Tab, label: 'Başvurular',  icon: FileText },
     { id: 'kampanya'  as Tab, label: 'Toplu Mail',  icon: Mail },
+    { id: 'banner'    as Tab, label: 'Vitrin & Banner', icon: Layers },
   ]
 
 
@@ -213,6 +217,8 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
         {activeTab === 'wolvox' && <AdminWolvoxQueue />}
 
         {activeTab === 'kampanya' && <AdminCampaignManager />}
+        
+        {activeTab === 'banner' && <AdminBanners supabase={supabase} />}
 
         {(activeTab === 'bayiler' || activeTab === 'basvurular') && (
           <AdminBayiYonetim activeTab={activeTab} />

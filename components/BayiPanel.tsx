@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
-import { LogOut, Package, Phone, Clock, CheckCircle, XCircle, Search, X, RotateCcw, FileText, Settings, LayoutDashboard, Box } from 'lucide-react'
+import { LogOut, Package, Phone, Clock, CheckCircle, XCircle, Search, X, RotateCcw, FileText, Settings, LayoutDashboard, Box, ChevronDown, ChevronUp } from 'lucide-react'
 import { ProductCard } from './ProductGrid'
 import type { User } from '@supabase/supabase-js'
 import { addManyToCart } from '@/lib/cart'
@@ -61,7 +61,12 @@ export default function BayiPanel({ user }: { user: User }) {
   const [counts, setCounts] = useState({ total: 0, withPrice: 0, recent: 0 })
   const [repeatMsg, setRepeatMsg] = useState('')
   const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'proposals' | 'settings'>('dashboard')
+  const [expandedOrders, setExpandedOrders] = useState<string[]>([])
   const supabase = useRef(createClient()).current
+
+  const toggleOrder = (id: string) => {
+    setExpandedOrders(prev => prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id])
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -89,10 +94,10 @@ export default function BayiPanel({ user }: { user: User }) {
         recent: recent || 0 
       })
 
-      // Siparişlerde 'urunler' blob'unu ilk etapta çekme (Veri tasarrufu)
+      // Siparişlerin tüm detaylarını çek
       const { data: siparisData } = await supabase
         .from('siparisler')
-        .select('id, siparis_no, created_at, toplam_tutar, durum')
+        .select('id, siparis_no, created_at, toplam_tutar, durum, urunler')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(20)
@@ -123,21 +128,13 @@ export default function BayiPanel({ user }: { user: User }) {
   ).length
 
   const handleRepeatOrder = async (siparis: Siparis) => {
-    // Sipariş ürünlerini sadece tıklandığında çek (Tasarruf için)
-    setRepeatMsg('Sipariş içeriği alınıyor...')
-    const { data } = await supabase
-      .from('siparisler')
-      .select('urunler')
-      .eq('id', siparis.id)
-      .single()
-
-    if (!data?.urunler || !Array.isArray(data.urunler)) {
-      setRepeatMsg('Hata: Ürünler bulunamadı.')
+    if (!siparis.urunler || !Array.isArray(siparis.urunler) || siparis.urunler.length === 0) {
+      setRepeatMsg('Hata: Sipariş içeriği bulunamadı.')
       return
     }
 
     addManyToCart(
-      data.urunler.map((u: any, i: number) => ({
+      siparis.urunler.map((u: any, i: number) => ({
         id: u.urun_id || `${siparis.id}-${i}`,
         ad: u.ad,
         kategori: 'Tekrar Sipariş',
@@ -260,20 +257,59 @@ export default function BayiPanel({ user }: { user: User }) {
 
         {activeTab === 'orders' && (
           <div className="space-y-4">
-            {siparisler.map((s) => (
-              <div key={s.id} className="border border-white/5 bg-[#141414] p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div>
-                  <div className="font-display font-bold text-lg text-white mb-1">{s.siparis_no}</div>
-                  <div className="font-body text-sm text-white/35">
-                    {new Date(s.created_at).toLocaleDateString('tr-TR')} • {s.toplam_tutar?.toLocaleString('tr-TR')} ₺
+            {siparisler.map((s) => {
+              const isExpanded = expandedOrders.includes(s.id)
+              return (
+                <div key={s.id} className="border border-white/5 bg-[#141414] flex flex-col">
+                  {/* Özet Başlığı */}
+                  <div 
+                    className="p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                    onClick={() => toggleOrder(s.id)}
+                  >
+                    <div>
+                      <div className="font-display font-bold text-lg text-white mb-1 flex items-center gap-3">
+                        {s.siparis_no}
+                        {isExpanded ? <ChevronUp size={16} className="text-white/30" /> : <ChevronDown size={16} className="text-white/30" />}
+                      </div>
+                      <div className="font-body text-sm text-white/35">
+                        {new Date(s.created_at).toLocaleDateString('tr-TR')} • {s.toplam_tutar?.toLocaleString('tr-TR')} ₺
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-display font-bold text-[10px] tracking-widest uppercase px-3 py-1 bg-white/5 text-white/40 border border-white/10">{s.durum}</span>
+                      <button onClick={(e) => { e.stopPropagation(); handleRepeatOrder(s) }} className="btn-outline text-xs"><RotateCcw size={12} /> Tekrarla</button>
+                    </div>
                   </div>
+                  
+                  {/* Detaylar (Açılır Kapanır) */}
+                  {isExpanded && s.urunler && s.urunler.length > 0 && (
+                    <div className="border-t border-white/5 p-6 bg-black/20">
+                      <div className="font-display font-bold text-xs uppercase tracking-widest text-white/40 mb-4">Sipariş İçeriği</div>
+                      <div className="space-y-3">
+                        {s.urunler.map((urun, idx) => (
+                          <div key={idx} className="flex items-center gap-4 bg-[#0A0A0A] p-3 border border-white/5">
+                            <div className="w-12 h-12 bg-black border border-white/10 flex items-center justify-center shrink-0">
+                              {urun.fotograf ? (
+                                <img src={urun.fotograf} alt={urun.ad} className="w-full h-full object-contain" />
+                              ) : (
+                                <Package size={20} className="text-white/10" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-display font-bold text-sm text-white truncate">{urun.ad}</div>
+                              <div className="text-[10px] text-white/40 mt-1 uppercase tracking-widest">{urun.adet} Adet x {urun.fiyat.toLocaleString('tr-TR')} ₺</div>
+                            </div>
+                            <div className="font-display font-bold text-brand-red text-sm shrink-0">
+                              {(urun.adet * urun.fiyat).toLocaleString('tr-TR')} ₺
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-display font-bold text-[10px] tracking-widest uppercase px-3 py-1 bg-white/5 text-white/40 border border-white/10">{s.durum}</span>
-                  <button onClick={() => handleRepeatOrder(s)} className="btn-outline text-xs"><RotateCcw size={12} /> Tekrarla</button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 

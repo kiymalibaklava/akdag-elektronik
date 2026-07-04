@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Trash2, Package, Pencil, X, Check, Search, Upload, Download } from 'lucide-react'
+import { Trash2, Package, Pencil, X, Check, Search, Upload, Download, Star } from 'lucide-react'
 import { PARA_BIRIMLERI } from '@/lib/kur'
 import { createClient } from '@/lib/supabase'
 import { KATEGORILER, KATEGORI_HIYERARSI } from '@/lib/categories'
@@ -31,6 +31,7 @@ interface Product {
   kritik_stok?: number | null
   marka?: string | null
   kullanim_alani?: string | null
+  is_featured?: boolean
 }
 
 interface Props {
@@ -89,6 +90,17 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
       setTotalCount(count || 0)
     }
     setLoading(false)
+  }
+
+  const toggleFeatured = async (product: Product) => {
+    const supabase = createClient()
+    const newValue = !product.is_featured
+    const { error } = await supabase.from('urunler').update({ is_featured: newValue }).eq('id', product.id)
+    if (!error) {
+      setProducts(products.map(p => p.id === product.id ? { ...p, is_featured: newValue } : p))
+      // Ana sayfa cache'ini yenile ki yeni öne çıkanlar hemen görünsün
+      await fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: '/' }) }).catch(() => {})
+    }
   }
 
   useEffect(() => {
@@ -369,6 +381,9 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  <button onClick={() => toggleFeatured(product)} className={`w-9 h-9 border flex items-center justify-center transition-all ${product.is_featured ? 'border-yellow-500/50 text-yellow-500 bg-yellow-500/10' : 'border-white/10 text-white/20 hover:border-yellow-500/40 hover:text-yellow-500'}`} title={product.is_featured ? "Öne Çıkanlardan Kaldır" : "Öne Çıkar"}>
+                    <Star size={13} fill={product.is_featured ? "currentColor" : "none"} />
+                  </button>
                   <button onClick={() => openEdit(product)} className="w-9 h-9 border border-white/10 flex items-center justify-center text-white/20 hover:border-brand-red/40 hover:text-brand-red transition-all"><Pencil size={13} /></button>
                   <button onClick={() => handleDelete(product.id)} disabled={deleting === product.id} className="w-9 h-9 border border-white/10 flex items-center justify-center text-white/20 hover:border-red-500/40 hover:text-red-500 transition-all disabled:opacity-40">
                     {deleting === product.id ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" /> : <Trash2 size={13} />}

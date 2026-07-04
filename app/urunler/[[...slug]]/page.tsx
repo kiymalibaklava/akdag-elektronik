@@ -6,6 +6,8 @@ import Pagination from '@/components/Pagination'
 import { TUM_KATEGORILER, KATEGORI_HIYERARSI, NEW_KATEGORI_HIYERARSI, findCategoryBySlug } from '@/lib/categories'
 import { notFound } from 'next/navigation'
 import { Filter, SlidersHorizontal, ChevronRight, X } from 'lucide-react'
+import { getActiveBanners } from '@/lib/banner-service'
+import BannerCarousel from '@/components/BannerCarousel'
 
 import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
 import { unstable_cache } from 'next/cache'
@@ -121,13 +123,20 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
   // Cache'den filtreleri çek
   const { markalar, kullanimAlanlari } = await getCachedFilters()
 
+  // Aktif Bannerları Çek
+  const banners = await getActiveBanners()
+
   const baseParams = new URLSearchParams()
   Object.entries(searchParams).forEach(([k, v]) => { if (v && k !== 'sayfa') baseParams.set(k, v) })
 
   return (
-    <div className="min-h-screen pt-8 pb-24">
+    <div className="min-h-screen pb-24">
+      
+      {/* Kampanya / Banner Alanı */}
+      <BannerCarousel banners={banners} />
+
       {/* Premium Header */}
-      <div className="bg-[#0A0A0A] border-b border-white/5 py-20 relative overflow-hidden">
+      <div className={`bg-[#0A0A0A] border-b border-white/5 relative overflow-hidden ${banners.length > 0 ? 'pt-8 pb-16' : 'py-20'}`}>
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-brand-red/5 to-transparent pointer-events-none" />
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="flex items-center gap-3 mb-6">

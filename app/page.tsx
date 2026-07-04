@@ -1,15 +1,17 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { ChevronRight, ArrowRight, Speaker, Lightbulb, Monitor, Clock, Award, Users, Phone, MapPin } from 'lucide-react'
 import ProductSearch from '@/components/ProductSearch'
 import HeroParticles from '@/components/HeroParticles'
 import BrandMarquee from '@/components/BrandMarquee'
+import FeaturedProducts from '@/components/FeaturedProducts'
 import StatCounter from '@/components/StatCounter'
 
 const categories = [
-  { icon: Speaker, label: 'Ses Sistemleri', desc: 'Hoparlör, mikser, mikrofon ve amfi sistemleri', count: '120+' },
-  { icon: Lightbulb, label: 'Işık Sistemleri', desc: 'Moving head, LED par, DMX kontrol ve efekt makineleri', count: '80+' },
-  { icon: Monitor, label: 'Görüntü Sistemleri', desc: 'LED ekran, projeksiyon ve video işleme', count: '60+' },
-  { icon: Award, label: 'Sahne ve Truss', desc: 'Truss konstrüksiyon, sahne platformları ve mekanik', count: '40+' },
+  { icon: Speaker, label: 'Ses Sistemleri', slug: 'ses-sistemleri', desc: 'Hoparlör, mikser, mikrofon ve amfi sistemleri', count: '120+' },
+  { icon: Lightbulb, label: 'Işık Sistemleri', slug: 'isik-sistemleri', desc: 'Moving head, LED par, DMX kontrol ve efekt makineleri', count: '80+' },
+  { icon: Monitor, label: 'Görüntü Sistemleri', slug: 'goruntu-sistemleri', desc: 'LED ekran, projeksiyon ve video işleme', count: '60+' },
+  { icon: Award, label: 'Sahne ve Truss', slug: 'sahne-ve-truss', desc: 'Truss konstrüksiyon, sahne platformları ve mekanik', count: '40+' },
 ]
 
 const stats = [
@@ -128,7 +130,7 @@ export default function HomePage() {
             {categories.map((cat, i) => {
               const Icon = cat.icon
               return (
-                <Link href="/urunler" key={cat.label}
+                <Link href={`/urunler/${cat.slug}`} key={cat.label}
                   className="product-card group bg-[#141414] border border-white/5 p-8 hover:bg-[#1A1A1A] hover:border-brand-red/30 transition-all duration-300 silver-border">
                   {/* Numara watermark */}
                   <div className="absolute top-5 right-5 font-display font-black text-[80px] leading-none text-white/[0.025] select-none">
@@ -191,52 +193,56 @@ export default function HomePage() {
                   </li>
                 ))}
               </ul>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-4">
                 <a href="tel:+903522316915" className="btn-primary text-sm">
                   <Phone size={14} />
                   Teklif İçin Arayın
                 </a>
-                <Link href="/urunler" className="btn-outline text-sm">Ürünleri Gör</Link>
+                <a href="https://akustek.com" target="_blank" rel="noopener noreferrer" className="btn-outline text-sm">
+                  Akustek.com'u Ziyaret Et
+                </a>
               </div>
             </div>
 
             {/* Görsel kart */}
             <div className="relative">
-              <div className="relative bg-[#141414] border border-white/8 p-10 overflow-hidden silver-border">
-                <div className="absolute top-0 right-0 w-32 h-32 border-t-2 border-r-2 border-brand-red/20" />
-                <div className="absolute bottom-0 left-0 w-32 h-32 border-b-2 border-l-2 border-brand-red/20" />
-                {/* Gümüş köşe aksan (#7) */}
-                <div className="absolute top-0 left-0 w-16 h-16 border-t border-l silver-border opacity-40" />
-
-                <div className="flex justify-center mb-8">
-                  <div className="relative">
-                    <div className="w-40 h-40 border-4 border-brand-red/20 rounded-full flex items-center justify-center animate-pulse-red">
-                      <div className="w-32 h-32 bg-brand-red/5 border-2 border-brand-red/30 rounded-full flex items-center justify-center">
-                        <Clock size={48} className="text-brand-red" />
-                      </div>
-                    </div>
-                    {[0, 72, 144, 216, 288].map((deg) => (
-                      <div key={deg} className="absolute w-2 h-2 bg-brand-red rounded-full"
-                        style={{ top: '50%', left: '50%', transform: `translate(-50%,-50%) rotate(${deg}deg) translateY(-70px)` }} />
-                    ))}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="font-display font-black text-3xl uppercase text-white tracking-widest mb-1">AKUSTEK</div>
-                  <div className="font-body silver-text text-sm mb-6">Akıllı Okul Yönetim Sistemi</div>
-                  <div className="inline-flex items-center gap-2 bg-brand-red/10 border border-brand-red/30 px-4 py-2">
-                    <div className="w-2 h-2 bg-brand-red rounded-full animate-pulse" />
-                    <span className="font-display font-semibold text-xs tracking-widest uppercase text-brand-red">Ana Bayi – Kayseri</span>
-                  </div>
-                </div>
+              {/* Premium Glow Effect */}
+              <div className="absolute inset-0 bg-brand-red/20 blur-[80px] rounded-full pointer-events-none" />
+              
+              <div className="relative bg-[#141414] border border-white/10 overflow-hidden silver-border flex items-center justify-center group shadow-2xl shadow-black">
+                {/* Akustek Fotoğrafı (public klasörüne akustek.png olarak yüklemeniz yeterli) */}
+                <a href="https://akustek.com" target="_blank" rel="noopener noreferrer" className="relative w-full block">
+                  <Image 
+                    src="/akustek.png" 
+                    alt="Akustek Akıllı Okul Saati" 
+                    width={1600}
+                    height={1000}
+                    className="w-full h-auto object-contain group-hover:scale-[1.02] transition-transform duration-700"
+                  />
+                </a>
               </div>
-              <div className="absolute -top-4 -right-4 bg-brand-red text-white px-4 py-2">
+
+              {/* Etiketler (Glassmorphism) */}
+              <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-brand-red/90 backdrop-blur-md border border-brand-red border-b-white/20 text-white px-5 py-2 z-20 shadow-xl shadow-brand-red/20">
                 <div className="font-display font-black text-xs tracking-widest uppercase">YENİ ÜRÜN</div>
+              </div>
+              
+              <div className="absolute -bottom-4 -left-2 md:-left-6 inline-flex items-center gap-3 bg-black/60 backdrop-blur-lg border border-white/10 px-6 py-3 z-20 shadow-2xl">
+                <div className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-red opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-red"></span>
+                </div>
+                <span className="font-display font-semibold text-[10px] sm:text-xs tracking-widest uppercase text-white/90">Ana Bayi – Kayseri</span>
               </div>
             </div>
           </div>
         </div>
       </section>
+
+      {/* ═══════════════════════════════════════════════
+          ÖNE ÇIKAN ÜRÜNLER (TRENDYOL STİLİ)
+      ═══════════════════════════════════════════════ */}
+      <FeaturedProducts />
 
       {/* ═══════════════════════════════════════════════
           MARKA ŞERİDİ — kayan marquee (#2)
