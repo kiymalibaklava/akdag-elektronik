@@ -63,7 +63,7 @@ function SifreBelirleContent() {
 
     // Supabase SDK'sı URL'deki (hash) access_token'ı arka planda okuyup oturum kurar.
     // Bu işlem asenkron olduğu için anında hazır olmayabilir, bu yüzden dinliyoruz.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: import('@supabase/supabase-js').Session | null) => {
       if (session) {
         setStatus('ready')
       }
