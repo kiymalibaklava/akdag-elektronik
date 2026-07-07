@@ -24,6 +24,24 @@ function SifreBelirleContent() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
+    // 1. Önce URL'in Hash (#) kısmını kontrol et
+    // Supabase süresi dolmuş linklerde query yerine hash fragment (#error=...) gönderir
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const hash = window.location.hash
+      if (hash.includes('error=')) {
+        if (hash.includes('otp_expired')) {
+          setErrorMsg('Bağlantının süresi dolmuş. Şifre sıfırlama e-postaları yalnızca 1 saat geçerlidir. Aşağıdan yeni bir bağlantı talep edebilirsiniz.')
+        } else {
+          setErrorMsg('Geçersiz veya süresi dolmuş bir bağlantı kullandınız. Lütfen şifre sıfırlama işlemini tekrar başlatın.')
+        }
+        setStatus('error')
+        // Hash'i temizleyip adresi temiz hale getir
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+        return
+      }
+    }
+
+    // 2. Query Parametre Kontrolü
     const urlError = searchParams.get('error')
     if (urlError === 'link_suresi_doldu') {
       setErrorMsg('Bağlantının süresi dolmuş. Şifre sıfırlama e-postaları yalnızca 1 saat geçerlidir. Aşağıdan yeni bir bağlantı talep edebilirsiniz.')
