@@ -61,16 +61,41 @@ function SifreBelirleContent() {
       }
     }
 
+    // Supabase SDK'sı URL'deki (hash) access_token'ı arka planda okuyup oturum kurar.
+    // Bu işlem asenkron olduğu için anında hazır olmayabilir, bu yüzden dinliyoruz.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        setStatus('ready')
+      }
+    })
+
     // Callback oturumu kurmuş olmalı (veya Supabase JS hash'ten kuracak) — sadece kontrol et
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: import('@supabase/supabase-js').Session | null } }) => {
       if (session) {
         setStatus('ready')
+      } else if (hasAccessToken) {
+        // Hash'te token var ama getSession henüz yakalayamadı (Supabase JS işliyor).
+        // 3 saniye tolerans veriyoruz, hala kurulmazsa hata verecek.
+        setTimeout(() => {
+          setStatus(prev => {
+            if (prev === 'loading') {
+              setErrorMsg('Oturum doğrulanamadı. Lütfen yeni bir sıfırlama bağlantısı isteyin.')
+              return 'error'
+            }
+            return prev
+          })
+        }, 3000)
       } else {
         setErrorMsg('Oturum bulunamadı. Lütfen e-postanızdaki bağlantıya tekrar tıklayın veya aşağıdan yeni bir sıfırlama bağlantısı isteyin.')
         setStatus('error')
       }
     })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [supabase, searchParams])
+
 
   const handleResend = async () => {
     if (!resendEmail.trim()) return
