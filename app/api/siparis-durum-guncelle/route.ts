@@ -14,8 +14,29 @@ const supabaseAdmin = () =>
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
+/** Gelen Authorization: Bearer <token> token'ından admin olup olmadığını doğrular. */
+async function isAdmin(req: NextRequest): Promise<boolean> {
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) return false
+  const token = authHeader.replace('Bearer ', '')
+  const db = supabaseAdmin()
+  const { data: { user }, error } = await db.auth.getUser(token)
+  if (error || !user) return false
+  const { data } = await db
+    .from('site_admins')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  return !!data
+}
+
 export async function POST(req: NextRequest) {
   try {
+    // Yetki kontrolü — sadece adminler sipariş durumunu güncelleyebilir
+    if (!(await isAdmin(req))) {
+      return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 })
+    }
+
     const { id, durum, kargo_takip_no } = await req.json()
     const db = supabaseAdmin()
 
@@ -103,7 +124,11 @@ export async function POST(req: NextRequest) {
 
     const emailData = durumEmailMap[yeniDurum]
     if (emailData) {
-      await sendEmail(siparis.email, emailData.subject, emailData.html)
+      try {
+        await sendEmail(siparis.email, emailData.subject, emailData.html)
+      } catch (mailErr) {
+        console.error('[siparis-durum-guncelle] E-posta gönderilemedi:', (mailErr as Error).message)
+      }
     }
 
     return NextResponse.json({ success: true })

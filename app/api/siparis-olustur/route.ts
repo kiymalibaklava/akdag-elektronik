@@ -16,7 +16,7 @@ const supabaseAdmin = () =>
 export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req)
-    if (!rateLimit(`siparis:${ip}`, 15, 60_000)) {
+    if (!(await rateLimit(`siparis:${ip}`, 15, 60_000))) {
       return NextResponse.json({ error: 'Çok fazla istek. Lütfen bir dakika sonra deneyin.' }, { status: 429 })
     }
 
@@ -99,22 +99,29 @@ export async function POST(req: NextRequest) {
 
     for (const item of urunler) {
       if (!item.urun_id) continue
+
+      // Önce mevcut durumu al (siparise_gore mantığı için gerekli)
       const { data: urun } = await db
         .from('urunler')
-        .select('stok_durumu, stok_adedi, kritik_stok')
+        .select('stok_durumu, stok_adedi')
         .eq('id', item.urun_id)
         .single()
 
-      const kalan = typeof urun?.stok_adedi === 'number' ? Math.max(0, urun.stok_adedi - item.adet) : null
-      if (kalan !== null) {
-        const nextDurum = kalan <= 0 ? 'tukendi' : 'stokta'
-        await db
-          .from('urunler')
-          .update({
-            stok_adedi: kalan,
-            stok_durumu: nextDurum,
-          })
-          .eq('id', item.urun_id)
+      if (typeof urun?.stok_adedi === 'number') {
+        // Atomic stok düşürme — PostgreSQL fonksiyonu ile race condition olmadan güncelle
+        // Supabase SQL: UPDATE urunler SET stok_adedi = GREATEST(stok_adedi - p_adet, 0) WHERE id = p_urun_id
+        const { error: rpcErr } = await db.rpc('atomic_stok_dusur', {
+          p_urun_id: item.urun_id,
+          p_adet: item.adet,
+        })
+
+        if (rpcErr) {
+          // RPC henüz eklenmemişse fallback (eski davranış) — uyarı logla
+          console.warn('[stok] atomic_stok_dusur RPC bulunamadı, fallback kullanılıyor. Lütfen stok-migration.sql dosyasını Supabase SQL Editor\'da çalıştırın.', rpcErr.message)
+          const kalan = Math.max(0, urun.stok_adedi - item.adet)
+          const nextDurum = kalan <= 0 ? 'tukendi' : 'stokta'
+          await db.from('urunler').update({ stok_adedi: kalan, stok_durumu: nextDurum }).eq('id', item.urun_id)
+        }
       }
 
       if (urun?.stok_durumu === 'stokta') {
@@ -144,20 +151,31 @@ export async function POST(req: NextRequest) {
       bayi_adi: bayi_adi ?? undefined,
     }
 
-    await sendEmail(
-      email,
-      `Siparişiniz Alındı — ${siparis.siparis_no} | Akdağ Elektronik`,
-      musterionayHTML(emailData)
-    )
+    // E-postaları ayrı try/catch ile gönder — mail hatası siparişi engellemesin
+    let emailError: string | undefined
+    try {
+      await sendEmail(
+        email,
+        `Siparişiniz Alındı — ${siparis.siparis_no} | Akdağ Elektronik`,
+        musterionayHTML(emailData)
+      )
+      const adminEmail = process.env.ADMIN_EMAIL || 'info@akdagelektronik.com'
+      await sendEmail(
+        adminEmail,
+        `🔔 Yeni Sipariş: ${siparis.siparis_no} — ${toplam_tutar.toLocaleString('tr-TR')} ₺`,
+        adminBildirimHTML(emailData)
+      )
+    } catch (mailErr) {
+      emailError = (mailErr as Error).message
+      console.error('[siparis-olustur] E-posta gönderilemedi, sipariş oluşturuldu:', emailError)
+    }
 
-    const adminEmail = process.env.ADMIN_EMAIL || 'info@akdagelektronik.com'
-    await sendEmail(
-      adminEmail,
-      `🔔 Yeni Sipariş: ${siparis.siparis_no} — ${toplam_tutar.toLocaleString('tr-TR')} ₺`,
-      adminBildirimHTML(emailData)
-    )
-
-    return NextResponse.json({ success: true, siparis_no: siparis.siparis_no, id: siparis.id })
+    return NextResponse.json({
+      success: true,
+      siparis_no: siparis.siparis_no,
+      id: siparis.id,
+      ...(emailError ? { email_error: 'E-posta gönderilemedi, siparişiniz kaydedildi.' } : {}),
+    })
   } catch (e) {
     console.error('Sipariş oluşturma hatası:', e)
     return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 })

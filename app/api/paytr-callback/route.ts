@@ -52,27 +52,31 @@ export async function POST(req: NextRequest) {
       })
       .eq('siparis_no', merchant_oid)
 
-    // Müşteriye e-posta gönder
+    // Müşteriye e-posta gönder — ayrı try/catch, hata PayTR OK yanıtını engellemesin
     if (siparis) {
-      if (status === 'success') {
-        await sendEmail(
-          siparis.email,
-          `Ödemeniz Onaylandı — ${siparis.siparis_no} | Akdağ Elektronik`,
-          odemeOnaylandiHTML({
-            siparis_no: siparis.siparis_no,
-            ad_soyad: siparis.ad_soyad,
-            toplam_tutar: siparis.toplam_tutar,
-          })
-        )
-      } else {
-        await sendEmail(
-          siparis.email,
-          `Ödeme Alınamadı — ${siparis.siparis_no} | Akdağ Elektronik`,
-          siparisIptalHTML({
-            siparis_no: siparis.siparis_no,
-            ad_soyad: siparis.ad_soyad,
-          })
-        )
+      try {
+        if (status === 'success') {
+          await sendEmail(
+            siparis.email,
+            `Ödemeniz Onaylandı — ${siparis.siparis_no} | Akdağ Elektronik`,
+            odemeOnaylandiHTML({
+              siparis_no: siparis.siparis_no,
+              ad_soyad: siparis.ad_soyad,
+              toplam_tutar: siparis.toplam_tutar,
+            })
+          )
+        } else {
+          await sendEmail(
+            siparis.email,
+            `Ödeme Alınamadı — ${siparis.siparis_no} | Akdağ Elektronik`,
+            siparisIptalHTML({
+              siparis_no: siparis.siparis_no,
+              ad_soyad: siparis.ad_soyad,
+            })
+          )
+        }
+      } catch (mailErr) {
+        console.error('[paytr-callback] E-posta gönderilemedi:', (mailErr as Error).message)
       }
     }
 

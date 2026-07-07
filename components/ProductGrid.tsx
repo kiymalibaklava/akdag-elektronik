@@ -129,7 +129,7 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
           <Link href="/karsilastir" className="btn-outline text-xs">Karşılaştırmaya Git</Link>
         </div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1 md:gap-2">
         {products.map((p) => <ProductCard key={p.id} product={p} isBayi={isBayi || isBayiAuth} kur={kur} showPrice={showPrice} />)}
       </div>
     </>

@@ -9,7 +9,7 @@ import { sendEmail } from '@/lib/send-email'
 export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req)
-    if (!rateLimit(`bayi-davet:${ip}`, 10, 60_000)) {
+    if (!(await rateLimit(`bayi-davet:${ip}`, 10, 60_000))) {
       return NextResponse.json({ error: 'Çok fazla istek.' }, { status: 429 })
     }
 
@@ -38,10 +38,12 @@ export async function POST(req: NextRequest) {
     })
 
     if (inviteErr) {
-      // Kullanıcı zaten kayıtlı — bayi kaydını oluştur/güncelle ve onay e-postası gönder
+      // Kullanıcı zaten kayıtlı — filtrelenmiş sorgu ile sadece o kullanıcıyı çek
       if (inviteErr.message.includes('already been registered')) {
-        const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers()
-        const user = existingUser?.users.find((u) => u.email === email)
+        const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({
+          filter: `email=${email}`,
+        } as Parameters<typeof supabaseAdmin.auth.admin.listUsers>[0])
+        const user = existingUsers?.users?.[0]
         if (user) {
           await supabaseAdmin.from('bayiler').upsert(
             {

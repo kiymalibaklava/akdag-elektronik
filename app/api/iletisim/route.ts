@@ -11,7 +11,7 @@ import { sendEmail } from '@/lib/send-email'
 export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req)
-    if (!rateLimit(`iletisim:${ip}`, 8, 60 * 60_000)) {
+    if (!(await rateLimit(`iletisim:${ip}`, 8, 60 * 60_000))) {
       return NextResponse.json({ error: 'Çok fazla gönderim. Lütfen daha sonra deneyin.' }, { status: 429 })
     }
 

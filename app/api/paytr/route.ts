@@ -11,7 +11,7 @@ const PAYTR_MERCHANT_SALT = process.env.PAYTR_MERCHANT_SALT!
 export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req)
-    if (!rateLimit(`paytr:${ip}`, 20, 60_000)) {
+    if (!(await rateLimit(`paytr:${ip}`, 20, 60_000))) {
       return NextResponse.json({ error: 'Çok fazla istek. Lütfen bir dakika sonra deneyin.' }, { status: 429 })
     }
 

@@ -277,10 +277,10 @@ export default function SepetPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button type="button" className="w-8 h-8 border border-white/10 flex items-center justify-center text-white/50 hover:text-white" onClick={() => { updateQty(i.id, i.adet - 1); refreshCart() }}><Minus size={14} /></button>
+                    <button type="button" className="w-10 h-10 sm:w-8 sm:h-8 border border-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors" onClick={() => { updateQty(i.id, i.adet - 1); refreshCart() }}><Minus size={14} /></button>
                     <span className="w-6 text-center font-body text-sm text-white/70">{i.adet}</span>
-                    <button type="button" className="w-8 h-8 border border-white/10 flex items-center justify-center text-white/50 hover:text-white" onClick={() => { updateQty(i.id, i.adet + 1); refreshCart() }}><Plus size={14} /></button>
-                    <button type="button" className="ml-2 text-white/25 hover:text-brand-red p-2" onClick={() => { removeFromCart(i.id); refreshCart() }}><Trash2 size={16} /></button>
+                    <button type="button" className="w-10 h-10 sm:w-8 sm:h-8 border border-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors" onClick={() => { updateQty(i.id, i.adet + 1); refreshCart() }}><Plus size={14} /></button>
+                    <button type="button" className="ml-1 sm:ml-2 text-white/25 hover:text-brand-red p-3 sm:p-2 transition-colors" onClick={() => { removeFromCart(i.id); refreshCart() }}><Trash2 size={16} /></button>
                   </div>
                 </div>
               ))}

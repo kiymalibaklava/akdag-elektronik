@@ -74,6 +74,7 @@ export default function HesabimPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
 
   const supabase = useRef(createClient()).current
+  const accessTokenRef = useRef<string | null>(null)
 
   useEffect(() => {
     loadUserAndOrders()
@@ -88,11 +89,13 @@ export default function HesabimPage() {
     }
 
     setUser(session.user)
+    // Token'ı sakla — korumalı API çağrıları için kullanılacak
+    accessTokenRef.current = session.access_token
 
-    // Siparişleri yükle
+    // Siparişleri yükle — tüm gerekli alanlar dahil
     const { data: orders } = await supabase
       .from('siparisler')
-      .select('id, siparis_no, created_at, toplam_tutar, durum, urunler, kargo_takip_no, fatura_url, odeme_durumu')
+      .select('id, siparis_no, created_at, toplam_tutar, durum, urunler, kargo_takip_no, odeme_durumu, odeme_tipi, teslimat_tipi, dekont_url, teslimat_adresi, fatura_tipi, firma_unvani, vergi_no, vergi_dairesi')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
       .limit(30)
@@ -215,10 +218,13 @@ export default function HesabimPage() {
 
       if (updateError) throw updateError
 
-      // 4. Notify Admin
+      // 4. Notify Admin — Authorization header ile güvenli gönderim
       await fetch('/api/dekont-bildirim', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessTokenRef.current ? { 'Authorization': `Bearer ${accessTokenRef.current}` } : {}),
+        },
         body: JSON.stringify({
           siparis_id: siparisId,
           siparis_no: siparisler.find(s => s.id === siparisId)?.siparis_no,
@@ -269,16 +275,16 @@ export default function HesabimPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 bg-white/5 border border-white/5 mb-8 max-w-fit">
+        <div className="flex gap-1 p-1 bg-white/5 border border-white/5 mb-8 w-full md:w-auto overflow-x-auto snap-x">
           <button
             onClick={() => setActiveTab('siparisler')}
-            className={`flex items-center gap-2 px-6 py-2.5 font-display font-bold text-xs uppercase tracking-widest transition-all ${activeTab === 'siparisler' ? 'bg-brand-red text-white' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
+            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 sm:px-6 py-3 sm:py-2.5 font-display font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all snap-start whitespace-nowrap ${activeTab === 'siparisler' ? 'bg-brand-red text-white' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
           >
             <Package size={14} /> Siparişlerim
           </button>
           <button
             onClick={() => setActiveTab('profil')}
-            className={`flex items-center gap-2 px-6 py-2.5 font-display font-bold text-xs uppercase tracking-widest transition-all ${activeTab === 'profil' ? 'bg-brand-red text-white' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
+            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 sm:px-6 py-3 sm:py-2.5 font-display font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all snap-start whitespace-nowrap ${activeTab === 'profil' ? 'bg-brand-red text-white' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
           >
             <Settings size={14} /> Profil Ayarları
           </button>

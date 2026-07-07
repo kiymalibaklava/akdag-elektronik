@@ -1,7 +1,15 @@
-import Link from 'next/link'
-import { CheckCircle, ArrowRight } from 'lucide-react'
+'use client'
 
-export default function OdemeBasarili() {
+import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { CheckCircle, ArrowRight, Package } from 'lucide-react'
+import { Suspense } from 'react'
+
+function OdemeBasariliContent() {
+  const searchParams = useSearchParams()
+  // PayTR başarılı dönüşte merchant_oid parametresi ile sipariş numarasını iletir
+  const siparisNo = searchParams.get('merchant_oid') || searchParams.get('siparis_no')
+
   return (
     <div className="min-h-screen flex items-center justify-center px-6">
       <div className="text-center max-w-md">
@@ -16,6 +24,17 @@ export default function OdemeBasarili() {
         <h1 className="font-display font-black text-4xl uppercase text-white mb-4">
           Siparişiniz Alındı!
         </h1>
+
+        {siparisNo && (
+          <div className="bg-[#141414] border border-green-500/20 p-4 mb-6 flex items-center gap-3">
+            <Package size={18} className="text-green-400 flex-shrink-0" />
+            <div className="text-left">
+              <div className="font-display text-[10px] tracking-widest uppercase text-white/30 mb-1">Sipariş Numaranız</div>
+              <div className="font-display font-black text-lg text-brand-red tracking-widest">{siparisNo}</div>
+            </div>
+          </div>
+        )}
+
         <p className="font-body text-white/40 text-base leading-relaxed mb-8">
           Ödemeniz başarıyla tamamlandı. Sipariş detaylarınız e-posta adresinize gönderilecektir.
           En kısa sürede sizinle iletişime geçilecektir.
@@ -37,5 +56,17 @@ export default function OdemeBasarili() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function OdemeBasarili() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" />
+      </div>
+    }>
+      <OdemeBasariliContent />
+    </Suspense>
   )
 }

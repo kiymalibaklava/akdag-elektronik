@@ -16,12 +16,20 @@ function SifreBelirleContent() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
+  // Yeni link isteme formu
+  const [resendEmail, setResendEmail] = useState('')
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendDone, setResendDone] = useState(false)
   const supabase = useRef(createClient()).current
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    // Callback'ten gelen hata parametresi
     const urlError = searchParams.get('error')
+    if (urlError === 'link_suresi_doldu') {
+      setErrorMsg('Bağlantının süresi dolmuş. Şifre sıfırlama e-postaları yalnızca 1 saat geçerlidir. Aşağıdan yeni bir bağlantı talep edebilirsiniz.')
+      setStatus('error')
+      return
+    }
     if (urlError) {
       setErrorMsg('Geçersiz veya süresi dolmuş bir bağlantı kullandınız. Lütfen şifre sıfırlama işlemini tekrar başlatın.')
       setStatus('error')
@@ -33,11 +41,26 @@ function SifreBelirleContent() {
       if (session) {
         setStatus('ready')
       } else {
-        setErrorMsg('Oturum bulunamadı. Lütfen e-postanızdaki bağlantıya tekrar tıklayın veya yeni bir şifre sıfırlama isteği gönderin.')
+        setErrorMsg('Oturum bulunamadı. Lütfen e-postanızdaki bağlantıya tekrar tıklayın veya aşağıdan yeni bir sıfırlama bağlantısı isteyin.')
         setStatus('error')
       }
     })
   }, [supabase, searchParams])
+
+  const handleResend = async () => {
+    if (!resendEmail.trim()) return
+    setResendLoading(true)
+    try {
+      await fetch('/api/sifre-sifirla', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resendEmail.trim() }),
+      })
+      setResendDone(true)
+    } finally {
+      setResendLoading(false)
+    }
+  }
 
   const handleSubmit = async () => {
     setFormError('')
@@ -94,15 +117,48 @@ function SifreBelirleContent() {
 
           {/* Hata */}
           {status === 'error' && (
-            <div className="flex flex-col items-center gap-4 py-6">
-              <AlertCircle size={40} className="text-brand-red" />
-              <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-sm text-center w-full">
+            <div className="flex flex-col gap-5 py-4">
+              <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 p-4 rounded-sm">
+                <AlertCircle size={18} className="text-brand-red flex-shrink-0 mt-0.5" />
                 <p className="font-body text-red-400/90 text-sm leading-relaxed">{errorMsg}</p>
               </div>
-              <a href="/bayi/sifre-sifirla" className="btn-primary text-sm mt-2 w-full text-center justify-center">
-                Yeni Sıfırlama Bağlantısı İste
+
+              {/* Inline yeni link isteme formu */}
+              {resendDone ? (
+                <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 p-4">
+                  <CheckCircle size={18} className="text-green-400 flex-shrink-0" />
+                  <div>
+                    <p className="font-body text-green-400 text-sm font-semibold">Bağlantı gönderildi!</p>
+                    <p className="font-body text-white/40 text-xs mt-0.5">{resendEmail} adresini kontrol edin. Spam klasörünü de kontrol etmeyi unutmayın.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="font-display text-xs tracking-widest uppercase text-white/40 font-semibold">Yeni Bağlantı İste</p>
+                  <input
+                    type="email"
+                    value={resendEmail}
+                    onChange={e => setResendEmail(e.target.value)}
+                    className="input-dark w-full"
+                    placeholder="E-posta adresiniz"
+                    onKeyDown={e => e.key === 'Enter' && handleResend()}
+                  />
+                  <button
+                    onClick={handleResend}
+                    disabled={resendLoading || !resendEmail.trim()}
+                    className="btn-primary w-full justify-center text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {resendLoading
+                      ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Gönderiliyor...</>
+                      : 'Yeni Sıfırlama Bağlantısı Gönder'
+                    }
+                  </button>
+                </div>
+              )}
+
+              <a href="/bayi" className="btn-outline text-sm w-full justify-center text-center">
+                Giriş Sayfasına Dön
               </a>
-              <a href="/bayi" className="btn-outline text-sm w-full justify-center">Giriş Sayfasına Dön</a>
             </div>
           )}
 

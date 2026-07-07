@@ -20,7 +20,7 @@ export default function SifreSifirla() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: email.trim(),
-        redirectTo: `${window.location.origin}/bayi/sifrele`,
+        // redirectTo gönderilmiyor — API her zaman doğru callback URL'ini oluşturur
       }),
     })
 

@@ -16,6 +16,19 @@ export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url)
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/bayi/sifrele'
+  // Supabase hata durumunda error ve error_description parametresi gönderir
+  const errorParam = searchParams.get('error')
+  const errorDescription = searchParams.get('error_description') || ''
+
+  // Supabase'den direkt hata geldi (ör: link süresi dolmuş)
+  if (errorParam) {
+    console.error('[auth/callback] Supabase hata parametresi:', errorParam, errorDescription)
+
+    // Link süresi dolmuş veya geçersizse şifre sıfırlama sayfasına yönlendir
+    const sifreSifirlaUrl = new URL(`${origin}/bayi/sifrele`)
+    sifreSifirlaUrl.searchParams.set('error', 'link_suresi_doldu')
+    return NextResponse.redirect(sifreSifirlaUrl.toString())
+  }
 
   if (code) {
     const cookieStore = cookies()

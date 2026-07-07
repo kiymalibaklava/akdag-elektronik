@@ -6,7 +6,7 @@ export const revalidate = 300
 
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req)
-  if (!rateLimit(`kur:${ip}`, 90, 60_000)) {
+  if (!(await rateLimit(`kur:${ip}`, 90, 60_000))) {
     return NextResponse.json({ error: 'Çok fazla istek' }, { status: 429 })
   }
 

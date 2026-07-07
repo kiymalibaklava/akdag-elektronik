@@ -7,7 +7,7 @@ import { getClientIp } from '@/lib/request-ip'
 export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req)
-    if (!rateLimit(`sifre:${ip}`, 8, 60 * 60_000)) {
+    if (!(await rateLimit(`sifre:${ip}`, 8, 60 * 60_000))) {
       return NextResponse.json({ error: 'Çok fazla deneme. Daha sonra tekrar deneyin.' }, { status: 429 })
     }
 
@@ -24,13 +24,18 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 
-    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'http://localhost:3000'
     const siteUrl = origin.replace(/\/$/, '')
-    
+
+    // PKCE akışı zorunlu:
+    //   1. Supabase mail linkine tıklanır
+    //   2. /auth/callback?code=... adresine gelir
+    //   3. code oturuma çevrilir → /bayi/sifrele'ye yönlendirilir
+    // redirectTo parametresi gönderilse bile her zaman callback üzerinden geçmeli
+    const callbackUrl = `${siteUrl}/auth/callback?next=/bayi/sifrele`
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      // PKCE akışı: önce /auth/callback'e gelir, code oturuma çevrilir,
-      // sonra next parametresiyle /bayi/sifrele'ye yönlendirilir.
-      redirectTo: redirectTo || `${siteUrl}/auth/callback?next=/bayi/sifrele`,
+      redirectTo: callbackUrl,
     })
 
     if (error) {
