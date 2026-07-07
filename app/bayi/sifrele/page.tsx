@@ -76,8 +76,8 @@ function SifreBelirleContent() {
       supabase.auth.setSession({
         access_token: manualAccessToken,
         refresh_token: manualRefreshToken
-      }).then(({ data, error }) => {
-        if (error || !data.session) {
+      }).then(({ data, error }: any) => {
+        if (error || !data?.session) {
           setErrorMsg('Oturum doğrulanamadı. Lütfen yeni bir sıfırlama bağlantısı isteyin.')
           setStatus('error')
         } else {
