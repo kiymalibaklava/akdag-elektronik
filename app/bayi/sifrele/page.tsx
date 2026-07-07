@@ -26,6 +26,7 @@ function SifreBelirleContent() {
   useEffect(() => {
     // 1. Önce URL'in Hash (#) kısmını kontrol et
     // Supabase süresi dolmuş linklerde query yerine hash fragment (#error=...) gönderir
+    let hasAccessToken = false
     if (typeof window !== 'undefined' && window.location.hash) {
       const hash = window.location.hash
       if (hash.includes('error=')) {
@@ -39,22 +40,28 @@ function SifreBelirleContent() {
         window.history.replaceState(null, '', window.location.pathname + window.location.search)
         return
       }
+      
+      if (hash.includes('access_token=')) {
+        hasAccessToken = true
+      }
     }
 
-    // 2. Query Parametre Kontrolü
-    const urlError = searchParams.get('error')
-    if (urlError === 'link_suresi_doldu') {
-      setErrorMsg('Bağlantının süresi dolmuş. Şifre sıfırlama e-postaları yalnızca 1 saat geçerlidir. Aşağıdan yeni bir bağlantı talep edebilirsiniz.')
-      setStatus('error')
-      return
-    }
-    if (urlError) {
-      setErrorMsg('Geçersiz veya süresi dolmuş bir bağlantı kullandınız. Lütfen şifre sıfırlama işlemini tekrar başlatın.')
-      setStatus('error')
-      return
+    // 2. Query Parametre Kontrolü (Eğer hash'te geçerli bir access_token varsa, hata parametrelerini yok say)
+    if (!hasAccessToken) {
+      const urlError = searchParams.get('error')
+      if (urlError === 'link_suresi_doldu') {
+        setErrorMsg('Bağlantının süresi dolmuş. Şifre sıfırlama e-postaları yalnızca 1 saat geçerlidir. Aşağıdan yeni bir bağlantı talep edebilirsiniz.')
+        setStatus('error')
+        return
+      }
+      if (urlError) {
+        setErrorMsg('Geçersiz veya süresi dolmuş bir bağlantı kullandınız. Lütfen şifre sıfırlama işlemini tekrar başlatın.')
+        setStatus('error')
+        return
+      }
     }
 
-    // Callback oturumu zaten kurmuş olmalı — sadece kontrol et
+    // Callback oturumu kurmuş olmalı (veya Supabase JS hash'ten kuracak) — sadece kontrol et
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: import('@supabase/supabase-js').Session | null } }) => {
       if (session) {
         setStatus('ready')

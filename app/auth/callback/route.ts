@@ -59,8 +59,8 @@ export async function GET(req: NextRequest) {
     console.error('[auth/callback] exchangeCodeForSession hatası:', error.message)
   }
 
-  // Hata durumunda şifre sıfırlama sayfasına hata parametresiyle yönlendir
-  return NextResponse.redirect(
-    `${origin}/bayi/sifrele?error=gecersiz_link`
-  )
+  // Hata da yok, code da yoksa büyük ihtimalle Implicit Flow (hash fragment) kullanılıyordur.
+  // Sunucu hash fragment'i göremediği için doğrudan hedefe yönlendiriyoruz,
+  // böylece tarayıcı tarafındaki Supabase istemcisi URL'deki hash'i yakalayabilir.
+  return NextResponse.redirect(`${origin}${next}`)
 }
