@@ -27,6 +27,9 @@ function SifreBelirleContent() {
     // 1. Önce URL'in Hash (#) kısmını kontrol et
     // Supabase süresi dolmuş linklerde query yerine hash fragment (#error=...) gönderir
     let hasAccessToken = false
+    let manualAccessToken = ''
+    let manualRefreshToken = ''
+
     if (typeof window !== 'undefined' && window.location.hash) {
       const hash = window.location.hash
       if (hash.includes('error=')) {
@@ -43,10 +46,17 @@ function SifreBelirleContent() {
       
       if (hash.includes('access_token=')) {
         hasAccessToken = true
+        // Token'ları manuel olarak ayıkla (Otomatik tanıma bazen gecikebiliyor/çalışmayabiliyor)
+        const params = new URLSearchParams(hash.substring(1))
+        manualAccessToken = params.get('access_token') || ''
+        manualRefreshToken = params.get('refresh_token') || ''
+        
+        // Hash'i temizle
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
       }
     }
 
-    // 2. Query Parametre Kontrolü (Eğer hash'te geçerli bir access_token varsa, hata parametrelerini yok say)
+    // 2. Query Parametre Kontrolü
     if (!hasAccessToken) {
       const urlError = searchParams.get('error')
       if (urlError === 'link_suresi_doldu') {
@@ -61,30 +71,32 @@ function SifreBelirleContent() {
       }
     }
 
-    // Supabase SDK'sı URL'deki (hash) access_token'ı arka planda okuyup oturum kurar.
-    // Bu işlem asenkron olduğu için anında hazır olmayabilir, bu yüzden dinliyoruz.
+    // 3. Eğer manuel token yakaladıysak, oturumu anında biz kuruyoruz (Bekleme yok!)
+    if (manualAccessToken && manualRefreshToken) {
+      supabase.auth.setSession({
+        access_token: manualAccessToken,
+        refresh_token: manualRefreshToken
+      }).then(({ data, error }) => {
+        if (error || !data.session) {
+          setErrorMsg('Oturum doğrulanamadı. Lütfen yeni bir sıfırlama bağlantısı isteyin.')
+          setStatus('error')
+        } else {
+          setStatus('ready')
+        }
+      })
+      return // Gerisine gerek yok
+    }
+
+    // Supabase SDK'sı başka bir şekilde kurmuşsa (PKCE vs.) onu kontrol et
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: import('@supabase/supabase-js').Session | null) => {
       if (session) {
         setStatus('ready')
       }
     })
 
-    // Callback oturumu kurmuş olmalı (veya Supabase JS hash'ten kuracak) — sadece kontrol et
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: import('@supabase/supabase-js').Session | null } }) => {
       if (session) {
         setStatus('ready')
-      } else if (hasAccessToken) {
-        // Hash'te token var ama getSession henüz yakalayamadı (Supabase JS işliyor).
-        // 3 saniye tolerans veriyoruz, hala kurulmazsa hata verecek.
-        setTimeout(() => {
-          setStatus(prev => {
-            if (prev === 'loading') {
-              setErrorMsg('Oturum doğrulanamadı. Lütfen yeni bir sıfırlama bağlantısı isteyin.')
-              return 'error'
-            }
-            return prev
-          })
-        }, 3000)
       } else {
         setErrorMsg('Oturum bulunamadı. Lütfen e-postanızdaki bağlantıya tekrar tıklayın veya aşağıdan yeni bir sıfırlama bağlantısı isteyin.')
         setStatus('error')
