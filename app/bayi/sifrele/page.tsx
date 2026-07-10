@@ -2,7 +2,6 @@
 
 import { Suspense } from 'react'
 import { useState, useEffect, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { Eye, EyeOff, CheckCircle, AlertCircle, Loader } from 'lucide-react'
 
@@ -15,114 +14,28 @@ function SifreBelirleContent() {
   const [showPass, setShowPass] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
-  const [errorMsg, setErrorMsg] = useState('')
-  // Yeni link isteme formu
-  const [resendEmail, setResendEmail] = useState('')
-  const [resendLoading, setResendLoading] = useState(false)
-  const [resendDone, setResendDone] = useState(false)
   const supabase = useRef(createClient()).current
-  const searchParams = useSearchParams()
 
+  // OTP akışında kullanıcı buraya oturum açmış olarak gelir.
+  // Sadece aktif session olup olmadığını kontrol ediyoruz.
   useEffect(() => {
-    // 1. Önce URL'in Hash (#) kısmını kontrol et
-    // Supabase süresi dolmuş linklerde query yerine hash fragment (#error=...) gönderir
-    let hasAccessToken = false
-    let manualAccessToken = ''
-    let manualRefreshToken = ''
-
-    if (typeof window !== 'undefined' && window.location.hash) {
-      const hash = window.location.hash
-      if (hash.includes('error=')) {
-        if (hash.includes('otp_expired')) {
-          setErrorMsg('Bağlantının süresi dolmuş. Şifre sıfırlama e-postaları yalnızca 1 saat geçerlidir. Aşağıdan yeni bir bağlantı talep edebilirsiniz.')
-        } else {
-          setErrorMsg('Geçersiz veya süresi dolmuş bir bağlantı kullandınız. Lütfen şifre sıfırlama işlemini tekrar başlatın.')
-        }
-        setStatus('error')
-        // Hash'i temizleyip adresi temiz hale getir
-        window.history.replaceState(null, '', window.location.pathname + window.location.search)
-        return
-      }
-      
-      if (hash.includes('access_token=')) {
-        hasAccessToken = true
-        // Token'ları manuel olarak ayıkla (Otomatik tanıma bazen gecikebiliyor/çalışmayabiliyor)
-        const params = new URLSearchParams(hash.substring(1))
-        manualAccessToken = params.get('access_token') || ''
-        manualRefreshToken = params.get('refresh_token') || ''
-        
-        // Hash'i temizle
-        window.history.replaceState(null, '', window.location.pathname + window.location.search)
-      }
-    }
-
-    // 2. Query Parametre Kontrolü
-    if (!hasAccessToken) {
-      const urlError = searchParams.get('error')
-      if (urlError === 'link_suresi_doldu') {
-        setErrorMsg('Bağlantının süresi dolmuş. Şifre sıfırlama e-postaları yalnızca 1 saat geçerlidir. Aşağıdan yeni bir bağlantı talep edebilirsiniz.')
-        setStatus('error')
-        return
-      }
-      if (urlError) {
-        setErrorMsg('Geçersiz veya süresi dolmuş bir bağlantı kullandınız. Lütfen şifre sıfırlama işlemini tekrar başlatın.')
-        setStatus('error')
-        return
-      }
-    }
-
-    // 3. Eğer manuel token yakaladıysak, oturumu anında biz kuruyoruz (Bekleme yok!)
-    if (manualAccessToken && manualRefreshToken) {
-      supabase.auth.setSession({
-        access_token: manualAccessToken,
-        refresh_token: manualRefreshToken
-      }).then(({ data, error }: any) => {
-        if (error || !data?.session) {
-          setErrorMsg('Oturum doğrulanamadı. Lütfen yeni bir sıfırlama bağlantısı isteyin.')
-          setStatus('error')
-        } else {
-          setStatus('ready')
-        }
-      })
-      return // Gerisine gerek yok
-    }
-
-    // Supabase SDK'sı başka bir şekilde kurmuşsa (PKCE vs.) onu kontrol et
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: import('@supabase/supabase-js').Session | null) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       if (session) {
         setStatus('ready')
       }
     })
 
-    supabase.auth.getSession().then(({ data: { session } }: { data: { session: import('@supabase/supabase-js').Session | null } }) => {
+    supabase.auth.getSession().then((res: any) => {
+      const session = res.data.session;
       if (session) {
         setStatus('ready')
       } else {
-        setErrorMsg('Oturum bulunamadı. Lütfen e-postanızdaki bağlantıya tekrar tıklayın veya aşağıdan yeni bir sıfırlama bağlantısı isteyin.')
         setStatus('error')
       }
     })
 
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [supabase, searchParams])
-
-
-  const handleResend = async () => {
-    if (!resendEmail.trim()) return
-    setResendLoading(true)
-    try {
-      await fetch('/api/sifre-sifirla', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: resendEmail.trim() }),
-      })
-      setResendDone(true)
-    } finally {
-      setResendLoading(false)
-    }
-  }
+    return () => subscription.unsubscribe()
+  }, [supabase])
 
   const handleSubmit = async () => {
     setFormError('')
@@ -177,47 +90,18 @@ function SifreBelirleContent() {
             </div>
           )}
 
-          {/* Hata */}
+          {/* Hata: Oturum bulunamadı */}
           {status === 'error' && (
             <div className="flex flex-col gap-5 py-4">
               <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 p-4 rounded-sm">
                 <AlertCircle size={18} className="text-brand-red flex-shrink-0 mt-0.5" />
-                <p className="font-body text-red-400/90 text-sm leading-relaxed">{errorMsg}</p>
+                <p className="font-body text-red-400/90 text-sm leading-relaxed">
+                  Oturum bulunamadı. Lütfen şifre sıfırlama adımlarını tekrar tamamlayın.
+                </p>
               </div>
-
-              {/* Inline yeni link isteme formu */}
-              {resendDone ? (
-                <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 p-4">
-                  <CheckCircle size={18} className="text-green-400 flex-shrink-0" />
-                  <div>
-                    <p className="font-body text-green-400 text-sm font-semibold">Bağlantı gönderildi!</p>
-                    <p className="font-body text-white/40 text-xs mt-0.5">{resendEmail} adresini kontrol edin. Spam klasörünü de kontrol etmeyi unutmayın.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="font-display text-xs tracking-widest uppercase text-white/40 font-semibold">Yeni Bağlantı İste</p>
-                  <input
-                    type="email"
-                    value={resendEmail}
-                    onChange={e => setResendEmail(e.target.value)}
-                    className="input-dark w-full"
-                    placeholder="E-posta adresiniz"
-                    onKeyDown={e => e.key === 'Enter' && handleResend()}
-                  />
-                  <button
-                    onClick={handleResend}
-                    disabled={resendLoading || !resendEmail.trim()}
-                    className="btn-primary w-full justify-center text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {resendLoading
-                      ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Gönderiliyor...</>
-                      : 'Yeni Sıfırlama Bağlantısı Gönder'
-                    }
-                  </button>
-                </div>
-              )}
-
+              <a href="/bayi/sifre-sifirla" className="btn-primary w-full justify-center text-sm text-center">
+                Şifre Sıfırlamaya Başla
+              </a>
               <a href="/bayi" className="btn-outline text-sm w-full justify-center text-center">
                 Giriş Sayfasına Dön
               </a>
@@ -232,7 +116,7 @@ function SifreBelirleContent() {
             </div>
           )}
 
-          {/* Form */}
+          {/* Şifre Formu */}
           {status === 'ready' && (
             <div className="space-y-5">
               <div>

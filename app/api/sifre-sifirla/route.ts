@@ -17,26 +17,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Geçersiz e-posta' }, { status: 400 })
     }
 
-    const { email, redirectTo } = parsed.data
+    const { email } = parsed.data
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 
-    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'http://localhost:3000'
-    const siteUrl = origin.replace(/\/$/, '')
-
-    // PKCE akışı zorunlu:
-    //   1. Supabase mail linkine tıklanır
-    //   2. /auth/callback?code=... adresine gelir
-    //   3. code oturuma çevrilir → /bayi/sifrele'ye yönlendirilir
-    // redirectTo parametresi gönderilse bile her zaman callback üzerinden geçmeli
-    const callbackUrl = `${siteUrl}/auth/callback?next=/bayi/sifrele`
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: callbackUrl,
-    })
+    // OTP akışı: redirectTo gönderilmiyor.
+    // Supabase, link yerine 6 haneli doğrulama kodu (OTP) gönderir.
+    // Mail içinde hiç farklı domain linki olmadığı için spam filtrelerine takılmaz.
+    const { error } = await supabase.auth.resetPasswordForEmail(email)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })

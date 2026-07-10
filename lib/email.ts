@@ -479,7 +479,31 @@ export function bayiOnaylandiHTML(data: {
   firma_adi: string
   yetkili_adi: string
   panel_url: string
+  otp_url?: string
+  is_yeni_kullanici?: boolean
 }): string {
+  const sifreSection = data.is_yeni_kullanici && data.otp_url ? `
+    ${infoBox(`
+      ${label('Şifrenizi Belirleyin')}
+      <div style="color:#ddd;font-size:14px;line-height:1.8">
+        Bayi panelinize giriş yapabilmek için önce <strong style="color:#fff">şifrenizi belirlemeniz</strong> gerekmektedir.<br><br>
+        Aşağıdaki butona tıklayın, e-posta adresinizi girin. Size gelen <strong style="color:#DA291C">6 haneli doğrulama kodunu</strong> girerek şifrenizi belirleyebilirsiniz.
+      </div>
+    `)}
+    <div style="background:#141414;border:1px solid #222;padding:20px 24px;margin-bottom:16px;text-align:center">
+      <a href="${data.otp_url}" style="display:inline-block;padding:12px 28px;background:#DA291C;color:#fff;text-decoration:none;font-weight:700;font-size:14px;border-radius:2px;text-transform:uppercase;letter-spacing:0.05em">
+        Şifremi Belirle →
+      </a>
+    </div>
+  ` : `
+    <div style="background:#141414;border:1px solid #222;padding:20px 24px;margin-bottom:16px;text-align:center">
+      <div style="color:#888;font-size:12px;margin-bottom:14px">Bayi panelinize giriş yapmak için aşağıdaki butona tıklayın</div>
+      <a href="${data.panel_url}" style="display:inline-block;padding:12px 28px;background:#DA291C;color:#fff;text-decoration:none;font-weight:700;font-size:14px;border-radius:2px;text-transform:uppercase;letter-spacing:0.05em">
+        Bayi Paneline Git →
+      </a>
+    </div>
+  `
+
   return emailShell(`
     ${header('Bayi Hesabınız Onaylandı 🎉', 'Akdağ Elektronik Bayi Ağı')}
     ${statusBadge('#22c55e', '✅', 'Bayi başvurunuz onaylandı. Hoş geldiniz!')}
@@ -497,14 +521,10 @@ export function bayiOnaylandiHTML(data: {
         Artık bayi fiyatlarına erişebilir, özel teklif oluşturabilir ve siparişlerinizi takip edebilirsiniz.
       </div>
     `)}
-    <div style="background:#141414;border:1px solid #222;padding:20px 24px;margin-bottom:16px;text-align:center">
-      <div style="color:#888;font-size:12px;margin-bottom:14px">Bayi panelinize giriş yapmak için aşağıdaki butona tıklayın</div>
-      <a href="${data.panel_url}" style="display:inline-block;padding:12px 28px;background:#DA291C;color:#fff;text-decoration:none;font-weight:700;font-size:14px;border-radius:2px;text-transform:uppercase;letter-spacing:0.05em">
-        Bayi Paneline Git →
-      </a>
-    </div>
+    ${sifreSection}
   `)
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MÜŞTERİ E-POSTASI — Bayi Hesabı Askıya Alındı

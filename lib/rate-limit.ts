@@ -29,7 +29,8 @@ let upstashLimiterCache: Map<string, Ratelimit> | null = null
 function getUpstashLimiter(limit: number, windowSec: number): Ratelimit | null {
   const url = process.env.UPSTASH_REDIS_REST_URL
   const token = process.env.UPSTASH_REDIS_REST_TOKEN
-  if (!url || !token) return null
+  // Placeholder veya geçersiz URL ise in-memory fallback'e geç
+  if (!url || !token || !url.startsWith('https://')) return null
 
   const cacheKey = `${limit}:${windowSec}`
   if (!upstashLimiterCache) upstashLimiterCache = new Map()

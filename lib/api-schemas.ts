@@ -56,7 +56,6 @@ export const bayiDavetSchema = z.object({
 
 export const sifreSifirlaSchema = z.object({
   email: z.string().email().max(320),
-  redirectTo: z.string().url().max(2000).optional().nullable(),
 })
 
 export const iletisimSchema = z.object({

@@ -30,10 +30,10 @@ export async function POST(req: NextRequest) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // Supabase davet e-postası gönder (yeni kullanıcılar için)
+    // Supabase davet — redirectTo verilmiyor.
+    // Bu sayede Supabase kendi supabase.co linkli davet mailini GÖNDERMEZ.
+    // Biz zaten aşağıda kendi markalı onay mailimizi Resend ile gönderiyoruz.
     const { data: inviteData, error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      // PKCE akışı: /auth/callback üzerinden geçer, sonra /bayi/sifrele'ye yönlenir
-      redirectTo: `${siteUrl}/auth/callback?next=/bayi/sifrele`,
       data: { firma_adi, yetkili_adi: yetkili_adi || '' },
     })
 
@@ -65,6 +65,8 @@ export async function POST(req: NextRequest) {
               firma_adi,
               yetkili_adi: yetkili_adi || '',
               panel_url: `${siteUrl}/bayi/panel`,
+              otp_url: `${siteUrl}/bayi/sifre-sifirla`,
+              is_yeni_kullanici: false,
             })
           )
 
@@ -92,7 +94,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: dbErr.message }, { status: 400 })
     }
 
-    // Yeni kullanıcıya da onay e-postası gönder (Supabase'in davet maili + bizim markalı mailimiz)
+    // Yeni kullanıcıya onay + şifre belirleme talimatı içeren markalı mail gönder.
+    // Supabase'in supabase.co linkli davet maili gönderilmediği için
+    // kullanıcı şifresini /bayi/sifre-sifirla sayfasından OTP ile belirleyecek.
     await sendEmail(
       email,
       'Bayi Hesabınız Onaylandı 🎉 | Akdağ Elektronik',
@@ -100,6 +104,8 @@ export async function POST(req: NextRequest) {
         firma_adi,
         yetkili_adi: yetkili_adi || '',
         panel_url: `${siteUrl}/bayi/panel`,
+        otp_url: `${siteUrl}/bayi/sifre-sifirla`,
+        is_yeni_kullanici: true,
       })
     )
 
