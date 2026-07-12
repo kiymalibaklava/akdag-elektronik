@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Package, Truck, Clock, CheckCircle, XCircle, LogOut, Store, Upload, Check, AlertCircle, Loader2, FileText, User as UserIcon, Settings, Building2, Phone, MapPin, Save, RefreshCw, Info } from 'lucide-react'
+import { Package, Truck, Clock, CheckCircle, XCircle, LogOut, Store, Upload, Check, AlertCircle, Loader2, FileText, User as UserIcon, Settings, Building2, Phone, MapPin, Save, RefreshCw, Info, ExternalLink } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 
 interface Bayi {
@@ -478,10 +478,16 @@ export default function HesabimPage() {
                             </div>
 
                             {s.kargo_takip_no && (
-                              <div className="flex items-center gap-2 text-brand-red text-xs font-body bg-brand-red/10 px-4 py-2 border border-brand-red/20">
-                                <Truck size={14} /> 
+                              <a
+                                href={`https://www.google.com/search?q=${encodeURIComponent(s.kargo_takip_no + ' kargo takip sorgula')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-brand-red text-xs font-body bg-brand-red/10 px-4 py-2 border border-brand-red/20 hover:bg-brand-red hover:text-white transition-all"
+                              >
+                                <Truck size={14} />
                                 <span className="font-display font-bold tracking-widest">TAKİP NO: {s.kargo_takip_no}</span>
-                              </div>
+                                <ExternalLink size={11} className="ml-1" />
+                              </a>
                             )}
                           </div>
                         </div>

@@ -236,8 +236,18 @@ export default function AdminBanners({ supabase }: { supabase: any }) {
             {/* Left: Image Upload */}
             <div>
               <label className="block text-xs font-display font-bold text-white/50 tracking-widest uppercase mb-2">
-                Kampanya Görseli (16:9 Tavsiye Edilir)
+                Kampanya Görseli
               </label>
+
+              {/* Boyut Uyarısı */}
+              <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 p-3 mb-3 rounded-sm">
+                <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-400/90 leading-relaxed">
+                  <span className="font-bold">Yatay (landscape) fotoğraf kullanın.</span><br />
+                  Önerilen boyut: <span className="font-mono font-bold">1920 × 720 px</span> veya <span className="font-mono font-bold">1280 × 480 px</span><br />
+                  <span className="text-amber-400/60">Dikey fotoğraflar (örn. 1080×1920) kırpılır ve düzgün görünmez.</span>
+                </div>
+              </div>
               
               <div className="border-2 border-dashed border-white/10 hover:border-brand-red/50 transition-colors bg-[#0F0F0F] rounded-sm p-4 text-center cursor-pointer relative group">
                 <input 
@@ -258,6 +268,7 @@ export default function AdminBanners({ supabase }: { supabase: any }) {
                   <div className="py-12 flex flex-col items-center justify-center text-white/30 group-hover:text-white/70">
                     <ImageIcon size={32} className="mb-3" />
                     <span className="text-sm">Görsel seçmek için tıklayın veya sürükleyin</span>
+                    <span className="text-xs mt-1 text-white/20">PNG, JPG, WEBP — Yatay format</span>
                   </div>
                 )}
               </div>
@@ -461,7 +472,7 @@ export default function AdminBanners({ supabase }: { supabase: any }) {
                 image={imagePreview}
                 crop={crop}
                 zoom={zoom}
-                aspect={21 / 9}
+                aspect={16 / 6}
                 onCropChange={setCrop}
                 onCropComplete={onCropComplete}
                 onZoomChange={setZoom}

@@ -309,7 +309,7 @@ export const ProductCard = memo(function ProductCard({ product, isBayi = false, 
               /* Fiyat gizli — WhatsApp bilgi metni (link değil, düz text) */
               <div className="flex items-center gap-1.5 bg-green-600/15 border border-green-500/25 px-2.5 py-1.5 text-green-400">
                 <MessageCircle size={13} className="flex-shrink-0" />
-                <span className="font-display font-semibold text-[10px] tracking-wider uppercase">Fiyat İçin İletişime Geçiniz</span>
+                <span className="font-display font-semibold text-[10px] tracking-wider uppercase">WhatsApp ile Ücretöğren ↓</span>
               </div>
             )}
 
@@ -347,14 +347,14 @@ export const ProductCard = memo(function ProductCard({ product, isBayi = false, 
           <div className="grid grid-cols-3 gap-1.5">
             <button
               type="button"
-              className={`btn-outline text-xs justify-center ${fav ? '!border-brand-red !text-brand-red' : ''}`}
+              className={`flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${fav ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
               onClick={(e) => { e.stopPropagation(); setFav(toggleFavorite(asSaved())) }}
             >
               <Heart size={12} />
             </button>
             <button
               type="button"
-              className={`btn-outline text-xs justify-center ${cmp ? '!border-brand-red !text-brand-red' : ''}`}
+              className={`flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${cmp ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
               onClick={(e) => {
                 e.stopPropagation()
                 const next = toggleCompare(asSaved())
@@ -382,14 +382,14 @@ export const ProductCard = memo(function ProductCard({ product, isBayi = false, 
           <div className="grid grid-cols-3 gap-1.5">
             <button
               type="button"
-              className={`btn-outline text-xs justify-center ${fav ? '!border-brand-red !text-brand-red' : ''}`}
+              className={`flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${fav ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
               onClick={() => setFav(toggleFavorite(asSaved()))}
             >
               <Heart size={12} />
             </button>
             <button
               type="button"
-              className={`btn-outline text-xs justify-center ${cmp ? '!border-brand-red !text-brand-red' : ''}`}
+              className={`flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${cmp ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
               onClick={() => {
                 const next = toggleCompare(asSaved())
                 if (next.overflow) { alert('Karşılaştırma listesi en fazla 4 ürün olabilir.'); return }
@@ -401,10 +401,10 @@ export const ProductCard = memo(function ProductCard({ product, isBayi = false, 
             <button
               type="button"
               onClick={handleWhatsApp}
-              className="flex items-center justify-center gap-1 text-xs font-display font-semibold uppercase tracking-wider px-2 py-1.5 bg-green-600/20 border border-green-500/30 text-green-400 hover:bg-green-600/30 transition-colors"
+              className="flex items-center justify-center gap-1 text-xs font-display font-semibold uppercase tracking-wider px-2 py-1.5 bg-green-600 border border-green-600 text-white hover:bg-green-700 transition-colors"
             >
               <MessageCircle size={12} />
-              Sor
+              WhatsApp
             </button>
           </div>
         )}

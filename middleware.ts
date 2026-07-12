@@ -62,9 +62,14 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // #2 — /hesabim koruması: giriş yapılmadan erişim yok
+  if (request.nextUrl.pathname.startsWith('/hesabim') && !user) {
+    return NextResponse.redirect(new URL('/bayi', request.url))
+  }
+
   return response
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/:path*', '/hesabim', '/hesabim/:path*'],
 }

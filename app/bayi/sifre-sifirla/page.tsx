@@ -54,7 +54,7 @@ export default function SifreSifirla() {
 
   // ── OTP Input yönetimi ──────────────────────────────────────────────────────
   const handleOtpChange = (index: number, value: string) => {
-    // Yapıştırma desteği: 6 haneli kodu tek seferde yapıştır
+    // Yapıştırma desteği: 8 haneli kodu tek seferde yapıştır
     if (value.length === 8 && /^\d{8}$/.test(value)) {
       const newOtp = value.split('')
       setOtp(newOtp)

@@ -135,20 +135,19 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
       {/* Kampanya / Banner Alanı */}
       <BannerCarousel banners={banners} />
 
-      {/* Premium Header */}
-      <div className={`bg-[#0A0A0A] border-b border-white/5 relative overflow-hidden ${banners.length > 0 ? 'pt-8 pb-16' : 'py-20'}`}>
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-brand-red/5 to-transparent pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-[2px] bg-brand-red" />
-            <span className="font-display font-black text-[10px] tracking-[0.4em] uppercase text-brand-red">
-              {activeCategory ? 'Kategori Kataloğu' : 'Tüm Ürünler'}
-            </span>
-          </div>
-          <h1 className="font-display font-black text-5xl md:text-8xl uppercase text-white mb-8 tracking-tighter leading-none">
+      {/* Başlık + Arama — Banner’ın hemen altında, aktarımlı geçiş */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-[2px] bg-brand-red" />
+          <span className="font-display font-black text-[10px] tracking-[0.4em] uppercase text-brand-red">
+            {activeCategory ? 'Kategori Kataloğu' : 'Tüm Ürünler'}
+          </span>
+        </div>
+        <div className="flex flex-col md:flex-row md:items-end gap-6 md:gap-12">
+          <h1 className="font-display font-black text-4xl md:text-6xl uppercase text-white tracking-tighter leading-none flex-shrink-0">
             {activeCategory ? activeCategory.name : 'ÜRÜN KATALOĞU'}
           </h1>
-          <div className="max-w-xl">
+          <div className="flex-1 max-w-xl">
             <ProductSearch fullPage />
           </div>
         </div>
