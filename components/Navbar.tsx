@@ -12,6 +12,7 @@ import { NEW_KATEGORI_HIYERARSI, type CategoryNode } from '@/lib/categories'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import { pullCartFromSupabase, setCartUserId } from '@/lib/cart'
+import ThemeToggle from './ThemeToggle'
 
 const navLinks = [
   { href: '/', label: 'Ana Sayfa' },
@@ -154,6 +155,7 @@ export default function Navbar() {
               <Search size={16} />
               <span className="font-display uppercase font-bold tracking-widest">Arama</span>
             </Link>
+            <ThemeToggle />
             <CartIcon />
             {user && (
               <Link href="/bayi/hizli-siparis" className="text-white/50 hover:text-brand-red transition-colors duration-200 text-xs flex items-center gap-1.5 group">
@@ -348,6 +350,7 @@ export default function Navbar() {
               <div className="flex items-center gap-4 pt-4 border-t border-white/5">
                 <Link href="/favoriler" aria-label="Favorilerim" className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white/40"><Heart size={18} /></Link>
                 <Link href="/karsilastir" aria-label="Karşılaştırma Listesi" className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white/40"><GitCompare size={18} /></Link>
+                <ThemeToggle />
               </div>
               <a href="tel:+903522316915" className="font-display font-bold text-xs tracking-widest uppercase text-white/50 py-3 flex items-center gap-2">
                 <Phone size={13} />

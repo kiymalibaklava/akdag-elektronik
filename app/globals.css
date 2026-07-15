@@ -180,3 +180,181 @@ body {
   padding-top: 80px;
   margin-top: -40px;
 }
+
+/* ═══════════════════════════════════════════════════════
+   LIGHT THEME — Profesyonel B2B Açık Tema
+   Tetikleyici: html[data-theme="light"]
+   Renk paleti:
+     Sayfa arka planı  : #F0F2F5 (hafif mavi-gri)
+     Kart arka planı   : #FFFFFF (beyaz)
+     İkincil bg        : #EDEEF1 (açık gri)
+     Ana metin         : #0F172A (koyu lacivert)
+   ═══════════════════════════════════════════════════════ */
+
+/* Temel gövde renkleri */
+html[data-theme="light"] body {
+  background-color: #F0F2F5;
+  color: #0F172A;
+}
+
+/* Kaydırma çubuğu */
+html[data-theme="light"] ::-webkit-scrollbar-track { background: #E5E7EB; }
+html[data-theme="light"] ::-webkit-scrollbar-thumb { background: #CBD5E1; }
+html[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+/* ── Koyu hex arka planlar → açık eşdeğerler ── */
+html[data-theme="light"] .bg-\[\#0A0A0A\]  { background-color: #F0F2F5 !important; }
+html[data-theme="light"] .bg-\[\#0F0F0F\]  { background-color: #FFFFFF !important; }
+html[data-theme="light"] .bg-\[\#111\]     { background-color: #EDEEF1 !important; }
+html[data-theme="light"] .bg-\[\#111111\]  { background-color: #EDEEF1 !important; }
+html[data-theme="light"] .bg-\[\#141414\]  { background-color: #FFFFFF !important; }
+html[data-theme="light"] .bg-\[\#1A1A1A\]  { background-color: #E5E7EB !important; }
+
+/* Opaklıklı navbar varyantları */
+html[data-theme="light"] .bg-\[\#0F0F0F\]\/95       { background-color: rgba(255,255,255,0.97) !important; }
+html[data-theme="light"] .bg-\[\#0F0F0F\]\/\[0\.98\] { background-color: rgba(255,255,255,0.99) !important; }
+
+/* Siyah opaklık overlay'leri — light'ta çok hafif */
+html[data-theme="light"] .bg-black\/20 { background-color: rgba(0,0,0,0.03) !important; }
+html[data-theme="light"] .bg-black\/40 { background-color: rgba(0,0,0,0.04) !important; }
+html[data-theme="light"] .bg-black\/60 { background-color: rgba(0,0,0,0.06) !important; }
+/* bg-black/85 (modal overlay) — karanlık kalmalı, override edilmez */
+
+/* Beyaz opaklık overlay'leri → hafif siyah overlay'e dönüştür */
+html[data-theme="light"] .bg-white\/5         { background-color: rgba(0,0,0,0.04) !important; }
+html[data-theme="light"] .bg-white\/\[0\.01\]  { background-color: rgba(0,0,0,0.01) !important; }
+html[data-theme="light"] .bg-white\/\[0\.02\]  { background-color: rgba(0,0,0,0.02) !important; }
+html[data-theme="light"] .bg-white\/\[0\.03\]  { background-color: rgba(0,0,0,0.03) !important; }
+html[data-theme="light"] .bg-white\/\[0\.04\]  { background-color: rgba(0,0,0,0.04) !important; }
+
+/* Tailwind charcoal rengi */
+html[data-theme="light"] .bg-brand-charcoal { background-color: #F8FAFC !important; }
+
+/* ── Metin renkleri ── */
+html[data-theme="light"] .text-white        { color: #0F172A !important; }
+html[data-theme="light"] .text-white\/80    { color: rgba(15,23,42,0.80) !important; }
+html[data-theme="light"] .text-white\/70    { color: rgba(15,23,42,0.70) !important; }
+html[data-theme="light"] .text-white\/60    { color: rgba(15,23,42,0.60) !important; }
+html[data-theme="light"] .text-white\/50    { color: rgba(15,23,42,0.50) !important; }
+html[data-theme="light"] .text-white\/40    { color: rgba(15,23,42,0.40) !important; }
+html[data-theme="light"] .text-white\/35    { color: rgba(15,23,42,0.35) !important; }
+html[data-theme="light"] .text-white\/30    { color: rgba(15,23,42,0.30) !important; }
+html[data-theme="light"] .text-white\/25    { color: rgba(15,23,42,0.25) !important; }
+html[data-theme="light"] .text-white\/20    { color: rgba(15,23,42,0.20) !important; }
+html[data-theme="light"] .text-white\/15    { color: rgba(15,23,42,0.15) !important; }
+html[data-theme="light"] .text-white\/10    { color: rgba(15,23,42,0.10) !important; }
+html[data-theme="light"] .text-brand-gray-light { color: rgba(15,23,42,0.50) !important; }
+
+/* ── Kenarlık renkleri ── */
+html[data-theme="light"] .border-white\/5   { border-color: rgba(0,0,0,0.08) !important; }
+html[data-theme="light"] .border-white\/10  { border-color: rgba(0,0,0,0.12) !important; }
+html[data-theme="light"] .border-white\/15  { border-color: rgba(0,0,0,0.15) !important; }
+html[data-theme="light"] .border-white\/20  { border-color: rgba(0,0,0,0.18) !important; }
+
+/* ── Form girdileri ── */
+html[data-theme="light"] .input-dark {
+  background-color: #FFFFFF !important;
+  border-color: rgba(0,0,0,0.15) !important;
+  color: #0F172A !important;
+}
+html[data-theme="light"] .input-dark::placeholder {
+  color: rgba(15,23,42,0.35) !important;
+}
+
+/* Diğer form girdileri (bg-black/40 vs. ile oluşturulmuş) */
+html[data-theme="light"] input.bg-black\/40,
+html[data-theme="light"] textarea.bg-black\/40,
+html[data-theme="light"] select.bg-black\/40 {
+  background-color: #FFFFFF !important;
+  border-color: rgba(0,0,0,0.15) !important;
+  color: #0F172A !important;
+}
+
+/* ── Ürün kartları ── */
+html[data-theme="light"] .product-card {
+  background-color: #FFFFFF !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+html[data-theme="light"] .product-card:hover {
+  border-color: rgba(218,41,28,0.3) !important;
+}
+
+/* ── Gölgeler — light modda daha yumuşak ── */
+html[data-theme="light"] .shadow-2xl {
+  box-shadow: 0 20px 40px -12px rgba(0,0,0,0.12) !important;
+}
+
+/* ── Hamburger mobile menü butonu ── */
+html[data-theme="light"] .md\:hidden.text-white { color: #0F172A !important; }
+
+/* ── Geçiş animasyonu — tema değişimini pürüzsüz yap ── */
+html {
+  transition: background-color 0.25s ease;
+}
+body,
+nav,
+footer,
+.product-card,
+.input-dark {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+/* ═══════════════════════════════════════════════════════
+   LIGHT THEME — EKSİK OVERRİDE TAMAMLAMASI
+   Aşağıdakiler ilk blokta eksik kalan opaklık varyantları
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Eksik text-white opaklık varyantları ── */
+html[data-theme="light"] .text-white\/45    { color: rgba(15,23,42,0.45) !important; }
+html[data-theme="light"] .text-white\/55    { color: rgba(15,23,42,0.55) !important; }
+html[data-theme="light"] .text-white\/65    { color: rgba(15,23,42,0.65) !important; }
+html[data-theme="light"] .text-white\/75    { color: rgba(15,23,42,0.75) !important; }
+html[data-theme="light"] .text-white\/85    { color: rgba(15,23,42,0.85) !important; }
+html[data-theme="light"] .text-white\/90    { color: rgba(15,23,42,0.90) !important; }
+html[data-theme="light"] .text-white\/95    { color: rgba(15,23,42,0.95) !important; }
+html[data-theme="light"] .text-white\/5     { color: rgba(15,23,42,0.05) !important; }
+html[data-theme="light"] .text-white\/\[0\.025\] { color: rgba(15,23,42,0.04) !important; }
+
+/* ── silver-text: #C0C0C0 beyaz zeminde görünmez — koyu gri yapıyoruz ── */
+html[data-theme="light"] .silver-text { color: #6B7280 !important; }
+html[data-theme="light"] .silver-border { border-color: rgba(0,0,0,0.1) !important; }
+
+/* ── Tüm placeholder'lar için global override ── */
+/* (placeholder-white/*, placeholder:text-white/* vs. hepsini kapsar) */
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder {
+  color: rgba(15,23,42,0.35) !important;
+}
+
+/* ── Hover arka plan durumları ── */
+html[data-theme="light"] .hover\:bg-\[\#1A1A1A\]:hover { background-color: #E8EAED !important; }
+html[data-theme="light"] .hover\:bg-white\/5:hover    { background-color: rgba(0,0,0,0.04) !important; }
+html[data-theme="light"] .hover\:text-white:hover     { color: #0F172A !important; }
+
+/* ── ProductSearch input: bg-[#141414] text-white ── */
+/* (bg-[#141414] zaten overridden, text-white da. Ek güvence:) */
+html[data-theme="light"] input.text-white { color: #0F172A !important; }
+html[data-theme="light"] textarea.text-white { color: #0F172A !important; }
+
+/* ── Bayi hızlı sipariş: bg-[#141414] input ── */
+html[data-theme="light"] .bg-\[\#141414\].border.border-white\/10 {
+  background-color: #FFFFFF !important;
+  border-color: rgba(0,0,0,0.12) !important;
+  color: #0F172A !important;
+}
+
+/* ── bg-[#0F0F0F]/95 scrolled navbar — border rengi ── */
+html[data-theme="light"] .border-b.border-white\/5 {
+  border-color: rgba(0,0,0,0.08) !important;
+}
+
+/* ── Dekoratif halka çizgileri (border-white/3) ── */
+html[data-theme="light"] .border-white\/3  { border-color: rgba(0,0,0,0.05) !important; }
+
+/* ── StatCounter bileşenindeki metinler ── */
+html[data-theme="light"] .stat-value { color: #0F172A !important; }
+
+/* ── scroll indicator gradient (via taşması) ── */
+html[data-theme="light"] .bg-gradient-to-b.from-white\/20 {
+  background-image: linear-gradient(to bottom, rgba(15,23,42,0.15), transparent) !important;
+}

@@ -88,6 +88,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="tr" className={`${barlow.variable} ${barlowCondensed.variable}`} suppressHydrationWarning>
       <body className="bg-[#0F0F0F] text-white antialiased font-body">
+        {/* Flash önleyici tema script'i — React öncesi çalışır */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('akdag-theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
