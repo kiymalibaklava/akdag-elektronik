@@ -149,7 +149,7 @@ export default function AdminAddProduct({ onAdded, initialData }: Props) {
 
     const stokAdetNum = Math.max(0, parseInt(stokAdedi || '0'))
     const kritikStokNum = Math.max(0, parseInt(kritikStok || '0'))
-    const stokDurumu = stokAdetNum <= 0 ? 'tukendi' : stok
+    const stokDurumu = stok !== 'stokta' ? stok : (stokAdetNum <= 0 ? 'tukendi' : 'stokta')
 
     const generateSlug = (text: string) => {
       const trMap: { [key: string]: string } = {

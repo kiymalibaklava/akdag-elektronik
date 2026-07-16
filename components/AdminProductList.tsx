@@ -64,6 +64,7 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
   const [editKritikStok, setEditKritikStok] = useState('5')
   const [editMarka, setEditMarka] = useState('')
   const [editKullanim, setEditKullanim] = useState('')
+  const [editModelKodu, setEditModelKodu] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [existingMarkalar, setExistingMarkalar] = useState<string[]>([])
@@ -136,7 +137,7 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
     setEditProduct(p)
     const supabase = createClient()
     const { data: fullProduct } = await supabase.from('urunler')
-      .select('id, ad, aciklama, kategori, alt_kategori, urun_tipi, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi, stok_durumu, stok_adedi, kritik_stok, marka, kullanim_alani')
+      .select('id, ad, aciklama, kategori, alt_kategori, urun_tipi, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi, stok_durumu, stok_adedi, kritik_stok, marka, kullanim_alani, model_kodu')
       .eq('id', p.id)
       .single()
     const prod = fullProduct || p
@@ -154,6 +155,7 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
     setEditKritikStok((prod.kritik_stok ?? 5).toString())
     setEditMarka(prod.marka || '')
     setEditKullanim(prod.kullanim_alani || '')
+    setEditModelKodu((prod as any).model_kodu || '')
     setEditFotograflar(prod.fotograflar || [])
     setNewPhotos([])
     setUploadError('')
@@ -168,7 +170,9 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
     const fiyatDegisti = editFiyat !== editProduct.fiyat?.toString() || editBayiF !== editProduct.bayi_fiyati?.toString()
     const stokAdedi = Math.max(0, parseInt(editStokAdedi || '0'))
     const kritikStok = Math.max(0, parseInt(editKritikStok || '0'))
-    const stokDurumu = stokAdedi <= 0 ? 'tukendi' : editStok
+    // Siparişe Göre veya Tükendi admin tarafından bilinçli seçilmişse koru
+    // Sadece 'stokta' seçilip adedi 0 ise otomatik 'tukendi' yap
+    const stokDurumu = editStok !== 'stokta' ? editStok : (stokAdedi <= 0 ? 'tukendi' : 'stokta')
     const yeniUrls: string[] = []
     for (const entry of newPhotos) {
       const path = `urunler/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`
@@ -195,6 +199,7 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
       bayi_para_birimi: editBayiParaBirimi,
       marka: editMarka.trim() || null,
       kullanim_alani: editKullanim.trim() || null,
+      model_kodu: editModelKodu.trim() || null,
       updated_at: new Date().toISOString(),
       ...(fiyatDegisti ? { fiyat_guncelleme: new Date().toISOString() } : {}),
     }).eq('id', editProduct.id)
@@ -474,6 +479,15 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
                       </select>
                     </div>
                   </div>
+                  {/* Stok Durumu — admin bilinçli seçim yapabilsin */}
+                  <div>
+                    <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Stok Durumu</label>
+                    <select value={editStok} onChange={e => setEditStok(e.target.value)} className="input-dark appearance-none cursor-pointer">
+                      <option value="stokta">Stokta</option>
+                      <option value="tukendi">Tükendi</option>
+                      <option value="siparise_gore">Siparişe Göre</option>
+                    </select>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="relative">
                       <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Stok Adedi</label>
@@ -483,6 +497,11 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
                       <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Kritik Stok</label>
                       <input type="number" value={editKritikStok} onChange={e => setEditKritikStok(e.target.value)} className="input-dark" />
                     </div>
+                  </div>
+                  {/* Model Kodu (Stok Kodu) */}
+                  <div>
+                    <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Model Kodu / Stok Kodu</label>
+                    <input type="text" value={editModelKodu} onChange={e => setEditModelKodu(e.target.value)} className="input-dark" placeholder="Örn: M7CL-48" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="relative">
