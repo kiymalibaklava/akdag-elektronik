@@ -102,15 +102,22 @@ export default function AdminSiparisler() {
   const updateDurum = async (id: string, durum: string) => {
     setUpdatingId(id)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/siparis-durum-guncelle', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({ id, durum })
       })
-      if (!res.ok) throw new Error('Güncellenemedi')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData?.error || 'Güncellenemedi')
+      }
       await loadSiparisler(0)
-    } catch (err) {
-      alert('Hata: Durum güncellenemedi.')
+    } catch (err: any) {
+      alert(`Hata: ${err.message || 'Durum güncellenemedi.'}`)
     } finally {
       setUpdatingId(null)
     }
@@ -127,15 +134,22 @@ export default function AdminSiparisler() {
   const kaydetKargoNo = async (id: string, no: string) => {
     setUpdatingKargo(id)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/siparis-durum-guncelle', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({ id, durum: 'kargolandi', kargo_takip_no: no })
       })
-      if (!res.ok) throw new Error('Güncellenemedi')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData?.error || 'Güncellenemedi')
+      }
       await loadSiparisler(0)
-    } catch (err) {
-      alert('Hata: Kargo bilgisi güncellenemedi.')
+    } catch (err: any) {
+      alert(`Hata: ${err.message || 'Kargo bilgisi güncellenemedi.'}`)
     } finally {
       setUpdatingKargo(null)
     }
