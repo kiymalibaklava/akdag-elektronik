@@ -18,6 +18,7 @@ const navLinks = [
   { href: '/', label: 'Ana Sayfa' },
   { href: '/urunler', label: 'Ürünler', hasMega: true },
   { href: '/hakkimizda', label: 'Hakkımızda' },
+  { href: '/proje-talebi', label: 'Proje Talebi' },
   { href: '/iletisim', label: 'İletişim' },
 ]
 
@@ -339,6 +340,7 @@ export default function Navbar() {
 
               {/* Diğer Linkler */}
               <Link href="/hakkimizda" className="font-display font-black text-xs tracking-[0.3em] uppercase py-4 border-b border-white/5 text-white/50">HAKKIMIZDA</Link>
+              <Link href="/proje-talebi" className="font-display font-black text-xs tracking-[0.3em] uppercase py-4 border-b border-white/5 text-brand-red/80">PROJE TALEBİ</Link>
               <Link href="/iletisim" className="font-display font-black text-xs tracking-[0.3em] uppercase py-4 border-b border-white/5 text-white/50">İLETİŞİM</Link>
               <Link href={user ? "/hesabim" : "/bayi"} className="font-display font-black text-xs tracking-[0.3em] uppercase py-4 border-b border-white/5 text-brand-red">
                 {user ? "HESABIM" : "BAYİ GİRİŞİ"}

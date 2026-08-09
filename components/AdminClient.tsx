@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
-import { LogOut, Package, Users, FileText, ShoppingBag, LayoutDashboard, Layers, Database, Mail } from 'lucide-react'
+import { LogOut, Package, Users, FileText, ShoppingBag, LayoutDashboard, Layers, Database, Mail, Hammer } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const AdminDashboard = dynamic(() => import('./AdminDashboard'), {
@@ -32,6 +32,9 @@ const AdminCampaignManager = dynamic(() => import('./AdminCampaignManager'), {
 const AdminBanners = dynamic(() => import('./AdminBanners'), {
   loading: () => <div className="py-10 flex justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
 })
+const AdminProjeTalepleri = dynamic(() => import('./AdminProjeTalepleri'), {
+  loading: () => <div className="py-10 flex justify-center"><div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" /></div>
+})
 
 import AdminLoginForm from './AdminLoginForm'
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
@@ -52,7 +55,7 @@ interface Product {
   fiyat_guncelleme?: string
 }
 
-type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'teklif' | 'bayiler' | 'basvurular' | 'wolvox' | 'kampanya' | 'banner'
+type Tab = 'dashboard' | 'siparisler' | 'urunler' | 'teklif' | 'bayiler' | 'basvurular' | 'wolvox' | 'kampanya' | 'banner' | 'projeler'
 
 export default function AdminClient({ onSuccess }: AdminClientProps) {
   const [user, setUser] = useState<User | null>(null)
@@ -60,6 +63,7 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
   const [bekleyenSiparis, setBekleyenSiparis] = useState(0)
+  const [bekleyenProje, setBekleyenProje] = useState(0)
   const supabase = useRef(createClient()).current
 
   useEffect(() => {
@@ -67,13 +71,13 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
       const session = response.data.session
       setUser(session?.user ?? null)
       setLoading(false)
-      if (session) { loadBekleyenSiparis() }
+      if (session) { loadCounts() }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setUser(session?.user ?? null)
       if (session) { 
-        loadBekleyenSiparis()
+        loadCounts()
         if (onSuccess) onSuccess() 
       }
       else setLoading(false)
@@ -82,9 +86,12 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
     return () => subscription.unsubscribe()
   }, [onSuccess])
 
-  const loadBekleyenSiparis = async () => {
-    const { count } = await supabase.from('siparisler').select('*', { count: 'exact', head: true }).eq('durum', 'beklemede')
-    setBekleyenSiparis(count || 0)
+  const loadCounts = async () => {
+    const { count: siparisCount } = await supabase.from('siparisler').select('*', { count: 'exact', head: true }).eq('durum', 'beklemede')
+    setBekleyenSiparis(siparisCount || 0)
+
+    const { count: projeCount } = await supabase.from('proje_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'yeni')
+    setBekleyenProje(projeCount || 0)
   }
 
   const handleLogout = async () => {
@@ -124,7 +131,7 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
                 const session = response.data.session;
                 if (session) { 
                   setUser(session.user); 
-                  loadBekleyenSiparis()
+                  loadCounts()
                   if (onSuccess) onSuccess()
                 }
               })
@@ -141,6 +148,7 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
     { id: 'urunler'   as Tab, label: 'Ürünler',    icon: Package },
     { id: 'wolvox'    as Tab, label: 'Wolvox Kuyruğu', icon: Database },
     { id: 'teklif'    as Tab, label: 'Teklif Hazırla', icon: FileText },
+    { id: 'projeler'  as Tab, label: 'Proje Talepleri', icon: Hammer, badge: bekleyenProje },
     { id: 'bayiler'   as Tab, label: 'Bayiler',     icon: Users },
     { id: 'basvurular'as Tab, label: 'Başvurular',  icon: FileText },
     { id: 'kampanya'  as Tab, label: 'Toplu Mail',  icon: Mail },
@@ -219,6 +227,8 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
         {activeTab === 'kampanya' && <AdminCampaignManager />}
         
         {activeTab === 'banner' && <AdminBanners supabase={supabase} />}
+
+        {activeTab === 'projeler' && <AdminProjeTalepleri />}
 
         {(activeTab === 'bayiler' || activeTab === 'basvurular') && (
           <AdminBayiYonetim activeTab={activeTab} />
