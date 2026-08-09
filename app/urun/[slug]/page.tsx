@@ -11,8 +11,8 @@ import type { Metadata } from 'next'
 import { getSiteUrl } from '@/lib/site-url'
 import { getBreadcrumbs } from '@/lib/categories'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+// ISR: 5 dakikada bir yenilenir — force-dynamic kaldırıldı, CDN cache devreye girdi
+export const revalidate = 300
 
 import { getProductBySlug } from '@/lib/product-service'
 
@@ -58,12 +58,9 @@ export default async function UrunDetayPage({ params }: Props) {
     redirect(`/urun/${product.slug}`)
   }
 
-  const { data: { session } } = await supabase.auth.getSession()
-  let isBayi = false
-  if (session?.user) {
-    const { data: bayi } = await supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
-    if (bayi?.onaylandi) isBayi = true
-  }
+  // isBayi client-side detect ediliyor (UrunFiyatGosterge + AddToCartButton kendi içinde
+  // supabase.auth.getSession() yapıyor). Server-side Supabase client'ta cookie olmadığından
+  // session zaten null dönüyordu — bu check gereksizdi ve sayfayı dynamic yapıyordu.
 
   const { data: related } = await supabase
     .from('urunler')
@@ -137,7 +134,7 @@ export default async function UrunDetayPage({ params }: Props) {
               bayiParaBirimi={product.bayi_para_birimi || product.para_birimi || 'TRY'}
               fiyatGuncelleme={product.fiyat_guncelleme}
               urunAdi={product.ad}
-              isBayi={isBayi}
+              isBayi={false}
             />
 
             {/* Stok */}
@@ -170,7 +167,7 @@ export default async function UrunDetayPage({ params }: Props) {
                   bayi_fiyati: product.bayi_fiyati,
                   para_birimi: product.para_birimi || 'TRY',
                   bayi_para_birimi: product.bayi_para_birimi || product.para_birimi || 'TRY',
-                }} isBayi={isBayi} />
+                }} isBayi={false} />
               ) : stok === 'tukendi' ? (
                 <div className="space-y-3">
                   <div className="font-display font-bold text-sm uppercase text-center text-white/30 tracking-widest py-3 border border-white/10 bg-white/[0.02]">
