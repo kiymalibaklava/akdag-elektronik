@@ -83,7 +83,7 @@ export default function IptalVeIade() {
                 <Mail size={16} className="text-brand-red shrink-0 mt-0.5" />
                 <div>
                   <div className="font-display font-bold text-xs uppercase text-white mb-1">E-posta</div>
-                  <div className="text-white/40">info@akdagelektronik.com</div>
+                  <div className="text-white/40">info@akdagelektronik.com.tr</div>
                 </div>
               </div>
             </div>
@@ -171,7 +171,7 @@ export default function IptalVeIade() {
             <p className="font-body text-white/40 text-sm mb-4">Lütfen sipariş numaranız ile birlikte bizimle iletişime geçin.</p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <a href="tel:+903522316915" className="btn-primary text-sm"><Phone size={14} />+90 352 231 69 15</a>
-              <a href="mailto:info@akdagelektronik.com" className="btn-outline text-sm"><Mail size={14} />info@akdagelektronik.com</a>
+              <a href="mailto:info@akdagelektronik.com.tr" className="btn-outline text-sm"><Mail size={14} />info@akdagelektronik.com.tr</a>
             </div>
           </div>
 

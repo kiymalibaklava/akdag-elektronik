@@ -60,7 +60,7 @@ export default function GizlilikPolitikasi() {
                 <li><strong className="text-white">Unvan:</strong> Akdağ Elektronik</li>
                 <li><strong className="text-white">Adres:</strong> Cumhuriyet Mah. Sur Cad. No:17/A, Melikgazi / Kayseri</li>
                 <li><strong className="text-white">Telefon:</strong> +90 352 231 69 15</li>
-                <li><strong className="text-white">E-posta:</strong> info@akdagelektronik.com</li>
+                <li><strong className="text-white">E-posta:</strong> info@akdagelektronik.com.tr</li>
               </ul>
             </div>
           </Section>
@@ -181,7 +181,7 @@ export default function GizlilikPolitikasi() {
                 <Mail size={16} className="text-brand-red shrink-0 mt-0.5" />
                 <div>
                   <div className="font-display font-bold text-xs uppercase text-white mb-1">E-posta</div>
-                  <div className="text-white/40">info@akdagelektronik.com</div>
+                  <div className="text-white/40">info@akdagelektronik.com.tr</div>
                 </div>
               </div>
               <div className="bg-[#141414] border border-white/5 p-4 flex items-start gap-3">
@@ -200,7 +200,7 @@ export default function GizlilikPolitikasi() {
             <div className="font-display font-bold text-sm uppercase tracking-widest text-white mb-3">Verileriniz Güvende</div>
             <p className="font-body text-white/40 text-sm mb-4">KVKK kapsamında tüm haklarınız saklıdır.</p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <a href="mailto:info@akdagelektronik.com" className="btn-primary text-sm"><Mail size={14} />KVKK Başvurusu</a>
+              <a href="mailto:info@akdagelektronik.com.tr" className="btn-primary text-sm"><Mail size={14} />KVKK Başvurusu</a>
               <Link href="/iletisim" className="btn-outline text-sm">İletişim Formu</Link>
             </div>
           </div>

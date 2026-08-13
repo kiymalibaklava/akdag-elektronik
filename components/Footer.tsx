@@ -88,9 +88,9 @@ export default function Footer() {
               </a>
             </li>
             <li>
-              <a href="mailto:info@akdagelektronik.com" className="flex gap-3 text-sm font-body text-white/40 hover:text-white transition-colors duration-200">
+              <a href="mailto:info@akdagelektronik.com.tr" className="flex gap-3 text-sm font-body text-white/40 hover:text-white transition-colors duration-200">
                 <Mail size={15} className="text-brand-red shrink-0 mt-0.5" />
-                info@akdagelektronik.com
+                info@akdagelektronik.com.tr
               </a>
             </li>
           </ul>

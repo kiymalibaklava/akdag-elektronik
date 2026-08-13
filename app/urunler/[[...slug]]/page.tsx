@@ -49,13 +49,39 @@ interface Props {
   }
 }
 
-export async function generateMetadata({ params }: Props) {
-  if (!params.slug || params.slug.length === 0) {
-    return { title: 'Tüm Ürünler | Akdağ Elektronik' }
+import type { Metadata } from 'next'
+
+import { getSiteUrl } from '@/lib/site-url'
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const isAllProducts = !params.slug || params.slug.length === 0
+  const category = !isAllProducts ? findCategoryBySlug(params.slug || []) : null
+
+  const title = isAllProducts 
+    ? 'Tüm Ürünler | Akdağ Elektronik' 
+    : `${category?.name || 'Ürünler'} | Akdağ Elektronik`
+  
+  const description = isAllProducts
+    ? 'Akdağ Elektronik geniş ürün yelpazesi: Profesyonel ses sistemleri, amfiler, hoparlörler, mikrofonlar ve sahne ışıklandırmaları.'
+    : `${category?.name || 'Ürün'} kategorisindeki en kaliteli ve profesyonel cihazları Akdağ Elektronik güvencesiyle inceleyin.`
+
+  const url = isAllProducts 
+    ? `${getSiteUrl()}/urunler` 
+    : `${getSiteUrl()}/urunler/${(params.slug || []).join('/')}`
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: 'Akdağ Elektronik',
+      type: 'website',
+      locale: 'tr_TR',
+    }
   }
-  const category = findCategoryBySlug(params.slug)
-  if (!category) return { title: 'Ürünler | Akdağ Elektronik' }
-  return { title: `${category.name} | Akdağ Elektronik`, description: `${category.name} ürün kategorisi.` }
 }
 
 export default async function UrunlerPage({ params, searchParams }: Props) {
@@ -129,8 +155,28 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
   const baseParams = new URLSearchParams()
   Object.entries(searchParams).forEach(([k, v]) => { if (v && k !== 'sayfa') baseParams.set(k, v) })
 
+  // JSON-LD ItemList for SEO
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: activeCategory ? activeCategory.name : 'Tüm Ürünler',
+    url: `${getSiteUrl()}/urunler${activeCategory ? `/${activeCategory.slug}` : ''}`,
+    numberOfItems: products?.length || 0,
+    itemListElement: (products || []).map((p: any, index: number) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'Product',
+        name: p.ad,
+        url: `${getSiteUrl()}/urun/${p.slug}`,
+        image: p.fotograflar && p.fotograflar.length > 0 ? p.fotograflar[0] : `${getSiteUrl()}/logo.png`,
+      }
+    }))
+  }
+
   return (
     <div className="min-h-screen pb-24">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       
       {/* Kampanya / Banner Alanı */}
       <BannerCarousel banners={banners} />

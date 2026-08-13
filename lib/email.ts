@@ -308,7 +308,7 @@ export function siparisIptalHTML(data: { siparis_no: string; ad_soyad: string })
       ${label('Bize Ulaşın')}
       <div style="color:#ddd;font-size:14px;line-height:1.8">
         📞 <a href="tel:+903522316915" style="color:#DA291C;text-decoration:none">+90 352 231 69 15</a><br>
-        📧 <a href="mailto:info@akdagelektronik.com" style="color:#DA291C;text-decoration:none">info@akdagelektronik.com</a>
+        📧 <a href="mailto:info@akdagelektronik.com.tr" style="color:#DA291C;text-decoration:none">info@akdagelektronik.com.tr</a>
       </div>
     `)}
   `)
@@ -548,7 +548,7 @@ export function bayiAskiyaAlindiHTML(data: {
       ${label('Bize Ulaşın')}
       <div style="color:#ddd;font-size:14px;line-height:1.8">
         📞 <a href="tel:+903522316915" style="color:#DA291C;text-decoration:none">+90 352 231 69 15</a><br>
-        📧 <a href="mailto:info@akdagelektronik.com" style="color:#DA291C;text-decoration:none">info@akdagelektronik.com</a>
+        📧 <a href="mailto:info@akdagelektronik.com.tr" style="color:#DA291C;text-decoration:none">info@akdagelektronik.com.tr</a>
       </div>
     `)}
   `)

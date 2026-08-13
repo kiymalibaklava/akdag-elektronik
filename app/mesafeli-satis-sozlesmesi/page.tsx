@@ -49,7 +49,7 @@ export default function MesafeliSatisSozlesmesi() {
                   <li className="flex gap-2"><FileText size={13} className="text-brand-red shrink-0 mt-0.5" />Unvan: Akdağ Elektronik</li>
                   <li className="flex gap-2"><MapPin size={13} className="text-brand-red shrink-0 mt-0.5" />Adres: Cumhuriyet Mah. Sur Cad. No:17/A, Melikgazi / Kayseri</li>
                   <li className="flex gap-2"><Phone size={13} className="text-brand-red shrink-0 mt-0.5" />Telefon: +90 352 231 69 15</li>
-                  <li className="flex gap-2"><Mail size={13} className="text-brand-red shrink-0 mt-0.5" />E-posta: info@akdagelektronik.com</li>
+                  <li className="flex gap-2"><Mail size={13} className="text-brand-red shrink-0 mt-0.5" />E-posta: info@akdagelektronik.com.tr</li>
                 </ul>
               </div>
               <div className="bg-[#141414] border border-white/5 p-5">
@@ -126,7 +126,7 @@ export default function MesafeliSatisSozlesmesi() {
             <div className="font-display font-bold text-sm uppercase tracking-widest text-white mb-3">Sorularınız İçin</div>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <a href="tel:+903522316915" className="btn-primary text-sm"><Phone size={14} />+90 352 231 69 15</a>
-              <a href="mailto:info@akdagelektronik.com" className="btn-outline text-sm"><Mail size={14} />info@akdagelektronik.com</a>
+              <a href="mailto:info@akdagelektronik.com.tr" className="btn-outline text-sm"><Mail size={14} />info@akdagelektronik.com.tr</a>
             </div>
           </div>
 

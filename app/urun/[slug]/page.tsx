@@ -187,7 +187,7 @@ export default async function UrunDetayPage({ params }: Props) {
                   <Phone size={13} />
                   Hızlı Arama
                 </a>
-                <a href={`mailto:info@akdagelektronik.com?subject=${encodeURIComponent(`${product.ad} hakkında bilgi`)}`}
+                <a href={`mailto:info@akdagelektronik.com.tr?subject=${encodeURIComponent(`${product.ad} hakkında bilgi`)}`}
                   className="btn-outline text-xs justify-center py-3">
                   <Mail size={13} />E-posta
                 </a>

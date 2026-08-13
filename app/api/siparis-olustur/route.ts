@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
         `Siparişiniz Alındı — ${siparis.siparis_no} | Akdağ Elektronik`,
         musterionayHTML(emailData)
       )
-      const adminEmail = process.env.ADMIN_EMAIL || 'info@akdagelektronik.com'
+      const adminEmail = process.env.ADMIN_EMAIL || 'info@akdagelektronik.com.tr'
       await sendEmail(
         adminEmail,
         `🔔 Yeni Sipariş: ${siparis.siparis_no} — ${toplam_tutar.toLocaleString('tr-TR')} ₺`,

@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     const musteriEmail = siparis.email
 
     // Admin'e dekont bildirimi
-    const adminEmail = process.env.ADMIN_EMAIL || 'info@akdagelektronik.com'
+    const adminEmail = process.env.ADMIN_EMAIL || 'info@akdagelektronik.com.tr'
     await sendEmail(
       adminEmail,
       `📄 Yeni Dekont Yüklendi: ${siparis_no}`,

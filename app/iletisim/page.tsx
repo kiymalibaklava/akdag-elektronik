@@ -1,14 +1,47 @@
 import { MapPin, Phone, Mail, Clock } from 'lucide-react'
 import IletisimForm from '@/components/IletisimForm'
+import type { Metadata } from 'next'
+import { getSiteUrl } from '@/lib/site-url'
 
-export const metadata = {
-  title: 'İletişim | Akdağ Elektronik',
-  description: 'Akdağ Elektronik iletişim bilgileri. Kayseri\'de ses, ışık ve görüntü sistemleri için bize ulaşın.',
+const title = 'İletişim | Akdağ Elektronik'
+const description = 'Akdağ Elektronik iletişim bilgileri. Kayseri\'de profesyonel ses, ışık ve görüntü sistemleri projeleriniz için bize ulaşın.'
+const url = `${getSiteUrl()}/iletisim`
+
+export const metadata: Metadata = {
+  title,
+  description,
+  alternates: { canonical: url },
+  openGraph: {
+    title,
+    description,
+    url,
+    siteName: 'Akdağ Elektronik',
+    type: 'website',
+    locale: 'tr_TR',
+  }
 }
 
 export default function IletisimPage() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ContactPage',
+    mainEntity: {
+      '@type': 'LocalBusiness',
+      name: 'Akdağ Elektronik',
+      image: `${getSiteUrl()}/logo.png`,
+      telephone: '+903522316915',
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: 'Serçeönü Mah. Ahievran Cad. No:24/A Kocasinan',
+        addressLocality: 'Kayseri',
+        addressCountry: 'TR'
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen pt-8 pb-24">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* Header */}
       <div className="bg-[#0A0A0A] border-b border-white/5 py-16">
         <div className="max-w-7xl mx-auto px-6">
@@ -70,8 +103,8 @@ export default function IletisimPage() {
                 </div>
                 <div>
                   <div className="font-display font-bold text-sm uppercase tracking-widest text-white mb-1">E-posta</div>
-                  <a href="mailto:info@akdagelektronik.com" className="font-body text-white/50 hover:text-brand-red transition-colors">
-                    info@akdagelektronik.com
+                  <a href="mailto:info@akdagelektronik.com.tr" className="font-body text-white/50 hover:text-brand-red transition-colors">
+                    info@akdagelektronik.com.tr
                   </a>
                 </div>
               </div>

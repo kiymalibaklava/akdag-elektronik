@@ -2,13 +2,28 @@ import { Award, Users, MapPin, Phone, Clock, CheckCircle, ArrowRight } from 'luc
 import Link from 'next/link'
 import type { Metadata } from 'next'
 
+import { getSiteUrl } from '@/lib/site-url'
+
+const title = 'Hakkımızda | Akdağ Elektronik'
+const description = 'Akdağ Elektronik hakkında bilgi edinin. Kayseri\'de 1976\'dan beri 50 yıllık tecrübeyle ses, ışık ve görüntü sistemleri uzmanı.'
+const url = `${getSiteUrl()}/hakkimizda`
+
 export const metadata: Metadata = {
-  title: 'Hakkımızda | Akdağ Elektronik',
-  description: 'Akdağ Elektronik hakkında bilgi edinin. Kayseri\'nin 25 yıllık ses, ışık ve görüntü sistemleri uzmanı.',
+  title,
+  description,
+  alternates: { canonical: url },
+  openGraph: {
+    title,
+    description,
+    url,
+    siteName: 'Akdağ Elektronik',
+    type: 'website',
+    locale: 'tr_TR',
+  }
 }
 
 const ekip = [
-  { ad: 'Mustafa Akdağ', unvan: 'Kurucu & Genel Müdür', tecrube: '25+ Yıl' },
+  { ad: 'Mustafa Akdağ', unvan: 'Kurucu & Genel Müdür', tecrube: '50+ Yıl' },
 ]
 
 const degerler = [
@@ -39,10 +54,30 @@ const referanslar = [
   'Türkiye Genelinde Çeşitli Kurum ve Kuruluşlar',
 ]
 
-export default function HakkimizdaPage() {
+export default function Hakkimizda() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Akdağ Elektronik',
+    url: getSiteUrl(),
+    logo: `${getSiteUrl()}/logo.png`,
+    foundingDate: '1976',
+    founder: {
+      '@type': 'Person',
+      name: 'Ahmet Akdağ'
+    },
+    description: description,
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Kayseri',
+      addressCountry: 'TR'
+    }
+  }
+
   return (
     <div className="min-h-screen pb-24">
-
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      
       {/* Hero */}
       <div className="relative bg-[#0A0A0A] border-b border-white/5 py-20 overflow-hidden">
         <div className="absolute inset-0 hero-grid opacity-40" />

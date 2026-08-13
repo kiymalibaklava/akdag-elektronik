@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Admin'e e-posta gönder
-    const adminEmail = process.env.ADMIN_EMAIL || 'info@akdagelektronik.com'
+    const adminEmail = process.env.ADMIN_EMAIL || 'info@akdagelektronik.com.tr'
     const mekanEtiketMap: Record<string, string> = {
       okul: 'Okul/Eğitim', cami: 'Cami ve İbadet Alanları', konferans: 'Konferans',
       spor: 'Spor Tesisi', hastane: 'Sağlık', diger: 'Diğer'
