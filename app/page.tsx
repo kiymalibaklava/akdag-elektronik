@@ -7,6 +7,8 @@ import BrandMarquee from '@/components/BrandMarquee'
 import FeaturedProducts from '@/components/FeaturedProducts'
 import StatCounter from '@/components/StatCounter'
 
+export const revalidate = 3600
+
 const categories = [
   { icon: Speaker, label: 'Ses Sistemleri', slug: 'ses-sistemleri', desc: 'Hoparlör, mikser, mikrofon ve amfi sistemleri', count: '120+' },
   { icon: Lightbulb, label: 'Işık Sistemleri', slug: 'isik-sistemleri', desc: 'Moving head, LED par, DMX kontrol ve efekt makineleri', count: '80+' },

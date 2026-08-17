@@ -30,11 +30,15 @@ export async function POST(req: NextRequest) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // Supabase davet — redirectTo verilmiyor.
-    // Bu sayede Supabase kendi supabase.co linkli davet mailini GÖNDERMEZ.
-    // Biz zaten aşağıda kendi markalı onay mailimizi Resend ile gönderiyoruz.
-    const { data: inviteData, error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: { firma_adi, yetkili_adi: yetkili_adi || '' },
+    // Supabase inviteUserByEmail varsayılan mailini zorla gönderdiği için createUser kullanıyoruz.
+    // Kullanıcı zaten aşağıdaki markalı onay mailimizde yer alan "Şifrenizi Belirleyin" 
+    // butonu üzerinden (şifre sıfırlama yoluyla) kendi şifresini alacak.
+    const tempPassword = Math.random().toString(36).slice(-12) + 'Aa1!'
+    const { data: inviteData, error: inviteErr } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { firma_adi, yetkili_adi: yetkili_adi || '' },
     })
 
     if (inviteErr) {

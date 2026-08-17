@@ -14,6 +14,10 @@ export async function POST(request: Request) {
     // dinamik olarak güncelliyoruz.
     revalidatePath('/')
     revalidatePath('/urunler')
+    
+    // unstable_cache ile fetch edilen verileri sıfırlamak için tag kullanıyoruz
+    const { revalidateTag } = require('next/cache')
+    revalidateTag('products')
 
     return NextResponse.json({
       revalidated: true,

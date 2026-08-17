@@ -12,7 +12,7 @@ import { getSiteUrl } from '@/lib/site-url'
 import { getBreadcrumbs } from '@/lib/categories'
 
 // ISR: 5 dakikada bir yenilenir — force-dynamic kaldırıldı, CDN cache devreye girdi
-export const revalidate = 300
+export const revalidate = 3600
 
 import { getProductBySlug } from '@/lib/product-service'
 

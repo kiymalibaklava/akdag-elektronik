@@ -13,7 +13,7 @@ import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
 import { unstable_cache } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const revalidate = 3600
 
 const PER_PAGE = 16
 
