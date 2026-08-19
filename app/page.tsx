@@ -6,6 +6,7 @@ import HeroParticles from '@/components/HeroParticles'
 import BrandMarquee from '@/components/BrandMarquee'
 import FeaturedProducts from '@/components/FeaturedProducts'
 import StatCounter from '@/components/StatCounter'
+import FaqSection from '@/components/FaqSection'
 
 export const revalidate = 3600
 
@@ -379,6 +380,39 @@ export default function HomePage() {
                   <div className="font-body text-white/60 text-sm">{item.label}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════
+          SIKÇA SORULAN SORULAR (FAQ SCHEMA)
+      ═══════════════════════════════════════════════ */}
+      <FaqSection />
+
+      {/* ═══════════════════════════════════════════════
+          SEO METİN BLOĞU (ÇÖZÜMLER)
+      ═══════════════════════════════════════════════ */}
+      <section className="py-24 bg-[#0F0F0F] relative">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-12 text-white/50 font-body text-sm leading-relaxed">
+            <div>
+              <h2 className="font-display font-bold text-2xl text-white mb-4 uppercase tracking-widest">Profesyonel Ses Sistemleri</h2>
+              <p className="mb-4">
+                Akdağ Elektronik olarak, Kayseri ve tüm Türkiye'ye profesyonel <strong>ses sistemleri</strong> çözümleri sunuyoruz. İster geniş çaplı bir <strong>fabrika ses sistemi</strong>, ister butik bir <strong>kafe ses sistemi</strong> arıyor olun, uzman ekibimizle ücretsiz keşif yaparak en doğru ürünleri belirliyoruz. 
+              </p>
+              <p>
+                <strong>Okul ses sistemi</strong> ve zil sistemleri konusunda Akustek Ana Bayisi olarak, yeni nesil akıllı okul saatleri ile eğitim kurumlarına kalıcı ve güvenilir çözümler üretiyoruz. Ayrıca <strong>cami ses sistemi</strong> projelerinde yankı ve akustiği dengeleyen özel kurulumlar gerçekleştiriyoruz.
+              </p>
+            </div>
+            <div>
+              <h2 className="font-display font-bold text-2xl text-white mb-4 uppercase tracking-widest">Sahne ve Konferans Sistemleri</h2>
+              <p className="mb-4">
+                Etkinlikleriniz için kusursuz bir deneyim sunan <strong>sahne ses sistemleri</strong>, line array hoparlörler ve ışık sistemleri ile projenizi A'dan Z'ye tasarlıyoruz. <strong>Konferans salonu ses sistemi</strong> kurulumlarımızda, delege mikrofonlarından görüntü sistemlerine kadar entegre yapılar kuruyoruz.
+              </p>
+              <p>
+                Kurumsal projelerinizde ve toptan ihtiyaçlarınızda <Link href="/bayi" className="text-brand-red hover:underline">Bayi Portalımız</Link> üzerinden özel iskonto oranlarıyla anında online teklif oluşturabilir, projelerinizi hızlandırabilirsiniz. En kaliteli markalar, rekabetçi fiyatlar ve 50 yıllık tecrübemizle yanınızdayız.
+              </p>
             </div>
           </div>
         </div>

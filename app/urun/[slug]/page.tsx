@@ -23,15 +23,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!product) return { title: 'Ürün Bulunamadı | Akdağ Elektronik' }
 
   const url = `${getSiteUrl()}/urun/${product.slug}`
-  const description = product.aciklama?.slice(0, 160) || `${product.ad} ürünü hakkında detaylı bilgi ve fiyatlar.`
+  
+  // SEO Optimizasyonu: Başlıkta ve açıklamada "Kullanım Alanı" ve "Marka" kullanarak 
+  // "Fabrika Ses Sistemi", "Cami Ses Sistemi" gibi aramalarda üst sıralara çıkmasını sağlıyoruz.
+  const seoAlan = product.kullanim_alani ? ` - ${product.kullanim_alani} Sistemleri` : ''
+  const seoMarka = product.marka ? `${product.marka} ` : ''
+  const seoTitle = `${seoMarka}${product.ad}${seoAlan} | Akdağ Elektronik`
+  
+  let description = product.aciklama?.slice(0, 150) || `${seoMarka}${product.ad} ürünü hakkında detaylı bilgi, teknik özellikler ve en uygun fiyatlar.`
+  if (product.kullanim_alani) {
+    description = `${product.kullanim_alani} sistemleri için ideal. ${description}`.slice(0, 160)
+  }
+
   const image = product.fotograflar?.[0] || `${getSiteUrl()}/og-image.jpg`
 
+  // Virgülle ayrılmış kullanım alanlarını veya kelimeleri SEO anahtar kelimelerine dönüştürüyoruz
+  const keywords = [product.ad, product.kategori, product.marka, product.kullanim_alani, "ses sistemi", "profesyonel ses"].filter(Boolean).join(', ')
+
   return {
-    title: `${product.ad} | Akdağ Elektronik`,
+    title: seoTitle,
     description,
+    keywords,
     alternates: { canonical: url },
     openGraph: {
-      title: product.ad,
+      title: seoTitle,
       description,
       url,
       siteName: 'Akdağ Elektronik',
@@ -40,7 +55,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: 'summary_large_image',
-      title: product.ad,
+      title: seoTitle,
       description,
       images: [image],
     },
