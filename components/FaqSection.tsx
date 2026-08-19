@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
@@ -6,7 +6,7 @@ import { ChevronDown } from 'lucide-react'
 const faqs = [
   {
     q: "Hangi bölgelere hizmet veriyorsunuz?",
-    a: "Kayseri merkezli mağazamızdan tüm Türkiye'ye hızlı kargo ile ürün gönderimi yapmaktayız. Ayrıca okul, cami, fabrika ve konferans salonu gibi büyük ses sistemi projelerinde Türkiye'nin her yerine kurulum ve mühendislik hizmeti sunuyoruz."
+    a: "Kayseri merkezli mağazamızdan tüm Türkiye'ye hızlı kargo ile ürün gönderimi yapmaktayız. Ayrıca okul, cami, fabrika ve konferans salonu gibi büyük ses sistemi projelerinde Kayseri ve çevre illerine profesyonel kurulum ve mühendislik hizmeti sunuyoruz."
   },
   {
     q: "Okul ve Cami ses sistemleri kurulumu yapıyor musunuz?",
