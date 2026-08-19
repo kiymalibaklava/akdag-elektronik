@@ -92,16 +92,27 @@ export default function SepetPage() {
       const u = session?.user ?? null
       setUser(u)
       if (u) {
+        // Otomatik email doldur (eğer formda boşsa)
+        setEmail(prev => prev || u.email || '')
+        
         supabase
           .from('bayiler')
-          .select('id, firma_adi, onaylandi')
+          .select('id, firma_adi, onaylandi, telefon, yetkili_adi, sehir')
           .eq('user_id', u.id)
           .maybeSingle()
-          .then((res: { data: BayiRow | null }) => {
+          .then((res: { data: any | null }) => {
             setBayi(res.data)
-            if (res.data?.onaylandi) {
-              setFaturaTipi('kurumsal')
-              setFirmaUnvani(res.data.firma_adi)
+            if (res.data) {
+              // Bayi bilgilerinden otomatik doldur
+              setTelefon(prev => prev || res.data.telefon || '')
+              setAdSoyad(prev => prev || res.data.yetkili_adi || u.user_metadata?.full_name || '')
+              
+              if (res.data.onaylandi) {
+                setFaturaTipi('kurumsal')
+                setFirmaUnvani(prev => prev || res.data.firma_adi || '')
+              }
+            } else {
+              setAdSoyad(prev => prev || u.user_metadata?.full_name || '')
             }
           })
       }

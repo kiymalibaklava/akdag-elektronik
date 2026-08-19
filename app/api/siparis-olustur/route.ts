@@ -149,6 +149,12 @@ export async function POST(req: NextRequest) {
       notlar: notlar ?? undefined,
       is_bayi,
       bayi_adi: bayi_adi ?? undefined,
+      fatura_tipi: fatura_tipi || 'bireysel',
+      firma_unvani: firma_unvani || undefined,
+      vergi_dairesi: vergi_dairesi || undefined,
+      vergi_no: vergi_no || undefined,
+      teslimat_tipi: teslimat_tipi || 'kargo',
+      teslimat_adresi: teslimat_adresi || undefined,
     }
 
     // E-postaları ayrı try/catch ile gönder — mail hatası siparişi engellemesin

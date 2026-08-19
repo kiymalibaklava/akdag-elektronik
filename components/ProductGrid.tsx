@@ -130,13 +130,13 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
         </div>
       )}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1 md:gap-2">
-        {products.map((p) => <ProductCard key={p.id} product={p} isBayi={isBayi || isBayiAuth} kur={kur} showPrice={showPrice} />)}
+        {products.map((p, index) => <ProductCard key={p.id} product={p} index={index} isBayi={isBayi || isBayiAuth} kur={kur} showPrice={showPrice} />)}
       </div>
     </>
   )
 }
 
-export const ProductCard = memo(function ProductCard({ product, isBayi = false, kur, showPrice = false }: { product: Product; isBayi?: boolean; kur?: KurData; showPrice?: boolean }) {
+export const ProductCard = memo(function ProductCard({ product, index = 0, isBayi = false, kur, showPrice = false }: { product: Product; index?: number; isBayi?: boolean; kur?: KurData; showPrice?: boolean }) {
   const kurData = kur || { USD: 32.5, EUR: 35.2, guncelleme: null }
   const pb = product.para_birimi || 'TRY'
   const bayiPb = product.bayi_para_birimi || pb
@@ -226,6 +226,8 @@ export const ProductCard = memo(function ProductCard({ product, isBayi = false, 
         <div className="aspect-square bg-[#1A1A1A] relative overflow-hidden">
           {product.fotograflar?.[0] ? (
             <Image src={product.fotograflar[0]} alt={product.ad} fill
+              priority={index < 8}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
@@ -307,9 +309,8 @@ export const ProductCard = memo(function ProductCard({ product, isBayi = false, 
               </>
             ) : (
               /* Fiyat gizli — WhatsApp bilgi metni (link değil, düz text) */
-              <div className="flex items-center gap-1.5 bg-green-600/15 border border-green-500/25 px-2.5 py-1.5 text-green-400">
-                <MessageCircle size={13} className="flex-shrink-0" />
-                <span className="font-display font-semibold text-[10px] tracking-wider uppercase">WhatsApp ile Ücretöğren ↓</span>
+              <div className="flex items-center gap-1 text-white/30 pt-1">
+                <span className="font-display font-semibold text-[10px] tracking-wider uppercase">Fiyat için alttan ulaşın</span>
               </div>
             )}
 
@@ -344,17 +345,17 @@ export const ProductCard = memo(function ProductCard({ product, isBayi = false, 
       <div className="border-t border-white/5 p-2">
         {showPrice && product.fiyat && stok !== 'tukendi' ? (
           /* Bayi giriş yapmış veya fiyat görünen kullanıcı — Sepete Ekle butonu */
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
             <button
               type="button"
-              className={`flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${fav ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
+              className={`hidden md:flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${fav ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
               onClick={(e) => { e.stopPropagation(); setFav(toggleFavorite(asSaved())) }}
             >
               <Heart size={12} />
             </button>
             <button
               type="button"
-              className={`flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${cmp ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
+              className={`hidden md:flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${cmp ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
               onClick={(e) => {
                 e.stopPropagation()
                 const next = toggleCompare(asSaved())
@@ -379,17 +380,17 @@ export const ProductCard = memo(function ProductCard({ product, isBayi = false, 
           </div>
         ) : (
           /* Fiyat gizli veya stok yok — Favori, Karşılaştır, WhatsApp */
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
             <button
               type="button"
-              className={`flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${fav ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
+              className={`hidden md:flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${fav ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
               onClick={() => setFav(toggleFavorite(asSaved()))}
             >
               <Heart size={12} />
             </button>
             <button
               type="button"
-              className={`flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${cmp ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
+              className={`hidden md:flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${cmp ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
               onClick={() => {
                 const next = toggleCompare(asSaved())
                 if (next.overflow) { alert('Karşılaştırma listesi en fazla 4 ürün olabilir.'); return }

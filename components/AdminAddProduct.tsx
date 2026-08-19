@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { Upload, Plus, X, Check, AlertCircle, Tag, ChevronRight } from 'lucide-react'
 import { PARA_BIRIMLERI } from '@/lib/kur'
-import { compressImage, formatFileSize } from './ImageCompressor'
+import imageCompression from 'browser-image-compression'
+import { formatFileSize } from './ImageCompressor'
 import { NEW_KATEGORI_HIYERARSI, type CategoryNode } from '@/lib/categories'
 
 interface FileEntry {
@@ -117,10 +118,28 @@ export default function AdminAddProduct({ onAdded, initialData }: Props) {
       if (file.size > 20 * 1024 * 1024) { setError(`"${file.name}" max 20MB.`); continue }
       const preview = URL.createObjectURL(file)
       setEntries(p => [...p, { file, preview, originalSize: file.size, compressing: true }])
-      const compressed = await compressImage(file)
-      setEntries(p => p.map(e => e.preview === preview
-        ? { ...e, file: compressed, compressedSize: compressed.size, compressing: false }
-        : e))
+      
+      try {
+        const options = {
+          maxSizeMB: 0.4, // Max ~400KB
+          maxWidthOrHeight: 1600, // Detaylar okunsun diye 1600px yeterince büyük
+          useWebWorker: true,
+          fileType: 'image/webp', // WebP çok daha iyi sıkıştırır
+          initialQuality: 0.8
+        }
+        const compressedBlob = await imageCompression(file, options)
+        const compressedFile = new File([compressedBlob], file.name.replace(/\.[^/.]+$/, ".webp"), { type: 'image/webp' })
+        
+        setEntries(p => p.map(e => e.preview === preview
+          ? { ...e, file: compressedFile, compressedSize: compressedFile.size, compressing: false }
+          : e))
+      } catch (error) {
+        console.error("Compression error:", error)
+        // Hata olursa orijinal dosyayı tut (çökmeyi önler)
+        setEntries(p => p.map(e => e.preview === preview
+          ? { ...e, compressing: false }
+          : e))
+      }
     }
     e.target.value = ''
   }

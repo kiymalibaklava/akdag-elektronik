@@ -132,6 +132,12 @@ export interface SiparisEmailData {
   notlar?: string
   is_bayi?: boolean
   bayi_adi?: string
+  fatura_tipi?: string
+  firma_unvani?: string
+  vergi_dairesi?: string
+  vergi_no?: string
+  teslimat_tipi?: string
+  teslimat_adresi?: string
 }
 
 export function musterionayHTML(data: SiparisEmailData): string {
@@ -370,6 +376,27 @@ export function adminBildirimHTML(data: SiparisEmailData): string {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.akdagelektronik.com'
 
+  const kargoHTML = data.teslimat_tipi === 'kargo' && data.teslimat_adresi
+    ? `<div style="background:#141414;border:1px solid #222;padding:16px 24px;margin-bottom:12px">
+         <div style="color:#888;font-size:11px;text-transform:uppercase;margin-bottom:4px">Teslimat Adresi (Kargo)</div>
+         <div style="color:#ddd;font-size:13px">${data.teslimat_adresi}</div>
+       </div>`
+    : `<div style="background:#141414;border:1px solid #222;padding:16px 24px;margin-bottom:12px">
+         <div style="color:#888;font-size:11px;text-transform:uppercase;margin-bottom:4px">Teslimat Yöntemi</div>
+         <div style="color:#ddd;font-size:13px">Mağazadan Teslim</div>
+       </div>`
+
+  const faturaHTML = data.fatura_tipi === 'kurumsal'
+    ? `<div style="background:#141414;border:1px solid #222;padding:16px 24px;margin-bottom:12px">
+         <div style="color:#888;font-size:11px;text-transform:uppercase;margin-bottom:4px">Kurumsal Fatura</div>
+         <div style="color:#fff;font-size:14px;font-weight:bold">${data.firma_unvani}</div>
+         <div style="color:#ccc;font-size:13px;margin-top:2px">V.D: ${data.vergi_dairesi} | V.No: ${data.vergi_no}</div>
+       </div>`
+    : `<div style="background:#141414;border:1px solid #222;padding:16px 24px;margin-bottom:12px">
+         <div style="color:#888;font-size:11px;text-transform:uppercase;margin-bottom:4px">Bireysel Fatura</div>
+         <div style="color:#ddd;font-size:13px">${data.ad_soyad} adına düzenlenecek</div>
+       </div>`
+
   return `<!DOCTYPE html>
 <html lang="tr">
 <body style="${BASE_STYLE}">
@@ -383,6 +410,10 @@ export function adminBildirimHTML(data: SiparisEmailData): string {
     <div style="color:#888;font-size:13px">${data.email} | ${data.telefon}</div>
     ${data.is_bayi ? `<div style="color:#DA291C;font-size:12px;margin-top:4px">🏢 Bayi: ${data.bayi_adi}</div>` : ''}
   </div>
+
+  ${faturaHTML}
+  ${kargoHTML}
+
   <div style="background:#141414;border:1px solid #222;margin-bottom:12px">
     <table style="width:100%;border-collapse:collapse">${urunlerHTML}
       <tr>

@@ -15,7 +15,7 @@ import { unstable_cache } from 'next/cache'
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600
 
-const PER_PAGE = 16
+const PER_PAGE = 20
 
 // Filtre seçeneklerini cache-leyerek egress tasarrufu yapıyoruz
 const getCachedFilters = unstable_cache(
