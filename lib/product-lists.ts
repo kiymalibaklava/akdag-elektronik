@@ -13,8 +13,6 @@ export interface SavedProduct {
 }
 
 const FAV_KEY = 'akdag-favoriler'
-const CMP_KEY = 'akdag-karsilastirma'
-const MAX_COMPARE = 4
 
 function getList(key: string): SavedProduct[] {
   if (typeof window === 'undefined') return []
@@ -34,16 +32,8 @@ export function getFavorites() {
   return getList(FAV_KEY)
 }
 
-export function getCompareList() {
-  return getList(CMP_KEY)
-}
-
 export function isFavorite(id: string) {
   return getFavorites().some((x) => x.id === id)
-}
-
-export function isCompared(id: string) {
-  return getCompareList().some((x) => x.id === id)
 }
 
 export function toggleFavorite(product: SavedProduct) {
@@ -57,24 +47,4 @@ export function toggleFavorite(product: SavedProduct) {
   }
   setList(FAV_KEY, [product, ...list])
   return true
-}
-
-export function toggleCompare(product: SavedProduct) {
-  const list = getCompareList()
-  if (list.some((x) => x.id === product.id)) {
-    setList(
-      CMP_KEY,
-      list.filter((x) => x.id !== product.id)
-    )
-    return { active: false, overflow: false }
-  }
-  if (list.length >= MAX_COMPARE) {
-    return { active: false, overflow: true }
-  }
-  setList(CMP_KEY, [...list, product])
-  return { active: true, overflow: false }
-}
-
-export function clearCompareList() {
-  setList(CMP_KEY, [])
 }

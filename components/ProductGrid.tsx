@@ -3,14 +3,11 @@
 import { useEffect, useState, memo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, GitCompare, Heart, MessageCircle, Package, Search, ShoppingCart, Check, Tag } from 'lucide-react'
+import { ArrowRight, Heart, MessageCircle, Package, Search, ShoppingCart, Check, Tag } from 'lucide-react'
 import { dovizToTL, formatFiyat, type KurData } from '@/lib/kur'
 import { addToCart } from '@/lib/cart'
 import {
-  getCompareList,
-  isCompared,
   isFavorite,
-  toggleCompare,
   toggleFavorite,
   type SavedProduct,
 } from '@/lib/product-lists'
@@ -55,7 +52,6 @@ function useKur() {
 
 export default function ProductGrid({ products, suggested, searchQuery, isBayi = false, showPrice: showPriceProp }: Props) {
   const kur = useKur()
-  const [compareCount, setCompareCount] = useState(0)
   const [authChecked, setAuthChecked] = useState(false)
   const [isBayiAuth, setIsBayiAuth] = useState(false)
 
@@ -77,22 +73,9 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
 
   const showPrice = isBayi || isBayiAuth
 
-  useEffect(() => {
-    const sync = () => setCompareCount(getCompareList().length)
-    sync()
-    window.addEventListener('product-lists-updated', sync)
-    return () => window.removeEventListener('product-lists-updated', sync)
-  }, [])
-
   if (products.length === 0) {
     return (
       <div>
-        {compareCount > 0 && (
-          <div className="mb-5 flex items-center justify-between border border-white/10 bg-[#141414] px-4 py-3">
-            <span className="font-body text-white/50 text-sm">{compareCount} ürün karşılaştırma listesinde</span>
-            <Link href="/karsilastir" className="btn-outline text-xs">Karşılaştırmaya Git</Link>
-          </div>
-        )}
         <div className="text-center py-20 border border-white/5 bg-[#141414] mb-12">
           <Search size={40} className="text-white/10 mx-auto mb-4" />
           <p className="font-display font-bold text-lg uppercase text-white/20 tracking-widest mb-2">Sonuç Bulunamadı</p>
@@ -123,12 +106,6 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
 
   return (
     <>
-      {compareCount > 0 && (
-        <div className="mb-5 flex items-center justify-between border border-white/10 bg-[#141414] px-4 py-3">
-          <span className="font-body text-white/50 text-sm">{compareCount} ürün karşılaştırma listesinde</span>
-          <Link href="/karsilastir" className="btn-outline text-xs">Karşılaştırmaya Git</Link>
-        </div>
-      )}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1 md:gap-2">
         {products.map((p, index) => <ProductCard key={p.id} product={p} index={index} isBayi={isBayi || isBayiAuth} kur={kur} showPrice={showPrice} />)}
       </div>
@@ -156,7 +133,6 @@ export const ProductCard = memo(function ProductCard({ product, index = 0, isBay
     ? Math.round((1 - bayiFiyatTL / normalFiyatTL) * 100)
     : 0
   const [fav, setFav] = useState(false)
-  const [cmp, setCmp] = useState(false)
   const [cartAdded, setCartAdded] = useState(false)
   const stockCount = product.stok_adedi ?? null
   const isCritical =
@@ -167,7 +143,6 @@ export const ProductCard = memo(function ProductCard({ product, index = 0, isBay
 
   useEffect(() => {
     setFav(isFavorite(product.id))
-    setCmp(isCompared(product.id))
   }, [product.id])
 
   const asSaved = (): SavedProduct => ({
@@ -345,25 +320,13 @@ export const ProductCard = memo(function ProductCard({ product, index = 0, isBay
       <div className="border-t border-white/5 p-2">
         {showPrice && product.fiyat && stok !== 'tukendi' ? (
           /* Bayi giriş yapmış veya fiyat görünen kullanıcı — Sepete Ekle butonu */
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
             <button
               type="button"
               className={`hidden md:flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${fav ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
               onClick={(e) => { e.stopPropagation(); setFav(toggleFavorite(asSaved())) }}
             >
               <Heart size={12} />
-            </button>
-            <button
-              type="button"
-              className={`hidden md:flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${cmp ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
-              onClick={(e) => {
-                e.stopPropagation()
-                const next = toggleCompare(asSaved())
-                if (next.overflow) { alert('Karşılaştırma listesi en fazla 4 ürün olabilir.'); return }
-                setCmp(next.active)
-              }}
-            >
-              <GitCompare size={12} />
             </button>
             <button
               type="button"
@@ -380,24 +343,13 @@ export const ProductCard = memo(function ProductCard({ product, index = 0, isBay
           </div>
         ) : (
           /* Fiyat gizli veya stok yok — Favori, Karşılaştır, WhatsApp */
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
             <button
               type="button"
               className={`hidden md:flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${fav ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
               onClick={() => setFav(toggleFavorite(asSaved()))}
             >
               <Heart size={12} />
-            </button>
-            <button
-              type="button"
-              className={`hidden md:flex items-center justify-center px-2 py-1.5 border text-xs transition-all duration-200 ${cmp ? 'border-brand-red text-brand-red bg-brand-red/10' : 'border-white/10 text-white/40 hover:border-brand-red hover:text-brand-red'}`}
-              onClick={() => {
-                const next = toggleCompare(asSaved())
-                if (next.overflow) { alert('Karşılaştırma listesi en fazla 4 ürün olabilir.'); return }
-                setCmp(next.active)
-              }}
-            >
-              <GitCompare size={12} />
             </button>
             <button
               type="button"
