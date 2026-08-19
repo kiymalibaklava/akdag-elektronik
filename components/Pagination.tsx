@@ -5,13 +5,14 @@ interface Props {
   currentPage: number
   totalPages: number
   baseParams: string
+  basePath?: string
 }
 
-export default function Pagination({ currentPage, totalPages, baseParams }: Props) {
+export default function Pagination({ currentPage, totalPages, baseParams, basePath = '/urunler' }: Props) {
   const getPageUrl = (page: number) => {
     const params = new URLSearchParams(baseParams)
     params.set('sayfa', String(page))
-    return `/urunler?${params.toString()}`
+    return `${basePath}?${params.toString()}`
   }
 
   // Sayfa numaralarını hesapla (max 5 göster)

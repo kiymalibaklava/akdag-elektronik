@@ -209,6 +209,7 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
           </div>
           <form className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
             <div className="space-y-2">
+              {searchParams.q && <input type="hidden" name="q" value={searchParams.q} />}
               <label className="block text-[9px] font-display font-bold uppercase text-white/20 tracking-widest">Marka</label>
               <select name="marka" defaultValue={searchParams.marka || 'tum'} className="input-dark text-xs py-3 border-white/10 hover:border-brand-red/30 transition-colors appearance-none cursor-pointer">
                 <option value="tum">TÜM MARKALAR</option>
@@ -324,6 +325,7 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
               currentPage={sayfa}
               totalPages={totalPages}
               baseParams={baseParams.toString()}
+              basePath={slugArray.length > 0 ? `/urunler/${slugArray.join('/')}` : '/urunler'}
             />
           </div>
         )}
