@@ -53,6 +53,8 @@ import type { Metadata } from 'next'
 
 import { getSiteUrl } from '@/lib/site-url'
 
+import { buildCanonicalUrl } from '@/lib/seo-utils'
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const isAllProducts = !params.slug || params.slug.length === 0
   const category = !isAllProducts ? findCategoryBySlug(params.slug || []) : null
@@ -75,18 +77,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     
   const description = `${baseDesc} Uygun fiyat, Kayseri içi stoktan teslim ve teknik destek avantajıyla ürünleri hemen inceleyin!`.substring(0, 155)
 
-  const url = isAllProducts 
-    ? `${getSiteUrl()}/urunler` 
-    : `${getSiteUrl()}/urunler/${(params.slug || []).join('/')}`
+  // Canonical URL Entegrasyonu
+  const rawPath = isAllProducts 
+    ? '/urunler' 
+    : `/urunler/${(params.slug || []).join('/')}`
+    
+  const canonicalUrl = buildCanonicalUrl(rawPath)
 
   return {
     title,
     description,
-    alternates: { canonical: url },
+    alternates: { canonical: canonicalUrl },
     openGraph: {
       title,
       description,
-      url,
+      url: canonicalUrl,
       siteName: 'Akdağ Elektronik',
       type: 'website',
       locale: 'tr_TR',

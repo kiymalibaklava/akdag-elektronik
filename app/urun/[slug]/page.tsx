@@ -15,6 +15,7 @@ import { getBreadcrumbs } from '@/lib/categories'
 export const revalidate = 3600
 
 import { getProductBySlug, getAllProductSlugs } from '@/lib/product-service'
+import { buildCanonicalUrl, enforceSlugRedirect } from '@/lib/seo-utils'
 
 interface Props { params: { slug: string } }
 
@@ -30,12 +31,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { data: product } = await getProductBySlug(params.slug)
   if (!product) return { title: 'Ürün Bulunamadı | Akdağ Elektronik' }
 
-  const url = `${getSiteUrl()}/urun/${product.slug}`
+  const canonicalUrl = buildCanonicalUrl(`/urun/${product.slug || product.id}`)
   
   // SEO: 55-60 Karakter Title Optimizasyonu
   let seoTitle = `${product.marka ? product.marka + ' ' : ''}${product.ad}`.trim()
   if (seoTitle.length > 35) {
-    // Eğer başlık çok uzunsa sadece marka ve model ile Akdağ'ı bırak
     seoTitle = `${seoTitle.substring(0, 35)}... | Akdağ Elektronik`
   } else {
     seoTitle = `${seoTitle} Fiyatı ve Özellikleri | Akdağ Elektronik`
@@ -51,18 +51,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const image = product.fotograflar?.[0] || `${getSiteUrl()}/og-image.jpg`
 
-  // Virgülle ayrılmış kullanım alanlarını veya kelimeleri SEO anahtar kelimelerine dönüştürüyoruz
   const keywords = [product.ad, product.kategori, product.marka, product.kullanim_alani, "ses sistemi", "profesyonel ses"].filter(Boolean).join(', ')
 
   return {
     title: seoTitle,
     description,
     keywords,
-    alternates: { canonical: url },
+    alternates: { canonical: canonicalUrl },
     openGraph: {
       title: seoTitle,
       description,
-      url,
+      url: canonicalUrl,
       siteName: 'Akdağ Elektronik',
       images: [{ url: image, width: 1200, height: 630, alt: product.ad }],
       type: 'website',
@@ -81,11 +80,8 @@ export default async function UrunDetayPage({ params }: Props) {
   const { data: product } = await getProductBySlug(params.slug)
   if (!product) notFound()
 
-  // SEO için: Eğer link UUID ile girilmişse ve ürünün bir slug'ı varsa, slug linkine yönlendir (301)
-  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.slug)
-  if (isUUID && product.slug) {
-    redirect(`/urun/${product.slug}`)
-  }
+  // SEO: Strict 301 Redirect for UUID -> Slug resolution
+  enforceSlugRedirect(params.slug, product.slug, '/urun')
 
   // isBayi client-side detect ediliyor (UrunFiyatGosterge + AddToCartButton kendi içinde
   // supabase.auth.getSession() yapıyor). Server-side Supabase client'ta cookie olmadığından
