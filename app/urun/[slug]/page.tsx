@@ -14,9 +14,17 @@ import { getBreadcrumbs } from '@/lib/categories'
 // ISR: 5 dakikada bir yenilenir — force-dynamic kaldırıldı, CDN cache devreye girdi
 export const revalidate = 3600
 
-import { getProductBySlug } from '@/lib/product-service'
+import { getProductBySlug, getAllProductSlugs } from '@/lib/product-service'
 
 interface Props { params: { slug: string } }
+
+// Next.js Build aşamasında bu sayfaları statik HTML olarak üretir (Ultra Hızlı Yükleme)
+export async function generateStaticParams() {
+  const slugs = await getAllProductSlugs()
+  return slugs.map((p) => ({
+    slug: p.slug || p.id,
+  }))
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { data: product } = await getProductBySlug(params.slug)
@@ -24,16 +32,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const url = `${getSiteUrl()}/urun/${product.slug}`
   
-  // SEO Optimizasyonu: Başlıkta ve açıklamada "Kullanım Alanı" ve "Marka" kullanarak 
-  // "Fabrika Ses Sistemi", "Cami Ses Sistemi" gibi aramalarda üst sıralara çıkmasını sağlıyoruz.
-  const seoAlan = product.kullanim_alani ? ` - ${product.kullanim_alani} Sistemleri` : ''
-  const seoMarka = product.marka ? `${product.marka} ` : ''
-  const seoTitle = `${seoMarka}${product.ad}${seoAlan} | Akdağ Elektronik`
-  
-  let description = product.aciklama?.slice(0, 150) || `${seoMarka}${product.ad} ürünü hakkında detaylı bilgi, teknik özellikler ve en uygun fiyatlar.`
-  if (product.kullanim_alani) {
-    description = `${product.kullanim_alani} sistemleri için ideal. ${description}`.slice(0, 160)
+  // SEO: 55-60 Karakter Title Optimizasyonu
+  let seoTitle = `${product.marka ? product.marka + ' ' : ''}${product.ad}`.trim()
+  if (seoTitle.length > 35) {
+    // Eğer başlık çok uzunsa sadece marka ve model ile Akdağ'ı bırak
+    seoTitle = `${seoTitle.substring(0, 35)}... | Akdağ Elektronik`
+  } else {
+    seoTitle = `${seoTitle} Fiyatı ve Özellikleri | Akdağ Elektronik`
   }
+  
+  // SEO: 140-155 Karakter Description Optimizasyonu ve CTA
+  const baseDesc = product.aciklama ? product.aciklama.replace(/<[^>]*>?/gm, '').trim() : ''
+  let description = `${product.marka ? product.marka + ' ' : ''}${product.ad} modeli profesyonel performanslar için stoklarımızda.`
+  if (baseDesc) {
+    description = `${description} ${baseDesc}`.substring(0, 110)
+  }
+  description = `${description}... En uygun fiyat ve teknik destek avantajıyla hemen inceleyin!`
 
   const image = product.fotograflar?.[0] || `${getSiteUrl()}/og-image.jpg`
 
@@ -77,10 +91,44 @@ export default async function UrunDetayPage({ params }: Props) {
   // supabase.auth.getSession() yapıyor). Server-side Supabase client'ta cookie olmadığından
   // session zaten null dönüyordu — bu check gereksizdi ve sayfayı dynamic yapıyordu.
 
-  const { data: related } = await supabase
-    .from('urunler')
-    .select('id, slug, ad, kategori, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi')
-    .eq('kategori', product.kategori).neq('id', product.id).limit(4)
+  // BENZER ÜRÜNLER ALGORİTMASI: Önce aynı alt_kategori'den getir, yetmezse aynı kategori'den tamamla.
+  let relatedCandidates: any[] = []
+  
+  // 1. Adım: Önce aynı alt kategoriye (Örn: Analog Mikser) ait ürünleri çek (Maksimum 20 tane al ki içinden rastgele seçebilelim)
+  if (product.alt_kategori) {
+    const { data: altKatData } = await supabase
+      .from('urunler')
+      .select('id, slug, ad, kategori, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi')
+      .eq('kategori', product.kategori)
+      .eq('alt_kategori', product.alt_kategori)
+      .neq('id', product.id)
+      .limit(20)
+    if (altKatData) relatedCandidates = [...altKatData]
+  }
+
+  // 2. Adım: Eğer aynı alt kategoriden 4'ten az ürün geldiyse (veya alt kategori yoksa), aynı ana kategoriden ürünlerle tamamla
+  if (relatedCandidates.length < 4) {
+    const { data: anaKatData } = await supabase
+      .from('urunler')
+      .select('id, slug, ad, kategori, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi')
+      .eq('kategori', product.kategori)
+      .neq('id', product.id)
+      .limit(20)
+      
+    if (anaKatData) {
+      // Zaten listede olanları tekrar ekleme
+      const existingIds = new Set(relatedCandidates.map(r => r.id))
+      const newItems = anaKatData.filter(r => !existingIds.has(r.id))
+      relatedCandidates = [...relatedCandidates, ...newItems]
+    }
+  }
+
+  // 3. Adım: Adayları JavaScript ile karıştır (Fisher-Yates Shuffle) ve ilk 4 tanesini al
+  for (let i = relatedCandidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [relatedCandidates[i], relatedCandidates[j]] = [relatedCandidates[j], relatedCandidates[i]]
+  }
+  const related = relatedCandidates.slice(0, 4)
 
   const stok = product.stok_durumu || 'stokta'
   const base = getSiteUrl()

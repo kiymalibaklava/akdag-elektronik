@@ -70,10 +70,12 @@ export const metadata: Metadata = {
 
 const orgJsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'Organization',
+  '@type': 'LocalBusiness',
   name: 'Akdağ Elektronik',
+  description: 'Kayseri profesyonel ses, ışık ve görüntü sistemleri firması. Cami, okul ve sahneler için ekipman satışı ve kurulumu.',
   url: getSiteUrl(),
   telephone: '+90-352-231-69-15',
+  email: 'info@akdagelektronik.com.tr',
   address: {
     '@type': 'PostalAddress',
     streetAddress: 'Cumhuriyet Mah. Sur Cad. No:17/A',
@@ -82,6 +84,13 @@ const orgJsonLd = {
     postalCode: '38040',
     addressCountry: 'TR',
   },
+  geo: {
+    '@type': 'GeoCoordinates',
+    latitude: '38.7176', // Temsili koordinatlar
+    longitude: '35.4839'
+  },
+  openingHours: 'Mo,Tu,We,Th,Fr,Sa 09:00-19:00',
+  priceRange: '$$'
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

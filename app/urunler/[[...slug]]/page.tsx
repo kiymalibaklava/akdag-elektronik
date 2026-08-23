@@ -57,13 +57,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const isAllProducts = !params.slug || params.slug.length === 0
   const category = !isAllProducts ? findCategoryBySlug(params.slug || []) : null
 
-  const title = isAllProducts 
-    ? 'Tüm Ürünler | Akdağ Elektronik' 
-    : `${category?.name || 'Ürünler'} | Akdağ Elektronik`
+  // SEO: 55-60 Karakter Title Optimizasyonu
+  let title = isAllProducts 
+    ? 'Tüm Ürünler ve Profesyonel Ses Sistemleri' 
+    : `${category?.name || 'Ürünler'}`
   
-  const description = isAllProducts
-    ? 'Akdağ Elektronik geniş ürün yelpazesi: Profesyonel ses sistemleri, amfiler, hoparlörler, mikrofonlar ve sahne ışıklandırmaları.'
-    : `${category?.name || 'Ürün'} kategorisindeki en kaliteli ve profesyonel cihazları Akdağ Elektronik güvencesiyle inceleyin.`
+  if (title.length > 35) {
+    title = `${title.substring(0, 35)}... | Akdağ Elektronik`
+  } else {
+    title = `${title} | Akdağ Elektronik`
+  }
+  
+  // SEO: 140-155 Karakter Description Optimizasyonu ve CTA
+  const baseDesc = isAllProducts
+    ? 'Profesyonel ses, ışık ve sahne sistemlerinde aradığınız tüm ürünler.'
+    : `${category?.name || 'Ürün'} kategorisindeki en iyi profesyonel ses cihazları.`
+    
+  const description = `${baseDesc} Uygun fiyat, Kayseri içi stoktan teslim ve teknik destek avantajıyla ürünleri hemen inceleyin!`.substring(0, 155)
 
   const url = isAllProducts 
     ? `${getSiteUrl()}/urunler` 
@@ -198,16 +208,27 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
           </div>
         </div>
       </div>
-
+      
       <div className="max-w-7xl mx-auto px-6 pt-16">
-        
-        {/* Akıllı Filtre Paneli (Madde 3) */}
-        <div className="bg-[#111111] border border-white/5 p-6 mb-12">
-          <div className="flex items-center gap-2 mb-6">
-            <SlidersHorizontal size={14} className="text-brand-red" />
-            <span className="font-display font-bold text-[10px] tracking-[0.2em] uppercase text-white/40">FİLTRELEME SEÇENEKLERİ</span>
-          </div>
-          <form className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+        {/* Akıllı Filtre Paneli (Madde 3) - Mobil Uyumlu */}
+        <div className="bg-[#111111] border border-white/5 mb-12">
+          {/* Mobil Toggle Checkbox (Sadece mobilde çalışacak şekilde ayarlandı) */}
+          <input type="checkbox" id="mobile-filter-toggle" className="peer hidden" />
+          
+          <label htmlFor="mobile-filter-toggle" className="p-4 sm:p-6 flex items-center justify-between cursor-pointer sm:cursor-default sm:pointer-events-none">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal size={14} className="text-brand-red" />
+              <span className="font-display font-bold text-[10px] tracking-[0.2em] uppercase text-white/40 peer-checked:text-brand-red transition-colors">
+                FİLTRELEME SEÇENEKLERİ
+              </span>
+            </div>
+            <span className="text-brand-red sm:hidden text-xs font-display uppercase tracking-widest peer-checked:hidden">Göster</span>
+            <span className="text-white/40 sm:hidden text-xs font-display uppercase tracking-widest hidden peer-checked:block">Gizle</span>
+          </label>
+
+          {/* Mobilde gizli, checked olunca görünür. Masaüstünde hep görünür. */}
+          <div className="hidden peer-checked:block sm:block px-4 pb-4 sm:px-6 sm:pb-6 border-t border-white/5 pt-4 sm:border-none sm:pt-0">
+            <form className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
             <div className="space-y-2">
               {searchParams.q && <input type="hidden" name="q" value={searchParams.q} />}
               <label className="block text-[9px] font-display font-bold uppercase text-white/20 tracking-widest">Marka</label>
@@ -266,6 +287,7 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
               )}
             </div>
           </form>
+          </div>
         </div>
 
         {/* Dinamik Kategori Gezgini */}

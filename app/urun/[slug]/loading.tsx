@@ -1,26 +1,9 @@
-export default function Loading() {
+﻿export default function UrunDetayLoading() {
   return (
-    <div className="min-h-screen pt-8 pb-24">
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <div className="w-40 h-3 bg-white/5 animate-pulse mb-10" />
-        <div className="grid md:grid-cols-2 gap-16">
-          <div className="aspect-square bg-[#141414] border border-white/5 animate-pulse" />
-          <div className="space-y-4">
-            <div className="w-24 h-3 bg-white/5 animate-pulse" />
-            <div className="w-3/4 h-10 bg-white/5 animate-pulse" />
-            <div className="w-12 h-0.5 bg-brand-red" />
-            <div className="space-y-2 pt-2">
-              <div className="w-full h-3 bg-white/5 animate-pulse" />
-              <div className="w-full h-3 bg-white/5 animate-pulse" />
-              <div className="w-2/3 h-3 bg-white/5 animate-pulse" />
-            </div>
-            <div className="bg-[#141414] border border-white/5 p-6 mt-6 space-y-3">
-              <div className="w-40 h-3 bg-white/5 animate-pulse" />
-              <div className="w-full h-11 bg-white/5 animate-pulse" />
-              <div className="w-full h-11 bg-white/5 animate-pulse" />
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen pt-32 pb-24 flex flex-col items-center justify-center bg-[#0A0A0A]">
+      <div className="w-10 h-10 border-2 border-white/10 border-t-brand-red rounded-full animate-spin mb-6" />
+      <div className="font-display font-bold text-xs uppercase tracking-widest text-brand-red animate-pulse">
+        Ürün Bilgileri Yükleniyor...
       </div>
     </div>
   )

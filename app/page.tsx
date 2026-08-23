@@ -406,12 +406,12 @@ export default function HomePage() {
               </p>
             </div>
             <div>
-              <h2 className="font-display font-bold text-2xl text-white mb-4 uppercase tracking-widest">Sahne ve Konferans Sistemleri</h2>
+              <h2 className="font-display font-bold text-2xl text-white mb-4 uppercase tracking-widest">Kayseri Ses Sistemleri ve Sahne Çözümleri</h2>
               <p className="mb-4">
-                Etkinlikleriniz için kusursuz bir deneyim sunan <strong>sahne ses sistemleri</strong>, line array hoparlörler ve ışık sistemleri ile projenizi A'dan Z'ye tasarlıyoruz. <strong>Konferans salonu ses sistemi</strong> kurulumlarımızda, delege mikrofonlarından görüntü sistemlerine kadar entegre yapılar kuruyoruz.
+                Akdağ Elektronik olarak, başta <strong>Kayseri ses sistemleri</strong> olmak üzere tüm Türkiye'ye profesyonel ses, ışık ve görüntü çözümleri sunuyoruz. Etkinlikleriniz için kusursuz bir deneyim sunan <strong>sahne ses sistemleri</strong>, line array hoparlörler ve ışık sistemleri ile projenizi A'dan Z'ye tasarlıyoruz.
               </p>
               <p>
-                Kurumsal projelerinizde ve toptan ihtiyaçlarınızda <Link href="/bayi" className="text-brand-red hover:underline">Bayi Portalımız</Link> üzerinden özel iskonto oranlarıyla anında online teklif oluşturabilir, projelerinizi hızlandırabilirsiniz. En kaliteli markalar, rekabetçi fiyatlar ve 50 yıllık tecrübemizle yanınızdayız.
+                Kurumsal projelerinizde ve toptan ihtiyaçlarınızda <Link href="/bayi" className="text-brand-red hover:underline">Bayi Portalımız</Link> üzerinden özel iskonto oranlarıyla anında online teklif oluşturabilir, projelerinizi hızlandırabilirsiniz. Kayseri içi ücretsiz keşif ve montaj avantajıyla en kaliteli markalar, rekabetçi fiyatlar ve 50 yıllık tecrübemizle yanınızdayız.
               </p>
             </div>
           </div>

@@ -38,12 +38,13 @@ export default function Footer() {
             {[
               { label: 'Ana Sayfa', href: '/' },
               { label: 'Ürünler', href: '/urunler' },
+              { label: 'Bayilik Başvurusu (B2B)', href: '/bayi/basvuru' },
+              { label: 'Bayi Girişi', href: '/bayi' },
+              { label: 'Proje Talebi (Ücretsiz Keşif)', href: '/proje-talebi' },
               { label: 'Hakkımızda', href: '/hakkimizda' },
               { label: 'İletişim', href: '/iletisim' },
               { label: 'Banka Hesaplarımız', href: '/banka-hesaplari' },
-              { label: 'Mesafeli Satış Sözleşmesi', href: '/mesafeli-satis-sozlesmesi' },
-              { label: 'İptal ve İade Koşulları', href: '/iptal-ve-iade' },
-              { label: 'Gizlilik Politikası', href: '/gizlilik-politikasi' },
+              { label: 'Sözleşmeler', href: '/mesafeli-satis-sozlesmesi' },
             ].map((item) => (
               <li key={item.label}>
                 <Link

@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
-import { LogOut, Package, Phone, Clock, CheckCircle, XCircle, Search, X, RotateCcw, FileText, Settings, LayoutDashboard, Box, ChevronDown, ChevronUp, User as UserIcon, Truck, Info, MapPin, Building2, Check, Loader2, Upload, ExternalLink, Save, RefreshCw } from 'lucide-react'
+import { LogOut, Package, Phone, Clock, CheckCircle, XCircle, Search, X, RotateCcw, FileText, Settings, LayoutDashboard, Box, ChevronDown, ChevronUp, User as UserIcon, Truck, Info, MapPin, Building2, Check, Loader2, Upload, ExternalLink, Save, RefreshCw, Download } from 'lucide-react'
 import { ProductCard } from './ProductGrid'
 import type { User } from '@supabase/supabase-js'
 import { addManyToCart } from '@/lib/cart'
@@ -234,6 +234,148 @@ export default function BayiPanel({ user }: { user: User }) {
     window.location.reload()
   }
 
+  const downloadPriceList = async () => {
+    try {
+      const { data } = await supabase.from('urunler').select('ad, slug, id, marka, model_kodu, kategori, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi, stok_durumu, stok_adedi').order('kategori')
+      if (!data) return
+
+      // Dinamik import
+      const ExcelJS = (await import('exceljs')).default
+      // @ts-ignore
+      const { saveAs } = (await import('file-saver')).default
+
+      const workbook = new ExcelJS.Workbook()
+      workbook.creator = 'Akdağ Elektronik'
+      workbook.created = new Date()
+
+      // Logo Ekleme (Bir kere fetch ediyoruz)
+      let logoId: number | null = null
+      try {
+        const response = await fetch('/logo.png')
+        const blob = await response.blob()
+        const arrayBuffer = await blob.arrayBuffer()
+        logoId = workbook.addImage({ buffer: arrayBuffer, extension: 'png' })
+      } catch (e) { console.warn('Logo eklenemedi', e) }
+
+      // Ürünleri Kategorilere Göre Grupla
+      const groupedData: Record<string, any[]> = {}
+      data.forEach((p: any) => {
+        const cat = p.kategori ? p.kategori.toUpperCase() : 'DİĞER'
+        // Excel sayfa isimleri 31 karakteri geçemez ve bazi karakterler yasaktır
+        const safeCat = cat.replace(/[\[\]\*\\\/\?]/g, '').substring(0, 30)
+        if (!groupedData[safeCat]) groupedData[safeCat] = []
+        groupedData[safeCat].push(p)
+      })
+
+      // Tüm Ürünler için "Genel Liste" Sekmesi
+      createSheet(workbook, 'TÜM ÜRÜNLER', data, logoId, true)
+
+      // Her Kategori İçin Ayrı Sekme
+      Object.keys(groupedData).sort().forEach(cat => {
+        createSheet(workbook, cat, groupedData[cat], logoId, false)
+      })
+
+      // Excel Dosyasını İndir
+      const buffer = await workbook.xlsx.writeBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      saveAs(blob, `Akdag_Fiyat_Listesi_${new Date().toISOString().split('T')[0]}.xlsx`)
+
+    } catch (err) {
+      console.error(err)
+      alert('Hesaplama tablosu oluşturulurken bir hata oluştu.')
+    }
+  }
+
+  const createSheet = (workbook: any, sheetName: string, sheetData: any[], logoId: number | null, isMain: boolean) => {
+      const sheet = workbook.addWorksheet(sheetName, {
+        views: [{ state: 'frozen', ySplit: 5 }], 
+        properties: { tabColor: { argb: isMain ? 'FF9B0000' : 'FF333333' } }
+      })
+
+      if (logoId !== null) {
+        sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 180, height: 60 } })
+      }
+
+      // Üst Başlık
+      sheet.mergeCells('A1:G3')
+      const titleCell = sheet.getCell('A1')
+      titleCell.value = `                B2B FİYAT LİSTESİ - ${sheetName}`
+      titleCell.font = { name: 'Arial', size: 22, bold: true, color: { argb: 'FFFFFFFF' } }
+      titleCell.alignment = { vertical: 'middle', horizontal: 'center' }
+      titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF9B0000' } }
+
+      // Alt Bilgi
+      sheet.mergeCells('A4:G4')
+      const infoCell = sheet.getCell('A4')
+      infoCell.value = `Tarih: ${new Date().toLocaleDateString('tr-TR')} | İletişim: 0532 393 43 70 | Hızlı Sipariş veya Teklif Oluşturmak İçin Sitemizi Ziyaret Edin.`
+      infoCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF333333' } }
+      infoCell.alignment = { horizontal: 'center', vertical: 'middle' }
+      infoCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } }
+
+      // Sütun Başlıkları
+      const headers = [
+        'Ürün Adı (Sitede İncele)', 'Marka', 'Model Kodu', 'Kategori', 'Stok Durumu', 'Perakende Fiyat', 'Bayi Alış Fiyatınız'
+      ]
+      
+      const headerRow = sheet.addRow(headers) 
+      headerRow.eachCell((cell: any, colNumber: number) => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111111' } } 
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
+        cell.border = {
+          top: { style: 'medium', color: { argb: 'FF9B0000' } }, bottom: { style: 'medium', color: { argb: 'FF9B0000' } },
+          left: { style: 'thin', color: { argb: 'FF555555' } }, right: { style: 'thin', color: { argb: 'FF555555' } }
+        }
+      })
+      headerRow.height = 30
+
+      sheet.columns = [
+        { width: 55 }, // Ad
+        { width: 18 }, // Marka
+        { width: 22 }, // Model
+        { width: 22 }, // Kategori
+        { width: 15 }, // Stok
+        { width: 20 }, // Perakende
+        { width: 25 }, // Bayi Fiyatı
+      ]
+
+      sheet.autoFilter = 'A5:G5'
+
+      sheetData.forEach((p: any, index: number) => {
+        const row = sheet.addRow([
+          p.ad || '-', // 1
+          p.marka || '-', // 2
+          p.model_kodu || '-', // 3
+          p.kategori || '-', // 4
+          p.stok_durumu === 'stokta' ? 'Stokta' : p.stok_durumu === 'tukendi' ? 'Tükendi' : 'Siparişe Göre', // 5
+          p.fiyat || 0, // 6
+          p.bayi_fiyati || 0, // 7
+        ])
+
+        const adCell = row.getCell(1)
+        adCell.value = { text: p.ad || '-', hyperlink: `https://akdagelektronik.com.tr/urun/${p.slug || p.id}` }
+        adCell.font = { color: { argb: 'FF0000EE' }, underline: true }
+
+        const stokCell = row.getCell(5)
+        stokCell.alignment = { horizontal: 'center' }
+        if (p.stok_durumu === 'stokta') stokCell.font = { bold: true, color: { argb: 'FF16A34A' } }
+        else if (p.stok_durumu === 'tukendi') stokCell.font = { bold: true, color: { argb: 'FFDC2626' } }
+        else stokCell.font = { bold: true, color: { argb: 'FFD97706' } }
+
+        row.getCell(6).numFmt = `#,##0.00 "${p.para_birimi || 'TRY'}"`
+        row.getCell(6).font = { color: { argb: 'FF666666' } }
+        row.getCell(6).alignment = { horizontal: 'center' }
+
+        row.getCell(7).numFmt = `#,##0.00 "${p.bayi_para_birimi || p.para_birimi || 'TRY'}"`
+        row.getCell(7).font = { bold: true, size: 12, color: { argb: 'FF9B0000' } }
+        row.getCell(7).alignment = { horizontal: 'center' }
+
+        if (index % 2 === 1) {
+          row.eachCell((c: any) => c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9F9F9' } })
+        }
+      })
+  }
+
   if (loading) {
     return (
         <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
@@ -376,7 +518,13 @@ export default function BayiPanel({ user }: { user: User }) {
                 </Link>
                 <button onClick={() => setActiveTab('proposals')} className="w-full text-left p-6 bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
                    <div className="font-display font-black text-white group-hover:translate-x-1 transition-transform uppercase tracking-widest text-sm mb-1">TEKLİF OLUŞTUR →</div>
-                   <p className="text-white/40 text-xs">Müşterine kendi logunla profesyonel teklif yap.</p>
+                   <p className="text-white/40 text-xs">Müşterine kendi logonla profesyonel teklif yap.</p>
+                </button>
+                <button onClick={downloadPriceList} className="w-full text-left p-6 bg-gradient-to-r from-green-700 to-green-600 border-2 border-green-400 hover:from-green-600 hover:to-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all group rounded-sm">
+                   <div className="font-display font-black text-white group-hover:translate-x-1 transition-transform uppercase tracking-widest text-lg mb-2 flex items-center gap-3">
+                     EXCEL FİYAT LİSTESİ <Download size={20} className="text-white" />
+                   </div>
+                   <p className="text-white/90 text-sm font-medium">B2B'ye Özel Tüm Ürün Fiyatlarınızı Profesyonel Excel Olarak İndirin.</p>
                 </button>
               </div>
             </div>

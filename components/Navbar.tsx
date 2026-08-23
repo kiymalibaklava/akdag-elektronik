@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X, Search, Phone, Heart, GitCompare, ChevronRight, ChevronDown, Speaker, Lightbulb, Monitor, Box, Plug, Briefcase } from 'lucide-react'
+import { Menu, X, Search, Phone, Heart, GitCompare, ChevronRight, ChevronDown, Speaker, Lightbulb, Monitor, Box, Plug, Briefcase, Building } from 'lucide-react'
 import AdLogo from './AdLogo'
 import CartIcon from './CartIcon'
 import KurGostergesi from './KurGostergesi'
@@ -87,7 +87,14 @@ export default function Navbar() {
       {/* Top bar */}
       <div className="bg-brand-red text-white text-[10px] sm:text-xs font-body tracking-wider z-[60] relative">
         <div className="max-w-7xl mx-auto px-6 py-2 flex justify-between items-center">
-          <span className="hidden sm:block uppercase font-bold tracking-[0.2em]">Kayseri&apos;nin Ses ve Işık Sistemleri Uzmanı</span>
+          <div className="hidden sm:flex items-center gap-4">
+            <span className="uppercase font-bold tracking-[0.2em]">Kayseri&apos;nin Ses ve Işık Sistemleri Uzmanı</span>
+            <span className="w-px h-3 bg-white/30" />
+            <Link href="/bayi/basvuru" className="uppercase font-bold tracking-[0.2em] flex items-center gap-1.5 hover:text-white/80 transition-colors">
+              <Building size={12} />
+              B2B BAYİLİK BAŞVURUSU
+            </Link>
+          </div>
           <a href="tel:+903522316915" className="flex items-center gap-1.5 font-semibold hover:opacity-80 transition-opacity">
             <Phone size={11} />
             +90 352 231 69 15
@@ -171,7 +178,7 @@ export default function Navbar() {
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
               </svg>
-              {user ? "HESABIM" : "BAYİ GİRİŞİ"}
+              {user ? "HESABIM" : "B2B BAYİ GİRİŞİ"}
             </Link>
           </div>
 

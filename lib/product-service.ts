@@ -32,3 +32,13 @@ export const getProductBySlug = unstable_cache(
   ['product-detail-slug'],
   { revalidate: 3600, tags: ['products'] }
 )
+
+export const getAllProductSlugs = unstable_cache(
+  async () => {
+    const supabase = await createServerSupabaseClient()
+    const { data } = await supabase.from('urunler').select('id, slug')
+    return data || []
+  },
+  ['all-product-slugs'],
+  { revalidate: 86400, tags: ['products'] }
+)
