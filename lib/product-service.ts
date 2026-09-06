@@ -10,7 +10,7 @@ export const getProduct = unstable_cache(
   async (id: string) => {
     const supabase = await createServerSupabaseClient()
     return supabase.from('urunler')
-      .select('id, ad, aciklama, kategori, alt_kategori, urun_tipi, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi, stok_durumu, stok_adedi, kritik_stok, marka, kullanim_alani, fiyat_guncelleme, created_at, updated_at')
+      .select('id, ad, aciklama, kategori, alt_kategori, urun_tipi, fotograflar, fiyat, para_birimi, stok_durumu, stok_adedi, kritik_stok, marka, kullanim_alani, fiyat_guncelleme, created_at, updated_at')
       .eq('id', id)
       .single()
   },
@@ -25,7 +25,7 @@ export const getProductBySlug = unstable_cache(
     const queryColumn = isUUID ? 'id' : 'slug'
 
     return supabase.from('urunler')
-      .select('id, ad, aciklama, kategori, alt_kategori, urun_tipi, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi, stok_durumu, stok_adedi, kritik_stok, marka, kullanim_alani, fiyat_guncelleme, slug, created_at, updated_at')
+      .select('id, ad, aciklama, kategori, alt_kategori, urun_tipi, fotograflar, fiyat, para_birimi, stok_durumu, stok_adedi, kritik_stok, marka, kullanim_alani, fiyat_guncelleme, slug, created_at, updated_at')
       .eq(queryColumn, slug)
       .single()
   },

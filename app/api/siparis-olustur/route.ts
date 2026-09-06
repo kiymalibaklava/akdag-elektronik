@@ -5,13 +5,12 @@ import { sendEmail } from '@/lib/send-email'
 import { siparisOlusturSchema } from '@/lib/api-schemas'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/request-ip'
+import { dovizToTL } from '@/lib/kur'
 
 const supabaseAdmin = () =>
   createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
-
-
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,7 +27,6 @@ export async function POST(req: NextRequest) {
 
     const {
       user_id,
-      bayi_id,
       urunler,
       toplam_tutar,
       ad_soyad,
@@ -37,8 +35,6 @@ export async function POST(req: NextRequest) {
       notlar,
       odeme_tipi,
       teslimat_tipi,
-      bayi_adi,
-      is_bayi,
       fatura_tipi,
       firma_unvani,
       vergi_dairesi,
@@ -46,14 +42,35 @@ export async function POST(req: NextRequest) {
       teslimat_adresi,
     } = parsed.data
 
-    const hesaplanan = urunler.reduce((s, u) => s + u.fiyat * u.adet, 0)
-    if (Math.abs(hesaplanan - toplam_tutar) > 0.05) {
-      return NextResponse.json({ error: 'Tutar doğrulanamadı' }, { status: 400 })
-    }
-
     const db = supabaseAdmin()
 
-    // Döviz kurlarını al (Geçmişe dönük değer takibi için)
+    // 1. Sadece Onaylı Bayi Doğrulaması (B2B Zorunluluğu)
+    const authHeader = req.headers.get('Authorization')
+    const token = authHeader ? authHeader.replace('Bearer ', '').trim() : null
+    let authUserId = user_id
+
+    if (token) {
+      const { data: authData } = await db.auth.getUser(token)
+      if (authData?.user?.id) {
+        authUserId = authData.user.id
+      }
+    }
+
+    if (!authUserId) {
+      return NextResponse.json({ error: 'Sipariş verebilmek için lütfen bayi girişi yapınız.' }, { status: 401 })
+    }
+
+    const { data: bayiKaydi } = await db
+      .from('bayiler')
+      .select('id, firma_adi, yetkili_adi, telefon, sehir, onaylandi')
+      .eq('user_id', authUserId)
+      .maybeSingle()
+
+    if (!bayiKaydi || !bayiKaydi.onaylandi) {
+      return NextResponse.json({ error: 'Sitemiz yalnızca onaylı bayilere satış yapmaktadır.' }, { status: 403 })
+    }
+
+    // 2. Döviz kurlarını al
     let dolarKuru = 32.5
     let euroKuru = 35.2
     try {
@@ -65,23 +82,67 @@ export async function POST(req: NextRequest) {
       }
     } catch {}
 
+    const kurObj = { USD: dolarKuru, EUR: euroKuru, guncelleme: null }
+
+    // 3. Fiyat Manipülasyonu Koruması: Ürün fiyatlarını veritabanından doğrula
+    const urunIds = urunler.map((u) => u.urun_id).filter(Boolean) as string[]
+    const [{ data: dbUrunler }, { data: dbOzelFiyatlar }] = await Promise.all([
+      db.from('urunler').select('id, ad, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi, fotograflar').in('id', urunIds),
+      db.from('urun_fiyatlari').select('urun_id, bayi_fiyati, para_birimi').in('urun_id', urunIds),
+    ])
+
+    const verifiedUrunler: any[] = []
+    let verifiedTotal = 0
+
+    for (const item of urunler) {
+      const dbUrun = dbUrunler?.find((u) => u.id === item.urun_id)
+      if (!dbUrun) {
+        return NextResponse.json({ error: `Ürün bulunamadı veya satıştan kaldırıldı: ${item.ad}` }, { status: 400 })
+      }
+
+      const ozelFiyat = dbOzelFiyatlar?.find((f) => f.urun_id === item.urun_id)
+      const rawBayiFiyat = ozelFiyat?.bayi_fiyati ?? dbUrun.bayi_fiyati ?? dbUrun.fiyat ?? 0
+      const rawParaBirimi = ozelFiyat?.para_birimi ?? dbUrun.bayi_para_birimi ?? dbUrun.para_birimi ?? 'TRY'
+
+      const birimFiyatTL = dovizToTL(Number(rawBayiFiyat), rawParaBirimi, kurObj)
+      verifiedTotal += birimFiyatTL * item.adet
+
+      verifiedUrunler.push({
+        urun_id: dbUrun.id,
+        ad: dbUrun.ad,
+        adet: item.adet,
+        fiyat: birimFiyatTL,
+        fotograf: item.fotograf || dbUrun.fotograflar?.[0] || '',
+      })
+    }
+
+    verifiedTotal = Math.ceil(verifiedTotal)
+
+    if (Math.abs(verifiedTotal - Math.ceil(toplam_tutar)) > 2) {
+      return NextResponse.json({
+        error: 'Sepet fiyatları güncel kurlara göre yenilendi. Lütfen sepetinizi kontrol edip tekrar deneyin.',
+        guncel_tutar: verifiedTotal,
+      }, { status: 400 })
+    }
+
+    // 4. Siparişi doğrulanmış verilerle kaydet
     const { data: siparis, error: dbErr } = await db
       .from('siparisler')
       .insert({
-        user_id: user_id || null,
-        bayi_id: bayi_id || null,
-        urunler,
-        toplam_tutar,
-        ad_soyad,
+        user_id: authUserId,
+        bayi_id: bayiKaydi.id,
+        urunler: verifiedUrunler,
+        toplam_tutar: verifiedTotal,
+        ad_soyad: ad_soyad || bayiKaydi.yetkili_adi || 'Bayi Yetkilisi',
         email,
-        telefon,
+        telefon: telefon || bayiKaydi.telefon || null,
         notlar,
         odeme_tipi,
         teslimat_tipi: teslimat_tipi || 'kargo',
         odeme_durumu: 'beklemede',
         durum: 'beklemede',
-        fatura_tipi: fatura_tipi || 'bireysel',
-        firma_unvani: firma_unvani || null,
+        fatura_tipi: fatura_tipi || 'kurumsal',
+        firma_unvani: firma_unvani || bayiKaydi.firma_adi || null,
         vergi_dairesi: vergi_dairesi || null,
         vergi_no: vergi_no || null,
         teslimat_adresi: teslimat_adresi || null,
@@ -140,17 +201,17 @@ export async function POST(req: NextRequest) {
 
     const emailData = {
       siparis_no: siparis.siparis_no,
-      ad_soyad: ad_soyad || 'Müşteri',
+      ad_soyad: ad_soyad || bayiKaydi.yetkili_adi || 'Bayi Yetkilisi',
       email,
-      telefon: telefon || '',
-      urunler,
-      toplam_tutar,
+      telefon: telefon || bayiKaydi.telefon || '',
+      urunler: verifiedUrunler,
+      toplam_tutar: verifiedTotal,
       odeme_tipi: odeme_tipi || 'havale',
       notlar: notlar ?? undefined,
-      is_bayi,
-      bayi_adi: bayi_adi ?? undefined,
-      fatura_tipi: fatura_tipi || 'bireysel',
-      firma_unvani: firma_unvani || undefined,
+      is_bayi: true,
+      bayi_adi: bayiKaydi.firma_adi,
+      fatura_tipi: fatura_tipi || 'kurumsal',
+      firma_unvani: firma_unvani || bayiKaydi.firma_adi,
       vergi_dairesi: vergi_dairesi || undefined,
       vergi_no: vergi_no || undefined,
       teslimat_tipi: teslimat_tipi || 'kargo',

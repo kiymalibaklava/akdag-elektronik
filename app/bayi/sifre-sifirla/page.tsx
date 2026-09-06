@@ -142,7 +142,7 @@ export default function SifreSifirla() {
           <p className="font-body text-white/30 text-sm mt-2">
             {step === 'email'
               ? 'E-posta adresinizi girin, doğrulama kodunu gönderelim.'
-              : `${email} adresine 6 haneli doğrulama kodu gönderildi.`}
+              : `${email} adresine 8 haneli doğrulama kodu gönderildi.`}
           </p>
         </div>
 

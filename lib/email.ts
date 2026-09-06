@@ -518,7 +518,7 @@ export function bayiOnaylandiHTML(data: {
       ${label('Şifrenizi Belirleyin')}
       <div style="color:#ddd;font-size:14px;line-height:1.8">
         Bayi panelinize giriş yapabilmek için önce <strong style="color:#fff">şifrenizi belirlemeniz</strong> gerekmektedir.<br><br>
-        Aşağıdaki butona tıklayın, e-posta adresinizi girin. Size gelen <strong style="color:#DA291C">6 haneli doğrulama kodunu</strong> girerek şifrenizi belirleyebilirsiniz.
+        Aşağıdaki butona tıklayın, e-posta adresinizi girin. Size gelen <strong style="color:#DA291C">8 haneli doğrulama kodunu</strong> girerek şifrenizi belirleyebilirsiniz.
       </div>
     `)}
     <div style="background:#141414;border:1px solid #222;padding:20px 24px;margin-bottom:16px;text-align:center">

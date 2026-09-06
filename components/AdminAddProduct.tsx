@@ -66,9 +66,14 @@ export default function AdminAddProduct({ onAdded, initialData }: Props) {
     setIsScraping(true)
     setSuggestedImages([])
     try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/scrape-image', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+        },
         body: JSON.stringify({ query })
       })
       const data = await res.json()
@@ -242,9 +247,14 @@ export default function AdminAddProduct({ onAdded, initialData }: Props) {
 
     // Önbelleği temizle (Anında Yayınlama)
     if (!dbErr) {
-      fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: '/' }) }).catch(() => {})
+      const { data: { session } } = await supabase.auth.getSession()
+      const revalidateHeaders = {
+        'Content-Type': 'application/json',
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+      }
+      fetch('/api/revalidate', { method: 'POST', headers: revalidateHeaders, body: JSON.stringify({ path: '/' }) }).catch(() => {})
       if (existingUrun?.id) {
-        fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: `/urun/${existingUrun.id}` }) }).catch(() => {})
+        fetch('/api/revalidate', { method: 'POST', headers: revalidateHeaders, body: JSON.stringify({ path: `/urun/${existingUrun.id}` }) }).catch(() => {})
       }
     }
 

@@ -93,6 +93,21 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
     setLoading(false)
   }
 
+  const triggerRevalidate = async (path = '/') => {
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      await fetch('/api/revalidate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+        },
+        body: JSON.stringify({ path })
+      })
+    } catch {}
+  }
+
   const toggleFeatured = async (product: Product) => {
     const supabase = createClient()
     const newValue = !product.is_featured
@@ -100,7 +115,7 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
     if (!error) {
       setProducts(products.map(p => p.id === product.id ? { ...p, is_featured: newValue } : p))
       // Ana sayfa cache'ini yenile ki yeni öne çıkanlar hemen görünsün
-      await fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: '/' }) }).catch(() => {})
+      await triggerRevalidate('/')
     }
   }
 
@@ -203,7 +218,7 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
       updated_at: new Date().toISOString(),
       ...(fiyatDegisti ? { fiyat_guncelleme: new Date().toISOString() } : {}),
     }).eq('id', editProduct.id)
-    fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: '/' }) }).catch(() => { })
+    triggerRevalidate('/')
     setSaving(false)
     setSaveSuccess(true)
     setTimeout(() => { setEditProduct(null); loadProducts() }, 800)
@@ -215,7 +230,7 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
     const supabase = createClient()
     await supabase.from('urunler').delete().eq('id', id)
     setDeleting(null)
-    fetch('/api/revalidate', { method: 'POST', body: JSON.stringify({ path: '/' }) }).catch(() => { })
+    triggerRevalidate('/')
     loadProducts()
   }
 

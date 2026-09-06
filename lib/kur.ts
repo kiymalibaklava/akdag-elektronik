@@ -12,7 +12,7 @@ export async function getKur(): Promise<KurData> {
     const res = await fetch('/api/kur', { next: { revalidate: 300 } })
     return await res.json()
   } catch {
-    return { USD: 32.50, EUR: 35.20, guncelleme: null, fallback: true }
+    return { USD: 48.40, EUR: 56.20, guncelleme: null, fallback: true }
   }
 }
 

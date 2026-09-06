@@ -20,6 +20,6 @@ export async function getKurClient(): Promise<KurData> {
     return data
   } catch (err) {
     console.error('Kur çekilemedi:', err)
-    return cachedKur || { USD: 32.5, EUR: 35.2, guncelleme: null }
+    return cachedKur || { USD: 48.40, EUR: 56.20, guncelleme: null }
   }
 }

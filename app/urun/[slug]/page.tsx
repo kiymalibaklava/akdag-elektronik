@@ -94,7 +94,7 @@ export default async function UrunDetayPage({ params }: Props) {
   if (product.alt_kategori) {
     const { data: altKatData } = await supabase
       .from('urunler')
-      .select('id, slug, ad, kategori, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi')
+      .select('id, slug, ad, kategori, fotograflar, fiyat, para_birimi')
       .eq('kategori', product.kategori)
       .eq('alt_kategori', product.alt_kategori)
       .neq('id', product.id)
@@ -106,7 +106,7 @@ export default async function UrunDetayPage({ params }: Props) {
   if (relatedCandidates.length < 4) {
     const { data: anaKatData } = await supabase
       .from('urunler')
-      .select('id, slug, ad, kategori, fotograflar, fiyat, bayi_fiyati, para_birimi, bayi_para_birimi')
+      .select('id, slug, ad, kategori, fotograflar, fiyat, para_birimi')
       .eq('kategori', product.kategori)
       .neq('id', product.id)
       .limit(20)
@@ -187,10 +187,9 @@ export default async function UrunDetayPage({ params }: Props) {
 
             {/* Fiyat — client component ile kur dönüşümü */}
             <UrunFiyatGosterge
+              urunId={product.id}
               fiyat={product.fiyat}
-              bayiFiyati={product.bayi_fiyati}
               paraBirimi={product.para_birimi || 'TRY'}
-              bayiParaBirimi={product.bayi_para_birimi || product.para_birimi || 'TRY'}
               fiyatGuncelleme={product.fiyat_guncelleme}
               urunAdi={product.ad}
               isBayi={false}
@@ -223,9 +222,7 @@ export default async function UrunDetayPage({ params }: Props) {
                   kategori: product.kategori,
                   fotograflar: product.fotograflar || [],
                   fiyat: product.fiyat,
-                  bayi_fiyati: product.bayi_fiyati,
                   para_birimi: product.para_birimi || 'TRY',
-                  bayi_para_birimi: product.bayi_para_birimi || product.para_birimi || 'TRY',
                 }} isBayi={false} />
               ) : stok === 'tukendi' ? (
                 <div className="space-y-3">

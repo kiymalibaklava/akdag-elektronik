@@ -62,9 +62,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // #2 — /hesabim koruması: giriş yapılmadan erişim yok
-  if (request.nextUrl.pathname.startsWith('/hesabim') && !user) {
-    return NextResponse.redirect(new URL('/bayi', request.url))
+  // #2 — B2B Yönlendirmesi: /hesabim doğrudan /bayi/panel'e yönlendirilir
+  if (request.nextUrl.pathname.startsWith('/hesabim')) {
+    return NextResponse.redirect(new URL(user ? '/bayi/panel' : '/bayi', request.url))
   }
 
   return response

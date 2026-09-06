@@ -32,8 +32,10 @@ export default function IletisimPage() {
       telephone: '+903522316915',
       address: {
         '@type': 'PostalAddress',
-        streetAddress: 'Serçeönü Mah. Ahievran Cad. No:24/A Kocasinan',
-        addressLocality: 'Kayseri',
+        streetAddress: 'Cumhuriyet Mah. Sur Cad. No:17/A',
+        addressLocality: 'Melikgazi',
+        addressRegion: 'Kayseri',
+        postalCode: '38040',
         addressCountry: 'TR'
       }
     }

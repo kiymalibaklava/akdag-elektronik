@@ -10,7 +10,7 @@ export default function ThemeToggle() {
   useEffect(() => {
     setMounted(true)
     // Flash-prevention script zaten data-theme'i set etti, sadece state'i senkronize et
-    const current = document.documentElement.getAttribute('data-theme') || 'dark'
+    const current = document.documentElement.getAttribute('data-theme') || 'light'
     setTheme(current as 'dark' | 'light')
   }, [])
 
@@ -25,7 +25,7 @@ export default function ThemeToggle() {
   if (!mounted) {
     return (
       <div className="w-8 h-8 flex items-center justify-center opacity-0">
-        <Sun size={16} />
+        <Moon size={16} />
       </div>
     )
   }

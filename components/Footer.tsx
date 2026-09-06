@@ -49,6 +49,7 @@ export default function Footer() {
               <li key={item.label}>
                 <Link
                   href={item.href}
+                  prefetch={false}
                   className="text-white/40 hover:text-brand-red text-sm font-body transition-colors duration-200 flex items-center gap-2 group"
                 >
                   <span className="w-4 h-px bg-brand-red/0 group-hover:bg-brand-red/60 transition-all duration-200" />
@@ -65,7 +66,7 @@ export default function Footer() {
           <ul className="space-y-3">
             {KATEGORILER.map((item) => (
               <li key={item}>
-                <Link href="/urunler" className="text-white/40 hover:text-brand-red text-sm font-body transition-colors duration-200 flex items-center gap-2 group">
+                <Link href="/urunler" prefetch={false} className="text-white/40 hover:text-brand-red text-sm font-body transition-colors duration-200 flex items-center gap-2 group">
                   <span className="w-4 h-px bg-brand-red/0 group-hover:bg-brand-red/60 transition-all duration-200" />
                   {item}
                 </Link>
@@ -102,9 +103,9 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-white/20 font-body">
           <span>© {new Date().getFullYear()} Akdağ Elektronik. Tüm hakları saklıdır.</span>
           <div className="flex gap-4">
-            <Link href="/mesafeli-satis-sozlesmesi" className="hover:text-white/50 transition-colors">Mesafeli Satış Sözleşmesi</Link>
-            <Link href="/iptal-ve-iade" className="hover:text-white/50 transition-colors">İptal ve İade</Link>
-            <Link href="/gizlilik-politikasi" className="hover:text-white/50 transition-colors">Gizlilik Politikası</Link>
+            <Link href="/mesafeli-satis-sozlesmesi" prefetch={false} className="hover:text-white/50 transition-colors">Mesafeli Satış Sözleşmesi</Link>
+            <Link href="/iptal-ve-iade" prefetch={false} className="hover:text-white/50 transition-colors">İptal ve İade</Link>
+            <Link href="/gizlilik-politikasi" prefetch={false} className="hover:text-white/50 transition-colors">Gizlilik Politikası</Link>
           </div>
         </div>
       </div>

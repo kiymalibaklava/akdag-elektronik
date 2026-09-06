@@ -7,21 +7,24 @@ import { Clock, MessageCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 
 interface Props {
+  urunId?: string
   fiyat?: number
   bayiFiyati?: number
   paraBirimi: string
-  bayiParaBirimi: string
+  bayiParaBirimi?: string
   fiyatGuncelleme?: string
   isBayi?: boolean
   urunAdi?: string
 }
 
 export default function UrunFiyatGosterge({
-  fiyat, bayiFiyati, paraBirimi, bayiParaBirimi, fiyatGuncelleme, isBayi = false, urunAdi = ''
+  urunId, fiyat, bayiFiyati, paraBirimi, bayiParaBirimi, fiyatGuncelleme, isBayi = false, urunAdi = ''
 }: Props) {
   const [kur, setKur] = useState<KurData>({ USD: 32.5, EUR: 35.2, guncelleme: null })
   const [isBayiAuth, setIsBayiAuth] = useState(isBayi)
   const [authChecked, setAuthChecked] = useState(false)
+  const [liveBayiFiyati, setLiveBayiFiyati] = useState<number | undefined>(bayiFiyati)
+  const [liveBayiPb, setLiveBayiPb] = useState<string>(bayiParaBirimi || paraBirimi || 'TRY')
 
   useEffect(() => {
     getKurClient().then(setKur).catch(() => {})
@@ -31,22 +34,34 @@ export default function UrunFiyatGosterge({
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
       if (session?.user) {
         supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
-          .then(({ data }: { data: any }) => {
-            if (data?.onaylandi) setIsBayiAuth(true)
+          .then(async ({ data }: { data: any }) => {
+            if (data?.onaylandi) {
+              setIsBayiAuth(true)
+              if (urunId && !bayiFiyati) {
+                const { data: p } = await supabase.from('urunler').select('bayi_fiyati, bayi_para_birimi').eq('id', urunId).maybeSingle()
+                if (p?.bayi_fiyati) {
+                  setLiveBayiFiyati(p.bayi_fiyati)
+                  if (p.bayi_para_birimi) setLiveBayiPb(p.bayi_para_birimi)
+                }
+              }
+            }
             setAuthChecked(true)
           })
       } else {
         setAuthChecked(true)
       }
     })
-  }, [isBayi])
+  }, [isBayi, urunId, bayiFiyati])
 
   const activeIsBayi = isBayi || isBayiAuth
 
   if (!fiyat) return null
 
+  const effectiveBayiFiyati = liveBayiFiyati ?? bayiFiyati
+  const effectiveBayiPb = liveBayiPb || bayiParaBirimi || 'TRY'
+
   const fiyatTL = dovizToTL(fiyat, paraBirimi, kur)
-  const bayiFiyatTL = bayiFiyati ? dovizToTL(bayiFiyati, bayiParaBirimi, kur) : null
+  const bayiFiyatTL = effectiveBayiFiyati ? dovizToTL(effectiveBayiFiyati, effectiveBayiPb, kur) : null
   const gosterBayiFiyat = activeIsBayi && bayiFiyatTL && bayiFiyatTL < fiyatTL
 
   // Fiyat gizli — WhatsApp butonu
@@ -76,7 +91,7 @@ export default function UrunFiyatGosterge({
 
   return (
     <div className="mb-6 space-y-2">
-      {gosterBayiFiyat && bayiFiyati ? (
+      {gosterBayiFiyat && effectiveBayiFiyati ? (
         <>
           {/* Üstü çizili normal fiyat */}
           <div className="flex items-center gap-2">
@@ -89,10 +104,10 @@ export default function UrunFiyatGosterge({
           </div>
           {/* Bayi fiyatı */}
           <div className="font-display font-black text-4xl text-brand-red">
-            {formatFiyat(bayiFiyati, bayiParaBirimi)}
+            {formatFiyat(effectiveBayiFiyati, effectiveBayiPb)}
           </div>
           {/* TL karşılığı */}
-          {bayiParaBirimi !== 'TRY' && bayiFiyatTL && (
+          {effectiveBayiPb !== 'TRY' && bayiFiyatTL && (
             <div className="font-body text-white/40 text-sm">
               ≈ <span className="font-semibold">{bayiFiyatTL.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺</span>
               <span className="text-white/20 text-xs ml-1">(güncel kur ile)</span>

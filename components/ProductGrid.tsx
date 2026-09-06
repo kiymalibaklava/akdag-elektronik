@@ -54,22 +54,44 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
   const kur = useKur()
   const [authChecked, setAuthChecked] = useState(false)
   const [isBayiAuth, setIsBayiAuth] = useState(false)
+  const [dealerPrices, setDealerPrices] = useState<Record<string, { bayi_fiyati: number; bayi_para_birimi: string }>>({})
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getSession().then((res: any) => {
+    supabase.auth.getSession().then(async (res: any) => {
       const session = res.data?.session
       if (session?.user) {
-        supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
-          .then(({ data }: any) => {
-            setIsBayiAuth(!!data?.onaylandi)
-            setAuthChecked(true)
-          })
+        const { data: b } = await supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
+        if (b?.onaylandi) {
+          setIsBayiAuth(true)
+          const allItems = [...products, ...(suggested || [])]
+          const pIds = Array.from(new Set(allItems.map(p => p.id))).filter(Boolean)
+          if (pIds.length > 0) {
+            const { data: dpList } = await supabase
+              .from('urunler')
+              .select('id, bayi_fiyati, bayi_para_birimi')
+              .in('id', pIds)
+
+            if (dpList) {
+              const map: Record<string, { bayi_fiyati: number; bayi_para_birimi: string }> = {}
+              for (const item of dpList) {
+                if (item.bayi_fiyati) {
+                  map[item.id] = {
+                    bayi_fiyati: item.bayi_fiyati,
+                    bayi_para_birimi: item.bayi_para_birimi || 'TRY'
+                  }
+                }
+              }
+              setDealerPrices(map)
+            }
+          }
+        }
+        setAuthChecked(true)
       } else {
         setAuthChecked(true)
       }
     })
-  }, [])
+  }, [products, suggested])
 
   const showPrice = isBayi || isBayiAuth
 
@@ -96,7 +118,16 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
               <span className="font-display font-semibold text-xs tracking-[0.3em] uppercase text-white/40">Bunlara Bakabilirsiniz</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-1">
-              {suggested.map(p => <ProductCard key={p.id} product={p} isBayi={isBayi || isBayiAuth} kur={kur} showPrice={showPrice} />)}
+              {suggested.map(p => (
+                <ProductCard 
+                  key={p.id} 
+                  product={p} 
+                  isBayi={isBayi || isBayiAuth} 
+                  kur={kur} 
+                  showPrice={showPrice} 
+                  dealerPrice={dealerPrices[p.id]}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -107,19 +138,44 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1 md:gap-2">
-        {products.map((p, index) => <ProductCard key={p.id} product={p} index={index} isBayi={isBayi || isBayiAuth} kur={kur} showPrice={showPrice} />)}
+        {products.map((p, index) => (
+          <ProductCard 
+            key={p.id} 
+            product={p} 
+            index={index} 
+            isBayi={isBayi || isBayiAuth} 
+            kur={kur} 
+            showPrice={showPrice} 
+            dealerPrice={dealerPrices[p.id]}
+          />
+        ))}
       </div>
     </>
   )
 }
 
-export const ProductCard = memo(function ProductCard({ product, index = 0, isBayi = false, kur, showPrice = false }: { product: Product; index?: number; isBayi?: boolean; kur?: KurData; showPrice?: boolean }) {
+export const ProductCard = memo(function ProductCard({ 
+  product, 
+  index = 0, 
+  isBayi = false, 
+  kur, 
+  showPrice = false,
+  dealerPrice 
+}: { 
+  product: Product; 
+  index?: number; 
+  isBayi?: boolean; 
+  kur?: KurData; 
+  showPrice?: boolean;
+  dealerPrice?: { bayi_fiyati: number; bayi_para_birimi?: string };
+}) {
   const kurData = kur || { USD: 32.5, EUR: 35.2, guncelleme: null }
   const pb = product.para_birimi || 'TRY'
-  const bayiPb = product.bayi_para_birimi || pb
+  const effectiveBayiFiyati = dealerPrice?.bayi_fiyati ?? product.bayi_fiyati
+  const effectiveBayiPb = dealerPrice?.bayi_para_birimi ?? product.bayi_para_birimi ?? pb
 
-  const hasBayiFiyat = isBayi && product.bayi_fiyati && product.fiyat &&
-    dovizToTL(product.bayi_fiyati, bayiPb, kurData) < dovizToTL(product.fiyat, pb, kurData)
+  const hasBayiFiyat = isBayi && effectiveBayiFiyati && product.fiyat &&
+    dovizToTL(effectiveBayiFiyati, effectiveBayiPb, kurData) < dovizToTL(product.fiyat, pb, kurData)
 
   const stok = product.stok_durumu || 'stokta'
   const isRecentUpdate = product.fiyat_guncelleme
@@ -127,7 +183,7 @@ export const ProductCard = memo(function ProductCard({ product, index = 0, isBay
     : false
 
   const normalFiyatTL = product.fiyat ? dovizToTL(product.fiyat, pb, kurData) : null
-  const bayiFiyatTL = product.bayi_fiyati ? dovizToTL(product.bayi_fiyati, bayiPb, kurData) : null
+  const bayiFiyatTL = effectiveBayiFiyati ? dovizToTL(effectiveBayiFiyati, effectiveBayiPb, kurData) : null
 
   const indirimYuzde = hasBayiFiyat && normalFiyatTL && bayiFiyatTL
     ? Math.round((1 - bayiFiyatTL / normalFiyatTL) * 100)
@@ -165,7 +221,7 @@ export const ProductCard = memo(function ProductCard({ product, index = 0, isBay
     if (!product.fiyat || stok === 'tukendi') return
 
     const fiyatTL = dovizToTL(product.fiyat, pb, kurData)
-    const bayiFiyatTLVal = product.bayi_fiyati ? dovizToTL(product.bayi_fiyati, bayiPb, kurData) : null
+    const bayiFiyatTLVal = effectiveBayiFiyati ? dovizToTL(effectiveBayiFiyati, effectiveBayiPb, kurData) : null
 
     addToCart({
       id: product.id,
@@ -176,8 +232,8 @@ export const ProductCard = memo(function ProductCard({ product, index = 0, isBay
       fiyat_doviz: product.fiyat,
       para_birimi: pb,
       bayi_fiyati: bayiFiyatTLVal,
-      bayi_fiyat_doviz: product.bayi_fiyati || null,
-      bayi_para_birimi: bayiPb,
+      bayi_fiyat_doviz: effectiveBayiFiyati || null,
+      bayi_para_birimi: effectiveBayiPb,
     })
     setCartAdded(true)
     setTimeout(() => setCartAdded(false), 2000)
@@ -196,7 +252,7 @@ export const ProductCard = memo(function ProductCard({ product, index = 0, isBay
   return (
     <div className="product-card group relative bg-[#141414] border border-white/5 overflow-hidden hover:border-brand-red/30 flex flex-col">
       {/* Tıklanabilir alan — Link ile sarılı (SEO + navigasyon) */}
-      <Link href={`/urun/${product.slug || product.id}`} className="flex flex-col flex-1">
+      <Link href={`/urun/${product.slug || product.id}`} prefetch={false} className="flex flex-col flex-1">
         {/* Görsel */}
         <div className="aspect-square bg-[#1A1A1A] relative overflow-hidden">
           {product.fotograflar?.[0] ? (
@@ -261,7 +317,7 @@ export const ProductCard = memo(function ProductCard({ product, index = 0, isBay
                       </span>
                     </div>
                     <div className="font-display font-black text-lg text-brand-red">
-                      {formatFiyat(product.bayi_fiyati!, bayiPb)}
+                      {formatFiyat(effectiveBayiFiyati!, effectiveBayiPb)}
                     </div>
                     <div className="font-body text-white/30 text-xs">
                       ≈ {bayiFiyatTL.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺

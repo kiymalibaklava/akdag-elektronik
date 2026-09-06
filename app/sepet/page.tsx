@@ -149,6 +149,10 @@ export default function SepetPage() {
 
   const submitOrder = async (odeme_tipi: 'havale' | 'kart') => {
     setError('')
+    if (!isBayi) {
+      setError('Sitemiz yalnızca yetkili bayilerimize toptan satış yapmaktadır. Sipariş vermek için lütfen Bayi Girişi yapınız.')
+      return
+    }
     if (!items.length) { setError('Sepetiniz boş.'); return }
     if (!adSoyad.trim() || !email.trim()) { setError('Ad soyad ve e-posta zorunludur.'); return }
     if (!telefon.trim()) { setError('Telefon numarası zorunludur.'); return } // #1
@@ -166,9 +170,15 @@ export default function SepetPage() {
 
     setBusy(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const reqHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (session?.access_token) {
+        reqHeaders['Authorization'] = `Bearer ${session.access_token}`
+      }
+
       const res = await fetch('/api/siparis-olustur', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: reqHeaders,
         body: JSON.stringify({
           user_id: user?.id ?? null,
           bayi_id: isBayi ? bayi?.id ?? null : null,
@@ -426,11 +436,30 @@ export default function SepetPage() {
                   </div>
                 )}
 
-                {/* #5 — Ödeme butonları yan yana */}
-                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button type="button" disabled={busy} onClick={() => submitOrder('havale')} className="btn-outline justify-center text-sm disabled:opacity-40"><Building2 size={15} /> Havale / EFT</button>
-                  <button type="button" disabled={busy} onClick={() => submitOrder('kart')} className="btn-primary justify-center text-sm disabled:opacity-40"><CreditCard size={15} /> Kredi Kartı (PayTR)</button>
-                </div>
+                {/* Sadece Bayilere Toptan Satış Kontrolü */}
+                {!isBayi ? (
+                  <div className="mt-6 p-4 border border-brand-red/30 bg-brand-red/5 space-y-3">
+                    <div className="flex items-center gap-2 text-brand-red font-display font-bold text-xs uppercase tracking-wider">
+                      <Info size={16} /> Yalnızca Bayilere Toptan Satış
+                    </div>
+                    <p className="text-white/60 text-xs font-body leading-relaxed">
+                      Sitemiz yalnızca yetkili bayilerimize toptan satış hizmeti vermektedir. Siparişinizi tamamlamak için lütfen bayi girişi yapınız veya bayilik başvurusunda bulununuz.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                      <Link href="/bayi" className="btn-primary text-xs flex-1 justify-center py-2.5">
+                        Bayi Girişi Yap
+                      </Link>
+                      <Link href="/bayi/basvuru" className="btn-outline text-xs flex-1 justify-center py-2.5">
+                        Bayilik Başvurusu
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button type="button" disabled={busy} onClick={() => submitOrder('havale')} className="btn-outline justify-center text-sm disabled:opacity-40"><Building2 size={15} /> Havale / EFT</button>
+                    <button type="button" disabled={busy} onClick={() => submitOrder('kart')} className="btn-primary justify-center text-sm disabled:opacity-40"><CreditCard size={15} /> Kredi Kartı (PayTR)</button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

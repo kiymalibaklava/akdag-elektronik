@@ -72,7 +72,7 @@ export default function BankaHesaplariPage() {
           <div className="space-y-2">
             <h4 className="font-display font-bold text-xs uppercase tracking-widest text-white">Önemli Hatırlatma</h4>
             <p className="text-white/40 text-sm font-body leading-relaxed">
-              Ödemeniz gerçekleştikten sonra <Link href="/hesabim" className="text-brand-red hover:underline font-bold">Hesabım</Link> sayfasından 
+              Ödemeniz gerçekleştikten sonra <Link href="/bayi/panel" className="text-brand-red hover:underline font-bold">Bayi Paneli</Link> sayfasından 
               dekontunuzu yükleyerek onay sürecini hızlandırabilirsiniz. Ödemeler genellikle 15-30 dakika içinde onaylanmaktadır.
             </p>
           </div>

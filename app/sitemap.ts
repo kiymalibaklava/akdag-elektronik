@@ -3,6 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getSiteUrl } from '@/lib/site-url'
 import { NEW_KATEGORI_HIYERARSI, CategoryNode } from '@/lib/categories'
 
+// Sitemap 24 saat boyunca Vercel Edge CDN'de önbelleklenir (0 CPU)
+export const revalidate = 86400
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const rawUrl = getSiteUrl()
   const baseUrl = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl

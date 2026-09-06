@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     )
 
     // OTP akışı: redirectTo gönderilmiyor.
-    // Supabase, link yerine 6 haneli doğrulama kodu (OTP) gönderir.
+    // Supabase, link yerine 8 haneli doğrulama kodu (OTP) gönderir.
     // Mail içinde hiç farklı domain linki olmadığı için spam filtrelerine takılmaz.
     const { error } = await supabase.auth.resetPasswordForEmail(email)
 

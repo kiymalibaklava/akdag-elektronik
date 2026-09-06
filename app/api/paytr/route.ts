@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
+import { createClient } from '@supabase/supabase-js'
 import { paytrTokenSchema } from '@/lib/api-schemas'
 import { rateLimit } from '@/lib/rate-limit'
 import { getClientIp } from '@/lib/request-ip'
@@ -25,15 +26,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Geçersiz veri' }, { status: 400 })
     }
 
-    const { siparis_no, tutar, ad_soyad, email, telefon, urunler } = parsed.data
+    const { siparis_no, ad_soyad, email, telefon, urunler } = parsed.data
     const user_ip = ip
 
+    // 1. Fiyat Güvenliği: Sipariş ve tutar doğrudan veritabanından doğrulanır
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+
+    const { data: dbSiparis, error: siparisErr } = await supabaseAdmin
+      .from('siparisler')
+      .select('id, siparis_no, toplam_tutar, urunler, ad_soyad, email, telefon, odeme_durumu')
+      .eq('siparis_no', siparis_no)
+      .single()
+
+    if (siparisErr || !dbSiparis) {
+      return NextResponse.json({ error: 'Sipariş bulunamadı' }, { status: 404 })
+    }
+
+    if (dbSiparis.odeme_durumu === 'odendi') {
+      return NextResponse.json({ error: 'Bu siparişin ödemesi zaten tamamlanmıştır.' }, { status: 400 })
+    }
+
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-    const tutarKurus = Math.round(tutar * 100).toString()
+    const verifiedTutar = Number(dbSiparis.toplam_tutar)
+    const tutarKurus = Math.round(verifiedTutar * 100).toString()
+
+    const verifiedUrunler = Array.isArray(dbSiparis.urunler) && dbSiparis.urunler.length > 0
+      ? dbSiparis.urunler
+      : urunler
 
     // PayTR, sepet öğeleri için TL cinsinden string bekler (örn: "150.00")
     const sepetIcerik = JSON.stringify(
-      urunler.map((u) => [u.ad, u.fiyat.toFixed(2), u.adet.toString()])
+      verifiedUrunler.map((u: any) => [u.ad, Number(u.fiyat).toFixed(2), (u.adet || 1).toString()])
     )
     const sepetBase64 = Buffer.from(sepetIcerik).toString('base64')
 

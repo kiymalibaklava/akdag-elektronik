@@ -1,11 +1,23 @@
 import { NextResponse } from 'next/server';
+import { verifyAdmin } from '@/lib/admin-auth';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
   try {
+    const adminUser = await verifyAdmin(request);
+    if (!adminUser) {
+      return NextResponse.json({ error: 'Yetkisiz erişim. Yönetici oturumu gereklidir.' }, { status: 401 });
+    }
+
+    const allowed = await rateLimit(`scrape-image:${adminUser.id}`, 30, 60_000);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Çok fazla istek gönderildi. Lütfen bir süre bekleyin.' }, { status: 429 });
+    }
+
     const { query } = await request.json();
 
-    if (!query) {
-      return NextResponse.json({ error: 'Sorgu parametresi (query) gerekli.' }, { status: 400 });
+    if (!query || typeof query !== 'string' || query.trim().length < 2 || query.length > 100) {
+      return NextResponse.json({ error: 'Geçersiz sorgu parametresi.' }, { status: 400 });
     }
 
     const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;

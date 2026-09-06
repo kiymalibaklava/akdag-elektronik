@@ -265,6 +265,7 @@ export default function Navbar() {
                         <Link
                           key={d.slug}
                           href={`/urunler/${ana.slug}/${alt.slug}/${d.slug}`}
+                          prefetch={false}
                           className="flex items-center gap-3 px-4 py-2.5 text-white/40 hover:text-white hover:bg-white/[0.04] transition-all group rounded-sm border border-transparent hover:border-white/5"
                         >
                           <div className="w-1 h-1 rounded-full bg-white/10 group-hover:bg-brand-red group-hover:scale-150 transition-all" />
@@ -276,6 +277,7 @@ export default function Navbar() {
                     <div className="mt-8 pt-6 border-t border-white/5">
                       <Link
                         href={`/urunler/${ana.slug}/${alt?.slug}`}
+                        prefetch={false}
                         className="inline-flex items-center gap-3 bg-brand-red/10 border border-brand-red/20 px-5 py-2.5 text-brand-red font-display font-bold text-[10px] tracking-[0.2em] uppercase hover:bg-brand-red hover:text-white transition-all"
                       >
                         TÜM {alt?.name} <ChevronRight size={14} />
@@ -328,7 +330,7 @@ export default function Navbar() {
                                 </button>
                                 <div className={`overflow-hidden transition-all duration-300 ${isAltOpen ? 'max-h-[1000px]' : 'max-h-0'}`}>
                                   {sub.children?.map(d => (
-                                    <Link key={d.slug} href={`/urunler/${kat.slug}/${sub.slug}/${d.slug}`} className="block pl-8 py-2 font-body text-xs text-white/20 hover:text-brand-red transition-colors border-l border-transparent hover:border-brand-red ml-2">
+                                    <Link key={d.slug} href={`/urunler/${kat.slug}/${sub.slug}/${d.slug}`} prefetch={false} className="block pl-8 py-2 font-body text-xs text-white/20 hover:text-brand-red transition-colors border-l border-transparent hover:border-brand-red ml-2">
                                       {d.name}
                                     </Link>
                                   ))}
@@ -347,7 +349,7 @@ export default function Navbar() {
               <Link href="/hakkimizda" className="font-display font-black text-xs tracking-[0.3em] uppercase py-4 border-b border-white/5 text-white/50">HAKKIMIZDA</Link>
               <Link href="/proje-talebi" className="font-display font-black text-xs tracking-[0.3em] uppercase py-4 border-b border-white/5 text-brand-red/80">PROJE TALEBİ</Link>
               <Link href="/iletisim" className="font-display font-black text-xs tracking-[0.3em] uppercase py-4 border-b border-white/5 text-white/50">İLETİŞİM</Link>
-              <Link href={user ? "/hesabim" : "/bayi"} className="font-display font-black text-xs tracking-[0.3em] uppercase py-4 border-b border-white/5 text-brand-red">
+              <Link href={user ? "/bayi/panel" : "/bayi"} className="font-display font-black text-xs tracking-[0.3em] uppercase py-4 border-b border-white/5 text-brand-red">
                 {user ? "HESABIM" : "BAYİ GİRİŞİ"}
               </Link>
             </div>

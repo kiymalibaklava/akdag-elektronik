@@ -3,19 +3,74 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import ProductSearch from '@/components/ProductSearch'
 import ProductGrid from '@/components/ProductGrid'
 import Pagination from '@/components/Pagination'
-import { TUM_KATEGORILER, KATEGORI_HIYERARSI, NEW_KATEGORI_HIYERARSI, findCategoryBySlug } from '@/lib/categories'
+import { TUM_KATEGORILER, KATEGORI_HIYERARSI, NEW_KATEGORI_HIYERARSI, findCategoryBySlug, type CategoryNode } from '@/lib/categories'
 import { notFound } from 'next/navigation'
 import { Filter, SlidersHorizontal, ChevronRight, X } from 'lucide-react'
 import { getActiveBanners } from '@/lib/banner-service'
 import BannerCarousel from '@/components/BannerCarousel'
 
-import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
+import { PUBLIC_PRODUCT_FIELDS } from '@/lib/product-queries'
 import { unstable_cache } from 'next/cache'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 3600
+export const revalidate = 300
 
 const PER_PAGE = 20
+
+// Next.js build sırasında tüm kategori URL'lerini statik HTML olarak CDN'e basar (0 CPU)
+export async function generateStaticParams() {
+  const paths: { slug: string[] }[] = [{ slug: [] }]
+  const traverse = (nodes: CategoryNode[], current: string[]) => {
+    for (const node of nodes) {
+      const next = [...current, node.slug]
+      paths.push({ slug: next })
+      if (node.children) traverse(node.children, next)
+    }
+  }
+  traverse(NEW_KATEGORI_HIYERARSI, [])
+  return paths
+}
+
+interface ProductQueryFilters {
+  q?: string
+  categoryName?: string
+  categoryLevel?: number
+  min?: number | null
+  max?: number | null
+  stok?: string
+  marka?: string
+  kullanim?: string
+  sirala?: string
+}
+
+// Modül seviyesinde önbellek fonksiyonu (Data Cache ile Vercel CPU tasarrufu sağlar)
+const getCachedProducts = unstable_cache(
+  async (from: number, to: number, cacheKey: string, filters: ProductQueryFilters) => {
+    const sb = await createServerSupabaseClient()
+    let q = sb.from('urunler').select(PUBLIC_PRODUCT_FIELDS, { count: 'exact' })
+
+    if (filters.q) q = q.or(`ad.ilike.%${filters.q}%,marka.ilike.%${filters.q}%,model_kodu.ilike.%${filters.q}%`)
+    if (filters.categoryName) {
+      if (filters.categoryLevel === 1) q = q.eq('kategori', filters.categoryName)
+      else if (filters.categoryLevel === 2) q = q.eq('alt_kategori', filters.categoryName)
+      else if (filters.categoryLevel === 3) q = q.eq('urun_tipi', filters.categoryName)
+    }
+    if (filters.min) q = q.gte('fiyat', filters.min)
+    if (filters.max) q = q.lte('fiyat', filters.max)
+    if (filters.stok && filters.stok !== 'tum') q = q.eq('stok_durumu', filters.stok)
+    if (filters.marka && filters.marka !== 'tum') q = q.eq('marka', filters.marka)
+    if (filters.kullanim && filters.kullanim !== 'tum') q = q.eq('kullanim_alani', filters.kullanim)
+
+    if (filters.sirala === 'yeni') q = q.order('created_at', { ascending: false })
+    else if (filters.sirala === 'fiyat_artan') q = q.order('fiyat', { ascending: true })
+    else if (filters.sirala === 'fiyat_azalan') q = q.order('fiyat', { ascending: false })
+    else if (filters.sirala === 'ad_asc') q = q.order('ad', { ascending: true })
+    else q = q.order('created_at', { ascending: false })
+
+    return q.range(from, to)
+  },
+  ['catalog-products-cache'],
+  { revalidate: 300, tags: ['products'] }
+)
 
 // Filtre seçeneklerini cache-leyerek egress tasarrufu yapıyoruz
 const getCachedFilters = unstable_cache(
@@ -100,7 +155,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function UrunlerPage({ params, searchParams }: Props) {
-  const supabase = await createServerSupabaseClient()
   const slugArray = params.slug || []
   
   // Kategori Bulma
@@ -117,48 +171,20 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
   const max = searchParams.max ? Number(searchParams.max) : null
   const sirala = searchParams.sirala || 'yeni'
 
-  // Ürünleri getiren ana fonksiyonu cache-liyoruz
-  const getProducts = unstable_cache(
-    async (from: number, to: number, filters: any) => {
-      const sb = await createServerSupabaseClient()
-      let q = sb.from('urunler').select(LIGHT_PRODUCT_FIELDS, { count: 'exact' })
-      
-      if (filters.q) q = q.ilike('ad', `%${filters.q}%`)
-      if (filters.activeCategory) {
-        if (filters.slugLength === 1) q = q.eq('kategori', filters.activeCategory.name)
-        else if (filters.slugLength === 2) q = q.eq('alt_kategori', filters.activeCategory.name)
-        else if (filters.slugLength === 3) q = q.eq('urun_tipi', filters.activeCategory.name)
-      }
-      if (filters.min) q = q.gte('fiyat', filters.min)
-      if (filters.max) q = q.lte('fiyat', filters.max)
-      if (filters.stok && filters.stok !== 'tum') q = q.eq('stok_durumu', filters.stok)
-      if (filters.marka && filters.marka !== 'tum') q = q.eq('marka', filters.marka)
-      if (filters.kullanim && filters.kullanim !== 'tum') q = q.eq('kullanim_alani', filters.kullanim)
-
-      if (filters.sirala === 'yeni') q = q.order('created_at', { ascending: false })
-      else if (filters.sirala === 'fiyat_artan') q = q.order('fiyat', { ascending: true })
-      else if (filters.sirala === 'fiyat_azalan') q = q.order('fiyat', { ascending: false })
-      else if (filters.sirala === 'ad_asc') q = q.order('ad', { ascending: true })
-
-      return q.range(from, to)
-    },
-    ['product-list-cache'],
-    { revalidate: 3600, tags: ['products'] }
-  )
-
-  const filters = {
+  const filters: ProductQueryFilters = {
     q: searchParams.q,
-    activeCategory,
-    slugLength: slugArray.length,
+    categoryName: activeCategory?.name,
+    categoryLevel: slugArray.length,
     min,
     max,
     stok: searchParams.stok,
     marka: searchParams.marka,
     kullanim: searchParams.kullanim,
-    sirala
+    sirala,
   }
 
-  const { data: products, count } = await getProducts(from, to, filters) as any
+  const cacheKey = JSON.stringify({ from, to, ...filters })
+  const { data: products, count } = await getCachedProducts(from, to, cacheKey, filters) as any
   const totalPages = Math.ceil((count || 0) / PER_PAGE)
 
   // Cache'den filtreleri çek

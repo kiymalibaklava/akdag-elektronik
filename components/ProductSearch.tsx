@@ -34,10 +34,11 @@ export default function ProductSearch({ fullPage = false }: { fullPage?: boolean
 
     const timer = setTimeout(async () => {
       setLoading(true)
+      const cleanQuery = query.trim()
       const { data } = await supabase
         .from('urunler')
         .select(SEARCH_SUGGESTION_FIELDS)
-        .ilike('ad', `%${query}%`)
+        .or(`ad.ilike.%${cleanQuery}%,marka.ilike.%${cleanQuery}%,model_kodu.ilike.%${cleanQuery}%`)
         .limit(6)
 
       setResults(data || [])

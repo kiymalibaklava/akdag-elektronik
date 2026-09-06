@@ -25,21 +25,32 @@ export default function AddToCartButton({ urun, isBayi }: Props) {
   const [added, setAdded] = useState(false)
   const [kur, setKur] = useState<KurData>({ USD: 32.5, EUR: 35.2, guncelleme: null })
   const [isBayiAuth, setIsBayiAuth] = useState(isBayi)
+  const [liveBayiFiyati, setLiveBayiFiyati] = useState<number | null | undefined>(urun.bayi_fiyati)
+  const [liveBayiPb, setLiveBayiPb] = useState<string | undefined>(urun.bayi_para_birimi)
 
   useEffect(() => {
     getKurClient().then(setKur).catch(() => {})
 
     // İstemci taraflı bayi kontrolü
     const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: { data: any }) => {
       if (session?.user) {
         supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
-          .then(({ data }: { data: any }) => {
-            if (data?.onaylandi) setIsBayiAuth(true)
+          .then(async ({ data }: { data: any }) => {
+            if (data?.onaylandi) {
+              setIsBayiAuth(true)
+              if (!urun.bayi_fiyati) {
+                const { data: p } = await supabase.from('urunler').select('bayi_fiyati, bayi_para_birimi').eq('id', urun.id).maybeSingle()
+                if (p?.bayi_fiyati) {
+                  setLiveBayiFiyati(p.bayi_fiyati)
+                  if (p.bayi_para_birimi) setLiveBayiPb(p.bayi_para_birimi)
+                }
+              }
+            }
           })
       }
     })
-  }, [isBayi])
+  }, [isBayi, urun.id, urun.bayi_fiyati])
 
   const activeIsBayi = isBayi || isBayiAuth
 
@@ -47,11 +58,12 @@ export default function AddToCartButton({ urun, isBayi }: Props) {
     if (!activeIsBayi) return
     
     const pb = urun.para_birimi || 'TRY'
-    const bayiPb = urun.bayi_para_birimi || pb
+    const effectiveBayiFiyati = liveBayiFiyati ?? urun.bayi_fiyati
+    const effectiveBayiPb = liveBayiPb || urun.bayi_para_birimi || pb
 
     // Sepette TL cinsinden tutuyoruz (ödeme TL ile)
     const fiyatTL = dovizToTL(urun.fiyat, pb, kur)
-    const bayiFiyatTL = urun.bayi_fiyati ? dovizToTL(urun.bayi_fiyati, bayiPb, kur) : null
+    const bayiFiyatTL = effectiveBayiFiyati ? dovizToTL(effectiveBayiFiyati, effectiveBayiPb, kur) : null
 
     addToCart({
       id: urun.id,
@@ -62,8 +74,8 @@ export default function AddToCartButton({ urun, isBayi }: Props) {
       fiyat_doviz: urun.fiyat,           // Orijinal döviz fiyatı
       para_birimi: pb,
       bayi_fiyati: bayiFiyatTL,          // TL karşılığı
-      bayi_fiyat_doviz: urun.bayi_fiyati || null,
-      bayi_para_birimi: bayiPb,
+      bayi_fiyat_doviz: effectiveBayiFiyati || null,
+      bayi_para_birimi: effectiveBayiPb,
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)

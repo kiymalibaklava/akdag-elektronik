@@ -95,7 +95,7 @@ const orgJsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" className={`${barlow.variable} ${barlowCondensed.variable}`} suppressHydrationWarning>
+    <html lang="tr" data-theme="light" className={`${barlow.variable} ${barlowCondensed.variable}`} suppressHydrationWarning>
       <body className="bg-[#0F0F0F] text-white antialiased font-body">
         {/* Flash önleyici tema script'i — React öncesi çalışır */}
         <script

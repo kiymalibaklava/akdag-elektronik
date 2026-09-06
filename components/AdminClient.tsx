@@ -61,26 +61,58 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
   const [user, setUser] = useState<User | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [authError, setAuthError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
   const [bekleyenSiparis, setBekleyenSiparis] = useState(0)
   const [bekleyenProje, setBekleyenProje] = useState(0)
   const supabase = useRef(createClient()).current
 
+  const checkAdmin = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('site_admins')
+        .select('user_id')
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (error) {
+        console.error('Admin kontrol hatası:', error)
+        return false
+      }
+      return !!data?.user_id
+    } catch {
+      return false
+    }
+  }
+
+  const verifySession = async (session: Session | null) => {
+    if (!session?.user) {
+      setUser(null)
+      setLoading(false)
+      return
+    }
+
+    const isAdmin = await checkAdmin(session.user.id)
+    if (isAdmin) {
+      setUser(session.user)
+      setAuthError(null)
+      loadCounts()
+    } else {
+      await supabase.auth.signOut()
+      setUser(null)
+      setAuthError('Bu hesap yönetici yetkisine sahip değildir.')
+    }
+    setLoading(false)
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then((response: any) => {
-      const session = response.data.session
-      setUser(session?.user ?? null)
-      setLoading(false)
-      if (session) { loadCounts() }
+      verifySession(response.data?.session)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      setUser(session?.user ?? null)
-      if (session) { 
-        loadCounts()
-        if (onSuccess) onSuccess() 
-      }
-      else setLoading(false)
+      verifySession(session).then(() => {
+        if (session && onSuccess) onSuccess() 
+      })
     })
 
     return () => subscription.unsubscribe()
@@ -115,31 +147,31 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
             <div className="inline-flex items-center gap-3 mb-6">
               <div className="w-12 h-12 bg-brand-red flex items-center justify-center font-display font-black text-white text-2xl"
                 style={{ clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))' }}>
-                AD
-              </div>
-              <div className="font-display leading-none text-left">
-                <div className="text-white font-black text-2xl tracking-wide uppercase">AKDAĞ</div>
-                <div className="text-white/30 text-xs tracking-[0.3em] uppercase">ELEKTRONİK</div>
-              </div>
+              AD
             </div>
-            <h1 className="font-display font-black text-2xl uppercase text-white tracking-widest">Admin Girişi</h1>
-            <p className="font-body text-white/30 text-sm mt-2">Yönetim paneline erişmek için giriş yapın.</p>
+            <div className="font-display leading-none text-left">
+              <div className="text-white font-black text-2xl tracking-wide uppercase">AKDAĞ</div>
+              <div className="text-white/30 text-xs tracking-[0.3em] uppercase">ELEKTRONİK</div>
+            </div>
           </div>
-          <div className="bg-[#141414] border border-white/8 p-8">
-            <AdminLoginForm onSuccess={() => {
-              supabase.auth.getSession().then((response: any) => {
-                const session = response.data.session;
-                if (session) { 
-                  setUser(session.user); 
-                  loadCounts()
-                  if (onSuccess) onSuccess()
-                }
-              })
-            }} />
-          </div>
+          <h1 className="font-display font-black text-2xl uppercase text-white tracking-widest">Admin Girişi</h1>
+          <p className="font-body text-white/30 text-sm mt-2">Yönetim paneline erişmek için giriş yapın.</p>
+        </div>
+        <div className="bg-[#141414] border border-white/8 p-8">
+          {authError && (
+            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center font-medium">
+              {authError}
+            </div>
+          )}
+          <AdminLoginForm onSuccess={() => {
+            supabase.auth.getSession().then((response: any) => {
+              verifySession(response.data?.session)
+            })
+          }} />
         </div>
       </div>
-    )
+    </div>
+  )
   }
 
   const tabs = [

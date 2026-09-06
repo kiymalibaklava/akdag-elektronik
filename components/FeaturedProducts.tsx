@@ -3,21 +3,27 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Package, ArrowRight, Star } from 'lucide-react'
 import { PARA_BIRIMLERI } from '@/lib/kur'
-import { LIGHT_PRODUCT_FIELDS } from '@/lib/product-queries'
+import { PUBLIC_PRODUCT_FIELDS } from '@/lib/product-queries'
 import FeaturedCarousel from './FeaturedCarousel'
+import { unstable_cache } from 'next/cache'
+
+const getCachedFeaturedProducts = unstable_cache(
+  async () => {
+    const supabase = await createServerSupabaseClient()
+    const { data } = await supabase
+      .from('urunler')
+      .select(PUBLIC_PRODUCT_FIELDS)
+      .eq('is_featured', true)
+      .order('created_at', { ascending: false })
+      .limit(10)
+    return (data || []) as any[]
+  },
+  ['featured-products-home'],
+  { revalidate: 3600, tags: ['products', 'featured'] }
+)
 
 export default async function FeaturedProducts() {
-  const supabase = await createServerSupabaseClient()
-  
-  // Sadece is_featured = true olan ürünleri getir
-  const { data } = await supabase
-    .from('urunler')
-    .select(LIGHT_PRODUCT_FIELDS)
-    .eq('is_featured', true)
-    .order('created_at', { ascending: false })
-    .limit(10)
-
-  const featuredProducts = data as any[] | null
+  const featuredProducts = await getCachedFeaturedProducts()
 
   if (!featuredProducts || featuredProducts.length === 0) return null
 
