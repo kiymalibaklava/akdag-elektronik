@@ -11,7 +11,7 @@ import ProductSearch from './ProductSearch'
 import { NEW_KATEGORI_HIYERARSI, type CategoryNode } from '@/lib/categories'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
-import { pullCartFromSupabase, setCartUserId } from '@/lib/cart'
+import { pullCartFromSupabase, setCartUserId, clearCart } from '@/lib/cart'
 import ThemeToggle from './ThemeToggle'
 
 const navLinks = [
@@ -34,24 +34,52 @@ export default function Navbar() {
   const [mobileAnaIdx, setMobileAnaIdx] = useState<number | null>(null)
   const [mobileAltIdx, setMobileAltIdx] = useState<number | null>(null)
   const [user, setUser] = useState<User | null>(null)
+  const [isBayi, setIsBayi] = useState(false)
   const pathname = usePathname()
   const megaTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const megaRef = useRef<HTMLDivElement>(null)
   const supabase = useRef(createClient()).current
 
+  const checkBayi = useCallback(async (sessionUser: User | null) => {
+    setUser(sessionUser)
+    setCartUserId(sessionUser?.id ?? null)
+    if (sessionUser) {
+      const { data } = await supabase
+        .from('bayiler')
+        .select('onaylandi')
+        .eq('user_id', sessionUser.id)
+        .maybeSingle()
+      const approved = !!data?.onaylandi
+      setIsBayi(approved)
+      if (approved) {
+        pullCartFromSupabase()
+      } else {
+        clearCart()
+      }
+    } else {
+      setIsBayi(false)
+      clearCart()
+    }
+  }, [supabase])
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }: any) => {
-      setUser(data.session?.user ?? null)
-      setCartUserId(data.session?.user?.id ?? null)
-      if (data.session?.user) pullCartFromSupabase()
+      checkBayi(data.session?.user ?? null)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e: any, session: any) => {
-      setUser(session?.user ?? null)
-      setCartUserId(session?.user?.id ?? null)
-      if (session?.user) pullCartFromSupabase()
+      checkBayi(session?.user ?? null)
     })
     return () => subscription.unsubscribe()
-  }, [supabase])
+  }, [supabase, checkBayi])
+
+  // Farklı cihazdan eklenen ürünlerin anlık görünmesi için sekme odaklandığında sepeti yenile
+  useEffect(() => {
+    const onFocus = () => {
+      if (isBayi) pullCartFromSupabase()
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [isBayi])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
@@ -162,7 +190,7 @@ export default function Navbar() {
               <span className="font-display uppercase font-bold tracking-widest">Arama</span>
             </Link>
             <ThemeToggle />
-            <CartIcon />
+            {isBayi && <CartIcon />}
             {user && (
               <Link href="/bayi/hizli-siparis" className="text-white/50 hover:text-brand-red transition-colors duration-200 text-xs flex items-center gap-1.5 group">
                 <Box size={16} className="group-hover:animate-pulse" />
@@ -355,7 +383,7 @@ export default function Navbar() {
             </div>
 
             <div className="pt-6 space-y-4">
-              <CartIcon />
+              {isBayi && <CartIcon />}
               <div className="flex items-center gap-4 pt-4 border-t border-white/5">
                 <Link href="/favoriler" aria-label="Favorilerim" className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full text-white/40"><Heart size={18} /></Link>
 

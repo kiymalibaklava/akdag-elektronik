@@ -3,12 +3,19 @@
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle, ArrowRight, Package } from 'lucide-react'
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 
 function OdemeBasariliContent() {
   const searchParams = useSearchParams()
   // PayTR başarılı dönüşte merchant_oid parametresi ile sipariş numarasını iletir
   const siparisNo = searchParams.get('merchant_oid') || searchParams.get('siparis_no')
+
+  useEffect(() => {
+    // PayTR iframe içerisindeyse ana pencereyi başarı sayfasına yönlendir
+    if (typeof window !== 'undefined' && window.self !== window.top) {
+      window.top!.location.href = window.location.href
+    }
+  }, [])
 
   return (
     <div className="min-h-screen flex items-center justify-center px-6">

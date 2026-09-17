@@ -3,22 +3,23 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import {
   getCart,
   updateQty,
   removeFromCart,
   clearCart,
+  pullCartFromSupabase,
   type CartItem,
 } from '@/lib/cart'
 import { dovizToTL, type KurData } from '@/lib/kur'
 import { getKurClient } from '@/lib/kur-client'
 import { 
   ArrowLeft, Trash2, Minus, Plus, CreditCard, Building2, Loader2, MapPin, Truck, Store, 
-  Info, Briefcase, User as UserIcon, Copy, Check, ExternalLink 
+  Info, Briefcase, User as UserIcon, ShieldCheck
 } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
-import { BANK_ACCOUNTS } from '@/lib/bank-accounts'
 
 interface BayiRow {
   id: string
@@ -27,6 +28,8 @@ interface BayiRow {
 }
 
 export default function SepetPage() {
+  const router = useRouter()
+  const [authChecking, setAuthChecking] = useState(true)
   const [items, setItems] = useState<CartItem[]>([])
   const [user, setUser] = useState<User | null>(null)
   const [bayi, setBayi] = useState<BayiRow | null>(null)
@@ -44,10 +47,8 @@ export default function SepetPage() {
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [doneNo, setDoneNo] = useState('')
   const [payToken, setPayToken] = useState<string | null>(null)
   const [kur, setKur] = useState<KurData>({ USD: 32.5, EUR: 35.2, guncelleme: null })
-  const [copiedIban, setCopiedIban] = useState<string | null>(null)
   const [payTrWarning, setPayTrWarning] = useState(false)
   
   const supabase = useRef(createClient()).current
@@ -91,33 +92,44 @@ export default function SepetPage() {
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       const u = session?.user ?? null
       setUser(u)
-      if (u) {
-        // Otomatik email doldur (eğer formda boşsa)
-        setEmail(prev => prev || u.email || '')
-        
-        supabase
-          .from('bayiler')
-          .select('id, firma_adi, onaylandi, telefon, yetkili_adi, sehir')
-          .eq('user_id', u.id)
-          .maybeSingle()
-          .then((res: { data: any | null }) => {
-            setBayi(res.data)
-            if (res.data) {
-              // Bayi bilgilerinden otomatik doldur
-              setTelefon(prev => prev || res.data.telefon || '')
-              setAdSoyad(prev => prev || res.data.yetkili_adi || u.user_metadata?.full_name || '')
-              
-              if (res.data.onaylandi) {
-                setFaturaTipi('kurumsal')
-                setFirmaUnvani(prev => prev || res.data.firma_adi || '')
-              }
-            } else {
-              setAdSoyad(prev => prev || u.user_metadata?.full_name || '')
-            }
-          })
+      if (!u) {
+        router.replace('/bayi')
+        return
       }
+
+      setEmail(prev => prev || u.email || '')
+
+      supabase
+        .from('bayiler')
+        .select('id, firma_adi, onaylandi, telefon, yetkili_adi, sehir')
+        .eq('user_id', u.id)
+        .maybeSingle()
+        .then((res: { data: any | null }) => {
+          if (!res.data?.onaylandi) {
+            router.replace('/bayi')
+            return
+          }
+          setBayi(res.data)
+          setAuthChecking(false)
+          setTelefon(prev => prev || res.data.telefon || '')
+          setAdSoyad(prev => prev || res.data.yetkili_adi || u.user_metadata?.full_name || '')
+          setFaturaTipi('kurumsal')
+          setFirmaUnvani(prev => prev || res.data.firma_adi || '')
+
+          // Diğer cihazlardan eklenen güncel sepeti çek
+          pullCartFromSupabase().then(() => refreshCart())
+        })
     })
-  }, [supabase])
+  }, [supabase, router, refreshCart])
+
+  // Farklı cihazdan eklenen ürünlerin anlık güncellenmesi için pencere odaklandığında eşitle
+  useEffect(() => {
+    const onFocus = () => {
+      pullCartFromSupabase().then(() => refreshCart())
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [refreshCart])
 
   // #9 — Form verilerini her değişiklikte localStorage'a kaydet
   useEffect(() => {
@@ -128,12 +140,6 @@ export default function SepetPage() {
       }))
     } catch {}
   }, [adSoyad, email, telefon, teslimatAdresi, notlar, faturaTipi, firmaUnvani, vergiDairesi, vergiNo])
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    setCopiedIban(text)
-    setTimeout(() => setCopiedIban(null), 2000)
-  }
 
   const isBayi = !!(bayi?.onaylandi)
 
@@ -147,7 +153,7 @@ export default function SepetPage() {
   const liveTotal = (): number => Math.ceil(items.reduce((sum, i) => sum + livePrice(i) * i.adet, 0))
   const total = liveTotal()
 
-  const submitOrder = async (odeme_tipi: 'havale' | 'kart') => {
+  const submitOrder = async () => {
     setError('')
     if (!isBayi) {
       setError('Sitemiz yalnızca yetkili bayilerimize toptan satış yapmaktadır. Sipariş vermek için lütfen Bayi Girişi yapınız.')
@@ -155,7 +161,7 @@ export default function SepetPage() {
     }
     if (!items.length) { setError('Sepetiniz boş.'); return }
     if (!adSoyad.trim() || !email.trim()) { setError('Ad soyad ve e-posta zorunludur.'); return }
-    if (!telefon.trim()) { setError('Telefon numarası zorunludur.'); return } // #1
+    if (!telefon.trim()) { setError('Telefon numarası zorunludur.'); return }
     if (teslimat === 'kargo' && !teslimatAdresi.trim()) {
       setError('Lütfen kargo teslimat adresi giriniz.')
       return
@@ -188,7 +194,7 @@ export default function SepetPage() {
           email: email.trim(),
           telefon: telefon.trim() || null,
           notlar: notlar.trim() || null,
-          odeme_tipi,
+          odeme_tipi: 'kart',
           teslimat_tipi: teslimat,
           is_bayi: isBayi,
           bayi_adi: isBayi ? bayi?.firma_adi : null,
@@ -202,8 +208,8 @@ export default function SepetPage() {
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Sipariş oluşturulamadı.'); setBusy(false); return }
       clearCart(); refreshCart()
-      try { localStorage.removeItem('akdag_sepet_form') } catch {} // #9
-      if (odeme_tipi === 'havale') { setDoneNo(data.siparis_no); setBusy(false); return }
+      try { localStorage.removeItem('akdag_sepet_form') } catch {}
+
       const payRes = await fetch('/api/paytr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -216,6 +222,17 @@ export default function SepetPage() {
       if (!payRes.ok) { setError(payData.error || 'Ödeme başlatılamadı.'); setBusy(false); return }
       setPayToken(payData.token); setBusy(false)
     } catch { setError('Bağlantı hatası.'); setBusy(false) }
+  }
+
+  if (authChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" />
+          <span className="font-display font-bold text-xs uppercase tracking-widest text-white/40">Bayi Yetkisi Doğrulanıyor...</span>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -235,81 +252,14 @@ export default function SepetPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 pt-12">
-        {doneNo && (
-          // #7 — Kompakt başarı ekranı: IBAN hemen görünür, scroll gerekmez
-          <div className="mb-10 bg-[#141414] border border-green-500/20 overflow-hidden relative">
-            <div className="absolute top-0 left-0 w-full h-1 bg-green-500" />
-
-            {/* Kompakt header */}
-            <div className="p-5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="font-display font-black text-green-400 text-[10px] uppercase tracking-widest">Sipariş Alındı</span>
-                </div>
-                <div className="font-display font-black text-xl text-white">
-                  No: <span className="text-brand-red tracking-widest">{doneNo}</span>
-                </div>
-                <p className="text-white/40 text-xs mt-0.5 font-body">Aktarımı aşağıdaki hesaplara yapınız</p>
-              </div>
-              <div className="flex gap-2 flex-shrink-0">
-                <Link href="/hesabim" className="flex items-center gap-1.5 px-3 py-2 border border-white/10 text-white/50 hover:text-white text-[10px] font-display font-bold uppercase tracking-widest transition-colors">
-                  <ExternalLink size={11} /> Hesabım
-                </Link>
-                <Link href="/urunler" className="btn-primary text-xs py-2 px-4">Alışverişe Devam</Link>
-              </div>
-            </div>
-
-            {/* IBAN — Hemen görünür */}
-            <div className="p-5 space-y-4">
-              <div className="flex items-center gap-2 text-white/40 font-display font-bold text-[10px] uppercase tracking-widest">
-                <Info size={13} className="text-brand-red" /> Lütfen Ödemeyi Aşağıdaki Hesaplara Yapınız
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-3">
-                {BANK_ACCOUNTS.map(bank => (
-                  <div key={bank.iban} className="bg-white/5 border border-white/5 p-4 group hover:border-brand-red/30 transition-all">
-                    <div className="flex justify-between items-start mb-3">
-                      <span className="font-display font-black text-sm text-white uppercase tracking-wider">{bank.bankName}</span>
-                      <Building2 size={14} className="text-white/10 group-hover:text-brand-red/40 transition-colors" />
-                    </div>
-                    <div className="space-y-2">
-                      <div>
-                        <div className="text-[9px] text-white/30 uppercase font-display font-bold tracking-widest mb-0.5">Hesap Sahibi</div>
-                        <div className="text-xs text-white/70 font-body">{bank.accountHolder}</div>
-                      </div>
-                      <div>
-                        <div className="text-[9px] text-white/30 uppercase font-display font-bold tracking-widest mb-0.5">IBAN</div>
-                        <div className="flex items-center justify-between bg-black/40 p-2 border border-white/5">
-                          <code className="text-[11px] text-brand-red font-bold">{bank.iban}</code>
-                          <button onClick={() => copyToClipboard(bank.iban)} className="p-1 text-white/40 hover:text-white hover:bg-white/5 transition-all" title="IBAN Kopyala">
-                            {copiedIban === bank.iban ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="bg-brand-red/10 border border-brand-red/20 p-3">
-                <p className="text-white/80 text-xs leading-relaxed font-body">
-                  ⚠️ <strong>ÖNEMLİ:</strong> Ödeme yaparken açıklama kısmına sadece <strong className="text-brand-red">{doneNo}</strong> yazınız.
-                  Ödemeyi yaptıktan sonra “Hesabım” sayfasından dekont yükleyerek onay sürecini hızlandırabilirsiniz.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {isBayi && !doneNo && (
+        {isBayi && (
           <div className="mb-6 flex items-center gap-2 text-green-400/90 text-sm font-body border border-green-500/20 bg-green-500/5 px-4 py-3">
             <Building2 size={16} />
             Onaylı bayi fiyatları uygulanıyor ({bayi?.firma_adi})
           </div>
         )}
 
-        {!items.length && !doneNo ? (
+        {!items.length ? (
           <div className="text-center py-20 border border-white/5 bg-[#141414]">
             <p className="font-body text-white/40 mb-6">Sepetiniz boş.</p>
             <Link href="/urunler" className="btn-primary text-sm">Ürünleri incele</Link>
@@ -318,7 +268,9 @@ export default function SepetPage() {
 
         {items.length > 0 && (
           <div className="grid lg:grid-cols-3 gap-10">
-            <div className="lg:col-span-2 space-y-3">
+            {/* Sol: Ürün Listesi - Sağdaki form doldurulurken sayfayla birlikte aşağı kayarak ekranda kalır */}
+            <div className="lg:col-span-2">
+              <div className="space-y-3 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto pr-1">
               {items.map((i) => (
                 <div key={i.id} className="flex gap-4 bg-[#141414] border border-white/5 p-4 items-center">
                   <div className="relative w-20 h-20 bg-black/40 flex-shrink-0 overflow-hidden">
@@ -340,6 +292,7 @@ export default function SepetPage() {
                   </div>
                 </div>
               ))}
+              </div>
             </div>
 
             <div className="space-y-6">
@@ -432,7 +385,7 @@ export default function SepetPage() {
                 {/* #4 — PayTR kapatılma uyardısı */}
                 {payTrWarning && (
                   <div className="mt-4 bg-yellow-500/10 border border-yellow-500/20 p-3 text-yellow-400 text-xs font-body">
-                    ⚠️ Ödeme tamamlanmadı. Siparişiniz <strong>beklemede</strong> olarak kaydedildi. Ödemeyi tamamlamak için tekrar butona tıklayın veya havale yapabilirsiniz.
+                    ⚠️ Ödeme tamamlanmadı. Siparişiniz <strong>beklemede</strong> olarak kaydedildi. Ödemeyi tamamlamak için tekrar &quot;Ödeme Yap&quot; butonuna tıklayabilirsiniz.
                   </div>
                 )}
 
@@ -455,9 +408,29 @@ export default function SepetPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button type="button" disabled={busy} onClick={() => submitOrder('havale')} className="btn-outline justify-center text-sm disabled:opacity-40"><Building2 size={15} /> Havale / EFT</button>
-                    <button type="button" disabled={busy} onClick={() => submitOrder('kart')} className="btn-primary justify-center text-sm disabled:opacity-40"><CreditCard size={15} /> Kredi Kartı (PayTR)</button>
+                  <div className="mt-6 space-y-3">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={submitOrder}
+                      className="btn-primary w-full justify-center text-base py-4 font-display font-black tracking-wider uppercase disabled:opacity-40 shadow-lg shadow-brand-red/20 hover:shadow-brand-red/40 transition-all"
+                    >
+                      {busy ? (
+                        <>
+                          <Loader2 size={18} className="animate-spin mr-2" />
+                          Ödeme Başlatılıyor...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard size={18} className="mr-2" />
+                          Ödeme Yap
+                        </>
+                      )}
+                    </button>
+                    <div className="flex items-center justify-center gap-2 text-white/40 text-xs font-body">
+                      <ShieldCheck size={14} className="text-green-400" />
+                      256-Bit SSL &amp; 3D Secure ile Güvenli Ödeme
+                    </div>
                   </div>
                 )}
               </div>
@@ -473,7 +446,7 @@ export default function SepetPage() {
             <div className="flex justify-between items-center px-4 py-3 border-b border-white/10">
               <div>
                 <span className="font-display text-xs tracking-widest uppercase text-white/60">Güvenli ödeme</span>
-                <div className="text-[10px] text-yellow-400/70 font-body mt-0.5">Ödemeyi tamamlamadan kapatınız</div>
+                <div className="text-[10px] text-yellow-400/70 font-body mt-0.5">Ödeme tamamlanana kadar bu pencereyi kapatmayınız</div>
               </div>
               <button
                 type="button"

@@ -67,9 +67,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(user ? '/bayi/panel' : '/bayi', request.url))
   }
 
+  // B2B Sepet Koruması: Giriş yapmamış kullanıcılar sepete erişemez, bayi girişine yönlendirilir
+  if (request.nextUrl.pathname.startsWith('/sepet') && !user) {
+    return NextResponse.redirect(new URL('/bayi', request.url))
+  }
+
   return response
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/hesabim', '/hesabim/:path*'],
+  matcher: ['/admin/:path*', '/hesabim', '/hesabim/:path*', '/sepet', '/sepet/:path*'],
 }
