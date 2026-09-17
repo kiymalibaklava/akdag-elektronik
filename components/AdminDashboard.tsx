@@ -42,6 +42,7 @@ export default function AdminDashboard() {
         supabase
           .from('siparisler')
           .select('id, toplam_tutar, durum, odeme_durumu, dekont_url, created_at, urunler')
+          .neq('durum', 'taslak')
           .order('created_at', { ascending: false })
           .limit(100),
         supabase.from('bayiler').select('*', { count: 'exact', head: true }).eq('onaylandi', true)

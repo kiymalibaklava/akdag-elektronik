@@ -97,6 +97,7 @@ export default function HesabimPage() {
       .from('siparisler')
       .select('id, siparis_no, created_at, toplam_tutar, durum, urunler, kargo_takip_no, odeme_durumu, odeme_tipi, teslimat_tipi, dekont_url, teslimat_adresi, fatura_tipi, firma_unvani, vergi_no, vergi_dairesi')
       .eq('user_id', session.user.id)
+      .neq('durum', 'taslak')
       .order('created_at', { ascending: false })
       .limit(30)
 

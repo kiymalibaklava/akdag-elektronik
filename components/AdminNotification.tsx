@@ -9,6 +9,7 @@ interface Bildirim {
   siparis_no: string
   ad_soyad: string
   toplam_tutar: number
+  durum?: string
   created_at: string
 }
 
@@ -73,13 +74,27 @@ export default function AdminNotification() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'siparisler' },
-        (payload: { new: Bildirim }) => { // HATA BURADA DÜZELTİLDİ: payload tipi belirtildi
+        (payload: { new: Bildirim }) => {
           if (ilkYukleme.current) return // İlk yükleme sonrasındakileri dinle
 
           const yeni = payload.new as Bildirim
+          if (yeni.durum === 'taslak') return // Taslak/ödenmemiş denemelerde yöneticiye bildirim DÜŞMEZ!
           setBildirimler(prev => [yeni, ...prev].slice(0, 5))
           playSound()
           showBrowserNotification(yeni)
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'siparisler' },
+        (payload: { new: Bildirim; old: Partial<Bildirim> }) => {
+          const yeni = payload.new as Bildirim
+          // Taslaktan onaylandıya geçtiğinde (PayTR ödemesi başarıyla tamamlandığında ses ve bildirim ver)
+          if (yeni.durum === 'onaylandi' && payload.old?.durum === 'taslak') {
+            setBildirimler(prev => [yeni, ...prev].slice(0, 5))
+            playSound()
+            showBrowserNotification(yeni)
+          }
         }
       )
       .subscribe()

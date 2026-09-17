@@ -89,29 +89,38 @@ export async function POST(req: NextRequest) {
       })
       .eq('id', siparis.id)
 
-    // 5. Başarısız ödemede stokları güvenle iade et
-    if (!isSuccess && Array.isArray(siparis.urunler)) {
+    // 5. Başarılı ödemede stokları güvenli ve atomik şekilde düş
+    if (isSuccess && Array.isArray(siparis.urunler)) {
       try {
         for (const item of siparis.urunler) {
           if (!item.urun_id || !item.adet) continue
-          const { data: urun } = await supabase
-            .from('urunler')
-            .select('stok_adedi')
-            .eq('id', item.urun_id)
-            .single()
+          const { error: rpcErr } = await supabase.rpc('atomic_stok_dusur', {
+            p_urun_id: item.urun_id,
+            p_adet: item.adet,
+          })
 
-          if (urun && typeof urun.stok_adedi === 'number') {
-            await supabase
+          if (rpcErr) {
+            const { data: urun } = await supabase
               .from('urunler')
-              .update({
-                stok_adedi: urun.stok_adedi + Number(item.adet),
-                stok_durumu: 'stokta',
-              })
+              .select('stok_adedi')
               .eq('id', item.urun_id)
+              .single()
+
+            if (urun && typeof urun.stok_adedi === 'number') {
+              const kalan = Math.max(0, urun.stok_adedi - Number(item.adet))
+              const nextDurum = kalan <= 0 ? 'tukendi' : 'stokta'
+              await supabase
+                .from('urunler')
+                .update({
+                  stok_adedi: kalan,
+                  stok_durumu: nextDurum,
+                })
+                .eq('id', item.urun_id)
+            }
           }
         }
       } catch (stokErr) {
-        console.error('[PayTR Callback] Stok iade edilirken hata:', stokErr)
+        console.error('[PayTR Callback] Stok düşülürken hata:', stokErr)
       }
     }
 

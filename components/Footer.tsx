@@ -43,7 +43,6 @@ export default function Footer() {
               { label: 'Proje Talebi (Ücretsiz Keşif)', href: '/proje-talebi' },
               { label: 'Hakkımızda', href: '/hakkimizda' },
               { label: 'İletişim', href: '/iletisim' },
-              { label: 'Banka Hesaplarımız', href: '/banka-hesaplari' },
               { label: 'Sözleşmeler', href: '/mesafeli-satis-sozlesmesi' },
             ].map((item) => (
               <li key={item.label}>

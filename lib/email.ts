@@ -1,5 +1,3 @@
-import { BANK_ACCOUNTS } from './bank-accounts'
-
 // ─── Ortak Yardımcılar ────────────────────────────────────────────────────────
 
 const BASE_STYLE = `margin:0;padding:0;background:#0f0f0f;font-family:'Segoe UI',Arial,sans-serif`
@@ -148,15 +146,6 @@ export function musterionayHTML(data: SiparisEmailData): string {
     whatsapp: 'WhatsApp Siparişi',
   }
 
-  const bankAccountsHTML = BANK_ACCOUNTS.map(bank => `
-    <div style="margin-top:12px;padding:12px;background:#1a1a1a;border-left:3px solid #DA291C">
-      <div style="color:#888;font-size:10px;text-transform:uppercase;margin-bottom:4px">${bank.bankName}</div>
-      <div style="color:#ddd;font-size:13px;line-height:1.6">
-        IBAN: <strong style="color:#DA291C">${bank.iban}</strong><br>
-        Alıcı: ${bank.accountHolder}
-      </div>
-    </div>`).join('')
-
   return emailShell(`
     ${header('Siparişiniz Alındı', `Sipariş No: <strong style="color:#DA291C">${data.siparis_no}</strong>`)}
     ${statusBadge('#22c55e', '✅', 'Siparişiniz başarıyla alındı. En kısa sürede işleme alınacak.')}
@@ -176,14 +165,6 @@ export function musterionayHTML(data: SiparisEmailData): string {
     ${infoBox(`
       <span style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.15em">Ödeme Yöntemi: </span>
       <span style="color:#ddd;font-size:13px">${odemeLabel[data.odeme_tipi] || data.odeme_tipi}</span>
-      ${data.odeme_tipi === 'havale' ? `
-      <div style="margin-top:16px">
-        <div style="color:#fff;font-size:12px;font-weight:700;margin-bottom:8px">HAVALE / EFT BİLGİLERİ</div>
-        ${bankAccountsHTML}
-        <div style="margin-top:12px;font-size:11px;color:#DA291C;font-style:italic">
-          Açıklama kısmına mutlaka <strong>${data.siparis_no}</strong> yazınız.
-        </div>
-      </div>` : ''}
     `)}
 
     ${data.notlar ? infoBox(`

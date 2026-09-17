@@ -125,6 +125,7 @@ export default function BayiPanel({ user }: { user: User }) {
         .from('siparisler')
         .select('toplam_tutar, durum')
         .eq('user_id', user.id)
+        .neq('durum', 'taslak')
 
       const allOrders: any[] = allOrdersData || []
       const totalHarcama = allOrders
@@ -146,6 +147,7 @@ export default function BayiPanel({ user }: { user: User }) {
         .from('siparisler')
         .select('id, siparis_no, created_at, toplam_tutar, durum, urunler, kargo_takip_no, odeme_durumu, odeme_tipi, teslimat_tipi, dekont_url, teslimat_adresi, fatura_tipi, firma_unvani, vergi_no, vergi_dairesi, dolar_kuru')
         .eq('user_id', user.id)
+        .neq('durum', 'taslak')
         .order('created_at', { ascending: false })
         .limit(20)
       setSiparisler((siparisData || []) as Siparis[])

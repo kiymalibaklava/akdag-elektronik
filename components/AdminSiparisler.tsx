@@ -85,6 +85,7 @@ export default function AdminSiparisler() {
     const { data } = await supabase
       .from('siparisler')
       .select('id, siparis_no, ad_soyad, email, telefon, toplam_tutar, durum, odeme_tipi, odeme_durumu, notlar, teslimat_tipi, kargo_takip_no, dekont_url, fatura_tipi, firma_unvani, vergi_dairesi, vergi_no, teslimat_adresi, dolar_kuru, euro_kuru, created_at')
+      .neq('durum', 'taslak')
       .order('created_at', { ascending: false })
       .range(from, to)
     
@@ -186,6 +187,7 @@ export default function AdminSiparisler() {
   }
 
   const filtered = siparisler.filter(s => {
+    if (s.durum === 'taslak') return false
     const durumMatch = filterDurum === 'hepsi' || s.durum === filterDurum || (filterDurum === 'dekontlu' && s.dekont_url)
     const searchMatch = !search ||
       s.siparis_no?.toLowerCase().includes(search.toLowerCase()) ||
@@ -196,9 +198,10 @@ export default function AdminSiparisler() {
   })
 
   const stats = {
-    toplam: siparisler.length,
+    toplam: siparisler.filter(s => s.durum !== 'taslak').length,
     beklemede: siparisler.filter(s => s.durum === 'beklemede').length,
     bugun: siparisler.filter(s => {
+      if (s.durum === 'taslak') return false
       const d = new Date(s.created_at)
       const now = new Date()
       return d.toDateString() === now.toDateString()

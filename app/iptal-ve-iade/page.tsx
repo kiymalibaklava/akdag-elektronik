@@ -154,9 +154,7 @@ export default function IptalVeIade() {
           <Section title="Para İadesi" num="06">
             <p>Cayma hakkının kullanılması durumunda SATICI, cayma bildiriminin kendisine ulaştığı tarihten itibaren en geç <strong className="text-brand-red">14 (on dört) gün</strong> içerisinde almış olduğu toplam bedeli ALICI&apos;ya iade eder.</p>
             <ul className="list-disc list-inside space-y-1 mt-3">
-              <li><strong className="text-white">Kredi kartı:</strong> İade tutarı bankanız tarafından 1-4 hafta içinde yansıtılır.</li>
-              <li><strong className="text-white">Havale/EFT:</strong> İade tutarı belirtilen banka hesabına aktarılır.</li>
-              <li><strong className="text-white">Kapıda ödeme:</strong> İade tutarı ALICI&apos;nın bildireceği banka hesabına havale edilir.</li>
+              <li><strong className="text-white">Kredi kartı:</strong> İade tutarı PayTR altyapısı üzerinden ödemenin yapıldığı karta iade edilir ve bankanızın süreçlerine göre hesabınıza yansıtılır.</li>
             </ul>
           </Section>
 

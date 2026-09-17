@@ -125,7 +125,16 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    // 4. Siparişi doğrulanmış verilerle kaydet
+    // 4. Kartlı ödemelerde kullanıcının önceki tamamlanmamış taslaklarını iptal et (veritabanını temiz tutar)
+    if (odeme_tipi === 'kart') {
+      await db
+        .from('siparisler')
+        .update({ durum: 'iptal', odeme_durumu: 'iptal', notlar: 'Yeni ödeme oturumu başlatıldı' })
+        .eq('user_id', authUserId)
+        .eq('durum', 'taslak')
+    }
+
+    // Siparişi doğrulanmış verilerle kaydet
     const { data: siparis, error: dbErr } = await db
       .from('siparisler')
       .insert({
@@ -140,7 +149,9 @@ export async function POST(req: NextRequest) {
         odeme_tipi,
         teslimat_tipi: teslimat_tipi || 'kargo',
         odeme_durumu: 'beklemede',
-        durum: 'beklemede',
+        // Kredi kartı siparişleri ödeme PayTR tarafından ONAYLANANA KADAR 'taslak' olarak kalır.
+        // Böylece müşteri ödeme yapmadan sayfayı kapatırsa yöneticiye sipariş DÜŞMEZ ve stok eksilmez.
+        durum: odeme_tipi === 'kart' ? 'taslak' : 'beklemede',
         fatura_tipi: fatura_tipi || 'kurumsal',
         firma_unvani: firma_unvani || bayiKaydi.firma_adi || null,
         vergi_dairesi: vergi_dairesi || null,
@@ -158,98 +169,86 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: dbErr?.message || 'Sipariş oluşturulamadı' }, { status: 400 })
     }
 
-    for (const item of urunler) {
-      if (!item.urun_id) continue
+    // Yalnızca kart harici (örn: havale/elden) siparişlerde stokları hemen düş
+    // Kredi kartında stok düşme ve e-posta gönderimi paytr-callback webhook'u ile ödeme ALINDIĞINDA yapılır!
+    if (odeme_tipi !== 'kart') {
+      for (const item of urunler) {
+        if (!item.urun_id) continue
 
-      // Önce mevcut durumu al (siparise_gore mantığı için gerekli)
-      const { data: urun } = await db
-        .from('urunler')
-        .select('stok_durumu, stok_adedi')
-        .eq('id', item.urun_id)
-        .single()
+        const { data: urun } = await db
+          .from('urunler')
+          .select('stok_durumu, stok_adedi')
+          .eq('id', item.urun_id)
+          .single()
 
-      if (typeof urun?.stok_adedi === 'number') {
-        // Atomic stok düşürme — PostgreSQL fonksiyonu ile race condition olmadan güncelle
-        // Supabase SQL: UPDATE urunler SET stok_adedi = GREATEST(stok_adedi - p_adet, 0) WHERE id = p_urun_id
-        const { error: rpcErr } = await db.rpc('atomic_stok_dusur', {
-          p_urun_id: item.urun_id,
-          p_adet: item.adet,
-        })
+        if (typeof urun?.stok_adedi === 'number') {
+          const { error: rpcErr } = await db.rpc('atomic_stok_dusur', {
+            p_urun_id: item.urun_id,
+            p_adet: item.adet,
+          })
 
-        if (rpcErr) {
-          // RPC henüz eklenmemişse fallback (eski davranış) — uyarı logla
-          console.warn('[stok] atomic_stok_dusur RPC bulunamadı, fallback kullanılıyor. Lütfen stok-migration.sql dosyasını Supabase SQL Editor\'da çalıştırın.', rpcErr.message)
-          const kalan = Math.max(0, urun.stok_adedi - item.adet)
-          const nextDurum = kalan <= 0 ? 'tukendi' : 'stokta'
-          await db.from('urunler').update({ stok_adedi: kalan, stok_durumu: nextDurum }).eq('id', item.urun_id)
+          if (rpcErr) {
+            const kalan = Math.max(0, urun.stok_adedi - item.adet)
+            const nextDurum = kalan <= 0 ? 'tukendi' : 'stokta'
+            await db.from('urunler').update({ stok_adedi: kalan, stok_durumu: nextDurum }).eq('id', item.urun_id)
+          }
+        }
+
+        if (urun?.stok_durumu === 'stokta') {
+          const { count } = await db
+            .from('siparisler')
+            .select('*', { count: 'exact', head: true })
+            .neq('durum', 'iptal')
+            .neq('durum', 'taslak')
+            .neq('durum', 'teslim_edildi')
+            .filter('urunler', 'cs', JSON.stringify([{ urun_id: item.urun_id }]))
+
+          if ((count || 0) >= 5) {
+            await db.from('urunler').update({ stok_durumu: 'siparise_gore' }).eq('id', item.urun_id)
+          }
         }
       }
 
-      if (urun?.stok_durumu === 'stokta') {
-        const { count } = await db
-          .from('siparisler')
-          .select('*', { count: 'exact', head: true })
-          .neq('durum', 'iptal')
-          .neq('durum', 'teslim_edildi')
-          .filter('urunler', 'cs', JSON.stringify([{ urun_id: item.urun_id }]))
-
-        if ((count || 0) >= 5) {
-          await db.from('urunler').update({ stok_durumu: 'siparise_gore' }).eq('id', item.urun_id)
-        }
+      const emailData = {
+        siparis_no: siparis.siparis_no,
+        ad_soyad: ad_soyad || bayiKaydi.yetkili_adi || 'Bayi Yetkilisi',
+        email,
+        telefon: telefon || bayiKaydi.telefon || '',
+        urunler: verifiedUrunler,
+        toplam_tutar: verifiedTotal,
+        odeme_tipi: odeme_tipi || 'havale',
+        notlar: notlar ?? undefined,
+        is_bayi: true,
+        bayi_adi: bayiKaydi.firma_adi,
+        fatura_tipi: fatura_tipi || 'kurumsal',
+        firma_unvani: firma_unvani || bayiKaydi.firma_adi,
+        vergi_dairesi: vergi_dairesi || undefined,
+        vergi_no: vergi_no || undefined,
+        teslimat_tipi: teslimat_tipi || 'kargo',
+        teslimat_adresi: teslimat_adresi || undefined,
       }
-    }
 
-    const emailData = {
-      siparis_no: siparis.siparis_no,
-      ad_soyad: ad_soyad || bayiKaydi.yetkili_adi || 'Bayi Yetkilisi',
-      email,
-      telefon: telefon || bayiKaydi.telefon || '',
-      urunler: verifiedUrunler,
-      toplam_tutar: verifiedTotal,
-      odeme_tipi: odeme_tipi || 'havale',
-      notlar: notlar ?? undefined,
-      is_bayi: true,
-      bayi_adi: bayiKaydi.firma_adi,
-      fatura_tipi: fatura_tipi || 'kurumsal',
-      firma_unvani: firma_unvani || bayiKaydi.firma_adi,
-      vergi_dairesi: vergi_dairesi || undefined,
-      vergi_no: vergi_no || undefined,
-      teslimat_tipi: teslimat_tipi || 'kargo',
-      teslimat_adresi: teslimat_adresi || undefined,
-    }
-
-    // E-postaları ayrı try/catch ile gönder — mail hatası siparişi engellemesin
-    let emailError: string | undefined
-    try {
-      // Kredi kartı (PayTR) ödemelerinde müşteri dekont/onay e-postası ödeme TAMAMLANDIKTAN sonra
-      // paytr-callback tarafından odemeOnaylandiHTML ile gönderilir. Ödeme yapılmadan önce gitmemeli!
-      if (odeme_tipi !== 'kart') {
+      try {
         await sendEmail(
           email,
           `Siparişiniz Alındı — ${siparis.siparis_no} | Akdağ Elektronik`,
           musterionayHTML(emailData)
         )
+        const adminEmail = process.env.ADMIN_EMAIL || 'info@akdagelektronik.com.tr'
+        await sendEmail(
+          adminEmail,
+          `🔔 Yeni Sipariş: ${siparis.siparis_no} — ${toplam_tutar.toLocaleString('tr-TR')} ₺`,
+          adminBildirimHTML(emailData)
+        )
+      } catch (mailErr) {
+        console.error('[siparis-olustur] Havale e-posta gönderilemedi:', mailErr)
       }
-      const adminEmail = process.env.ADMIN_EMAIL || 'info@akdagelektronik.com.tr'
-      const adminSubject = odeme_tipi === 'kart'
-        ? `🔔 Yeni Sipariş (Kart Ödemesi Bekleniyor): ${siparis.siparis_no} — ${toplam_tutar.toLocaleString('tr-TR')} ₺`
-        : `🔔 Yeni Sipariş: ${siparis.siparis_no} — ${toplam_tutar.toLocaleString('tr-TR')} ₺`
-
-      await sendEmail(
-        adminEmail,
-        adminSubject,
-        adminBildirimHTML(emailData)
-      )
-    } catch (mailErr) {
-      emailError = (mailErr as Error).message
-      console.error('[siparis-olustur] E-posta gönderilemedi, sipariş oluşturuldu:', emailError)
     }
 
     return NextResponse.json({
       success: true,
       siparis_no: siparis.siparis_no,
       id: siparis.id,
-      ...(emailError ? { email_error: 'E-posta gönderilemedi, siparişiniz kaydedildi.' } : {}),
     })
   } catch (e) {
     console.error('Sipariş oluşturma hatası:', e)
