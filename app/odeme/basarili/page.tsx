@@ -4,13 +4,21 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle, ArrowRight, Package } from 'lucide-react'
 import { Suspense, useEffect } from 'react'
+import { clearCart } from '@/lib/cart'
 
 function OdemeBasariliContent() {
   const searchParams = useSearchParams()
   // PayTR başarılı dönüşte merchant_oid parametresi ile sipariş numarasını iletir
-  const siparisNo = searchParams.get('merchant_oid') || searchParams.get('siparis_no')
+  const rawSiparisNo = searchParams.get('merchant_oid') || searchParams.get('siparis_no')
+  const siparisNo = rawSiparisNo?.startsWith('AKD') && !rawSiparisNo.includes('-')
+    ? rawSiparisNo.replace(/^AKD/, 'AKD-')
+    : rawSiparisNo
 
   useEffect(() => {
+    // Başarılı ödeme sonrası sepeti ve kayıtlı form verilerini temizle
+    clearCart()
+    try { localStorage.removeItem('akdag_sepet_form') } catch {}
+
     // PayTR iframe içerisindeyse ana pencereyi başarı sayfasına yönlendir
     if (typeof window !== 'undefined' && window.self !== window.top) {
       window.top!.location.href = window.location.href

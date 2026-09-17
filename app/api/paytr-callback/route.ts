@@ -52,11 +52,15 @@ export async function POST(req: NextRequest) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // 2. Sipariş bilgilerini al
+    // 2. Sipariş bilgilerini al (Hem alfanümerik hem de tireli formatı destekle)
+    const withHyphen = merchant_oid.startsWith('AKD') && !merchant_oid.includes('-')
+      ? merchant_oid.replace(/^AKD/, 'AKD-')
+      : merchant_oid
+
     const { data: siparis, error: siparisErr } = await supabase
       .from('siparisler')
       .select('id, siparis_no, email, ad_soyad, toplam_tutar, odeme_durumu, durum, urunler')
-      .eq('siparis_no', merchant_oid)
+      .or(`siparis_no.eq.${merchant_oid},siparis_no.eq.${withHyphen}`)
       .maybeSingle()
 
     if (siparisErr || !siparis) {
@@ -83,7 +87,7 @@ export async function POST(req: NextRequest) {
           : `PayTR Ödeme Başarısız: [${failed_reason_code || 'HATA'}] ${failed_reason_msg || 'İşlem tamamlanamadı'}`,
         updated_at: new Date().toISOString(),
       })
-      .eq('siparis_no', merchant_oid)
+      .eq('id', siparis.id)
 
     // 5. Başarısız ödemede stokları güvenle iade et
     if (!isSuccess && Array.isArray(siparis.urunler)) {

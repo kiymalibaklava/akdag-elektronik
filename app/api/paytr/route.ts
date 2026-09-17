@@ -39,11 +39,15 @@ export async function POST(req: NextRequest) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
+    const withHyphen = siparis_no.startsWith('AKD') && !siparis_no.includes('-')
+      ? siparis_no.replace(/^AKD/, 'AKD-')
+      : siparis_no
+
     const { data: dbSiparis, error: siparisErr } = await supabaseAdmin
       .from('siparisler')
       .select('id, siparis_no, toplam_tutar, urunler, ad_soyad, email, telefon, teslimat_adresi, odeme_durumu')
-      .eq('siparis_no', siparis_no)
-      .single()
+      .or(`siparis_no.eq.${siparis_no},siparis_no.eq.${withHyphen}`)
+      .maybeSingle()
 
     if (siparisErr || !dbSiparis) {
       return NextResponse.json({ error: 'Sipariş bulunamadı' }, { status: 404 })
@@ -76,7 +80,7 @@ export async function POST(req: NextRequest) {
     // Kuruş, döviz çevrimi veya yuvarlama farkı varsa PayTR'ın sepet tutarı hatası vermesini önlemek için
     // toplam tutarı tek kalem sipariş bedeli olarak garantile
     if (basketItems.length === 0 || Math.abs(basketSum - verifiedTutar) > 0.01) {
-      basketItems = [[`Sipariş Bedeli (${siparis_no})`, verifiedTutar.toFixed(2), 1]]
+      basketItems = [[`Sipariş Bedeli (${dbSiparis.siparis_no})`, verifiedTutar.toFixed(2), 1]]
     }
 
     const sepetIcerik = JSON.stringify(basketItems)
@@ -97,10 +101,13 @@ export async function POST(req: NextRequest) {
     const user_name = (ad_soyad || dbSiparis.ad_soyad || 'Bayi Yetkilisi').trim()
     const user_address = (dbSiparis.teslimat_adresi || 'Kayseri, Türkiye').trim()
 
+    // PayTR alfanümerik zorunluluğu: merchant_oid özel karakter (tire vb.) İÇEREMEZ!
+    const merchant_oid = dbSiparis.siparis_no.replace(/[^A-Za-z0-9]/g, '')
+
     const hashStr = [
       merchantId,
       user_ip,
-      siparis_no,
+      merchant_oid,
       email,
       tutarKurus,
       sepetBase64,
@@ -120,7 +127,7 @@ export async function POST(req: NextRequest) {
     const params = new URLSearchParams({
       merchant_id: merchantId,
       user_ip,
-      merchant_oid: siparis_no,
+      merchant_oid,
       email,
       payment_amount: tutarKurus,
       paytr_token: paytrToken,
@@ -151,6 +158,12 @@ export async function POST(req: NextRequest) {
       console.error('[PayTR Token Hatası]', paytrData)
       return NextResponse.json({ error: paytrData.reason || 'PayTR token alınamadı' }, { status: 400 })
     }
+
+    // Token'ı siparişe kaydet
+    await supabaseAdmin
+      .from('siparisler')
+      .update({ paytr_token: paytrData.token })
+      .eq('id', dbSiparis.id)
 
     return NextResponse.json({ token: paytrData.token })
   } catch (e) {

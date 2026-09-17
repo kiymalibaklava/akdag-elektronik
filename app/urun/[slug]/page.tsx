@@ -7,6 +7,7 @@ import ProductImageGallery from '@/components/ProductImageGallery'
 import ShareButtons from '@/components/ShareButtons'
 import AddToCartButton from '@/components/AddToCartButton'
 import UrunFiyatGosterge from '@/components/UrunFiyatGosterge'
+import PayTrTaksitTablosu from '@/components/PayTrTaksitTablosu'
 import type { Metadata } from 'next'
 import { getSiteUrl } from '@/lib/site-url'
 import { getBreadcrumbs } from '@/lib/categories'
@@ -216,14 +217,22 @@ export default async function UrunDetayPage({ params }: Props) {
             {/* CTA */}
             <div className="border border-white/5 bg-[#141414] p-6 space-y-3 mt-8">
               {product.fiyat && stok !== 'tukendi' ? (
-                <AddToCartButton urun={{
-                  id: product.id,
-                  ad: product.ad,
-                  kategori: product.kategori,
-                  fotograflar: product.fotograflar || [],
-                  fiyat: product.fiyat,
-                  para_birimi: product.para_birimi || 'TRY',
-                }} isBayi={false} />
+                <>
+                  <AddToCartButton urun={{
+                    id: product.id,
+                    ad: product.ad,
+                    kategori: product.kategori,
+                    fotograflar: product.fotograflar || [],
+                    fiyat: product.fiyat,
+                    para_birimi: product.para_birimi || 'TRY',
+                  }} isBayi={false} />
+                  <PayTrTaksitTablosu
+                    urunId={product.id}
+                    fiyat={product.fiyat}
+                    paraBirimi={product.para_birimi || 'TRY'}
+                    urunAdi={product.ad}
+                  />
+                </>
               ) : stok === 'tukendi' ? (
                 <div className="space-y-3">
                   <div className="font-display font-bold text-sm uppercase text-center text-white/30 tracking-widest py-3 border border-white/10 bg-white/[0.02]">

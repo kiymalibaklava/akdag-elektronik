@@ -221,15 +221,23 @@ export async function POST(req: NextRequest) {
     // E-postaları ayrı try/catch ile gönder — mail hatası siparişi engellemesin
     let emailError: string | undefined
     try {
-      await sendEmail(
-        email,
-        `Siparişiniz Alındı — ${siparis.siparis_no} | Akdağ Elektronik`,
-        musterionayHTML(emailData)
-      )
+      // Kredi kartı (PayTR) ödemelerinde müşteri dekont/onay e-postası ödeme TAMAMLANDIKTAN sonra
+      // paytr-callback tarafından odemeOnaylandiHTML ile gönderilir. Ödeme yapılmadan önce gitmemeli!
+      if (odeme_tipi !== 'kart') {
+        await sendEmail(
+          email,
+          `Siparişiniz Alındı — ${siparis.siparis_no} | Akdağ Elektronik`,
+          musterionayHTML(emailData)
+        )
+      }
       const adminEmail = process.env.ADMIN_EMAIL || 'info@akdagelektronik.com.tr'
+      const adminSubject = odeme_tipi === 'kart'
+        ? `🔔 Yeni Sipariş (Kart Ödemesi Bekleniyor): ${siparis.siparis_no} — ${toplam_tutar.toLocaleString('tr-TR')} ₺`
+        : `🔔 Yeni Sipariş: ${siparis.siparis_no} — ${toplam_tutar.toLocaleString('tr-TR')} ₺`
+
       await sendEmail(
         adminEmail,
-        `🔔 Yeni Sipariş: ${siparis.siparis_no} — ${toplam_tutar.toLocaleString('tr-TR')} ₺`,
+        adminSubject,
         adminBildirimHTML(emailData)
       )
     } catch (mailErr) {

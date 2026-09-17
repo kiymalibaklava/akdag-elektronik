@@ -20,6 +20,7 @@ import {
   Info, Briefcase, User as UserIcon, ShieldCheck
 } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
+import PayTrTaksitTablosu from '@/components/PayTrTaksitTablosu'
 
 interface BayiRow {
   id: string
@@ -207,21 +208,33 @@ export default function SepetPage() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Sipariş oluşturulamadı.'); setBusy(false); return }
-      clearCart(); refreshCart()
-      try { localStorage.removeItem('akdag_sepet_form') } catch {}
 
+      // PayTR token isteği (Sepet silinmez, ödeme başarıyla tamamlandığında /odeme/basarili sayfasında temizlenir)
       const payRes = await fetch('/api/paytr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          siparis_no: data.siparis_no, tutar: total, ad_soyad: adSoyad.trim(), email: email.trim(), telefon: telefon.trim(),
+          siparis_no: data.siparis_no,
+          tutar: total,
+          ad_soyad: adSoyad.trim(),
+          email: email.trim(),
+          telefon: telefon.trim(),
           urunler: items.map((i) => ({ ad: i.ad, fiyat: livePrice(i), adet: i.adet })),
         }),
       })
       const payData = await payRes.json()
-      if (!payRes.ok) { setError(payData.error || 'Ödeme başlatılamadı.'); setBusy(false); return }
-      setPayToken(payData.token); setBusy(false)
-    } catch { setError('Bağlantı hatası.'); setBusy(false) }
+      if (!payRes.ok || !payData.token) {
+        setError(payData.error || 'Ödeme başlatılamadı. Lütfen bilgilerinizi kontrol edip tekrar deneyin.')
+        setBusy(false)
+        return
+      }
+
+      setPayToken(payData.token)
+      setBusy(false)
+    } catch {
+      setError('Bağlantı hatası oluştu. Lütfen tekrar deneyin.')
+      setBusy(false)
+    }
   }
 
   if (authChecking) {
@@ -297,10 +310,22 @@ export default function SepetPage() {
 
             <div className="space-y-6">
               <div className="bg-[#141414] border border-white/5 p-6">
-                <div className="flex justify-between items-baseline mb-6 border-b border-white/5 pb-4">
+                <div className="flex justify-between items-baseline mb-4 border-b border-white/5 pb-4">
                   <span className="font-display text-xs tracking-widest uppercase text-white/50">Toplam <span className="text-white/30">(KDV Dahil)</span></span>
                   <span className="font-display font-black text-2xl text-brand-red">{Math.ceil(total).toLocaleString('tr-TR')} ₺</span>
                 </div>
+
+                {isBayi && total > 0 && (
+                  <div className="mb-6 pb-4 border-b border-white/5 flex items-center justify-between">
+                    <span className="font-display text-[11px] uppercase tracking-wider text-white/40">Taksit İmkanı</span>
+                    <PayTrTaksitTablosu
+                      tutarTL={total}
+                      urunAdi={`Sepet Toplamı (${items.length} Ürün)`}
+                      isBayi={isBayi}
+                      compact
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-4">
                   <div>
@@ -439,24 +464,42 @@ export default function SepetPage() {
         )}
       </div>
 
-      {/* #4 — PayTR modal — kapatma uyarılı */}
+      {/* PayTR Güvenli Ödeme Modalı */}
       {payToken && (
-        <div className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4">
-          <div className="bg-[#0F0F0F] border border-white/10 w-full max-w-lg max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center px-4 py-3 border-b border-white/10">
-              <div>
-                <span className="font-display text-xs tracking-widest uppercase text-white/60">Güvenli ödeme</span>
-                <div className="text-[10px] text-yellow-400/70 font-body mt-0.5">Ödeme tamamlanana kadar bu pencereyi kapatmayınız</div>
+        <div className="fixed inset-0 z-[150] bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-[#0F0F0F] border border-white/10 w-full max-w-2xl max-h-[95vh] flex flex-col shadow-2xl rounded-sm overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center px-5 py-3.5 border-b border-white/10 bg-[#141414]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse" />
+                <span className="font-display text-xs tracking-widest uppercase text-white font-bold">
+                  Güvenli Ödeme Ekranı (PayTR)
+                </span>
               </div>
               <button
                 type="button"
-                className="text-white/40 hover:text-brand-red text-xs font-body border border-white/10 hover:border-brand-red/30 px-3 py-1.5 transition-all"
-                onClick={() => { setPayToken(null); setPayTrWarning(true) }}
+                className="text-white/50 hover:text-white text-xs font-display uppercase tracking-wider border border-white/10 hover:border-brand-red/40 px-3 py-1.5 transition-all"
+                onClick={() => {
+                  setPayToken(null)
+                  setPayTrWarning(true)
+                }}
               >
-                Kapat
+                Pencereyi Kapat
               </button>
             </div>
-            <iframe title="PayTR" src={`https://www.paytr.com/odeme/guvenli/${payToken}`} className="w-full flex-1 min-h-[560px] bg-white" />
+            <div className="p-0 flex-1 bg-white overflow-y-auto">
+              <iframe
+                title="PayTR Güvenli Ödeme"
+                src={`https://www.paytr.com/odeme/guvenli/${payToken}`}
+                className="w-full min-h-[600px] sm:min-h-[660px] border-0"
+              />
+            </div>
+            <div className="px-5 py-2.5 border-t border-white/10 bg-[#141414] flex items-center justify-between text-[11px] text-white/40">
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck size={14} className="text-green-400" />
+                <span>256-Bit SSL &amp; 3D Secure Güvencesi</span>
+              </div>
+              <span className="text-yellow-400/80">İşleminiz tamamlanana kadar sayfayı kapatmayınız</span>
+            </div>
           </div>
         </div>
       )}
