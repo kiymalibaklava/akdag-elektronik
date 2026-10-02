@@ -84,7 +84,7 @@ export default function AddToCartButton({ urun, isBayi }: Props) {
   if (!activeIsBayi) {
     return (
       <a
-        href={`https://wa.me/905323934370?text=${encodeURIComponent(`Merhaba, ${urun.ad} ürünü hakkında bilgi almak ve sipariş vermek istiyorum.`)}`}
+        href={`https://wa.me/903522316915?text=${encodeURIComponent(`Merhaba, ${urun.ad} ürünü hakkında bilgi almak ve sipariş vermek istiyorum.`)}`}
         target="_blank"
         rel="noopener noreferrer"
         className="btn-outline text-sm w-full justify-center gap-2"

@@ -165,19 +165,43 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
                 const kur = item.para_birimi === 'USD' ? p.kur_usd : item.para_birimi === 'EUR' ? p.kur_eur : 1
                 const birimTl = item.fiyat_doviz * kur
                 const toplamTl = birimTl * item.miktar
+                const productUrl = item.slug
+                  ? `/urun/${item.slug}`
+                  : (item.kod && item.kod !== 'SERVİS' && item.kod !== 'MANUEL' && item.kod !== '-' && !item.kod.startsWith('manual-'))
+                    ? `/urun/${item.kod}`
+                    : (item.id && !String(item.id).startsWith('manual-'))
+                      ? `/urun/${item.id}`
+                      : null
+                const markaText = (item.marka && item.marka !== '-' && item.marka.trim())
+                  ? item.marka.trim()
+                  : (item.ad ? item.ad.trim().split(' ')[0] : '-')
+
                 return (
                   <tr key={idx} style={{ background: idx % 2 === 0 ? 'white' : 'rgba(0,0,0,0.01)', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
                     <td style={{ padding: '10px 8px', verticalAlign: 'top', border: '1px solid rgba(0,0,0,0.05)' }}>
                       <div style={{ width: 34, height: 34, background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                         {item.gorsel ? (
-                          <img 
-                            src={item.gorsel} 
-                            style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} 
-                            alt="" 
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="10" fill="%239ca3af">Görsel Yok</text></svg>';
-                            }}
-                          />
+                          productUrl ? (
+                            <a href={productUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', width: '100%', height: '100%' }}>
+                              <img 
+                                src={item.gorsel} 
+                                style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} 
+                                alt="" 
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="10" fill="%239ca3af">Görsel Yok</text></svg>';
+                                }}
+                              />
+                            </a>
+                          ) : (
+                            <img 
+                              src={item.gorsel} 
+                              style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} 
+                              alt="" 
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="10" fill="%239ca3af">Görsel Yok</text></svg>';
+                              }}
+                            />
+                          )
                         ) : (
                           <span style={{ fontSize: 8, color: 'rgba(0,0,0,0.2)' }}>—</span>
                         )}
@@ -185,11 +209,31 @@ export default function ProposalPageClient({ proposal: p }: { proposal: Proposal
                     </td>
                     <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 900, verticalAlign: 'top', border: '1px solid rgba(0,0,0,0.05)' }}>{item.miktar} Adet</td>
                     <td style={{ padding: '10px 8px', verticalAlign: 'top', border: '1px solid rgba(0,0,0,0.05)' }}>
-                      <div style={{ fontWeight: 900, textTransform: 'uppercase', fontSize: 8, lineHeight: 1.3 }}>{item.marka}</div>
-                      {item.kod && <div style={{ fontSize: 7, opacity: 0.4, fontWeight: 700, letterSpacing: 1, marginTop: 2, lineHeight: 1.3 }}>{item.kod}</div>}
+                      <div style={{ fontWeight: 900, textTransform: 'uppercase', fontSize: 8, lineHeight: 1.3 }}>{markaText}</div>
                     </td>
                     <td style={{ padding: '10px 8px', verticalAlign: 'top', border: '1px solid rgba(0,0,0,0.05)' }}>
-                      <div style={{ fontSize: 9, lineHeight: 1.45, fontWeight: 500 }}>{item.ad}</div>
+                      {productUrl ? (
+                        <a
+                          href={productUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Ürünü sitede görüntüle"
+                          style={{
+                            fontSize: 9,
+                            lineHeight: 1.45,
+                            fontWeight: 500,
+                            color: '#1A1A1A',
+                            textDecoration: 'none',
+                            display: 'inline-block',
+                            cursor: 'pointer',
+                          }}
+                          className="hover:text-brand-red transition-colors"
+                        >
+                          {item.ad}
+                        </a>
+                      ) : (
+                        <div style={{ fontSize: 9, lineHeight: 1.45, fontWeight: 500, color: '#1A1A1A' }}>{item.ad}</div>
+                      )}
                     </td>
                     <td style={{ padding: 8, textAlign: 'right', color: 'rgba(0,0,0,0.5)', verticalAlign: 'top' }}>
                       {item.fiyat_doviz.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}{item.para_birimi === 'USD' ? ' $' : item.para_birimi === 'EUR' ? ' €' : ' ₺'}

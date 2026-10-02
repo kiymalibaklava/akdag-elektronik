@@ -72,7 +72,7 @@ export default function UrunFiyatGosterge({
           <div className="font-display font-bold text-xs uppercase tracking-widest text-white/30 mb-3">Fiyat Bilgisi</div>
           <p className="font-body text-white/40 text-sm mb-4">Fiyatlarımızı görmek için bayi girişi yapın veya WhatsApp üzerinden iletişime geçin.</p>
           <a
-            href={`https://wa.me/905323934370?text=${encodeURIComponent(`Merhaba, ${urunAdi} ürünü hakkında fiyat bilgisi almak istiyorum.`)}`}
+            href={`https://wa.me/903522316915?text=${encodeURIComponent(`Merhaba, ${urunAdi} ürünü hakkında fiyat bilgisi almak istiyorum.`)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-3 font-display font-bold text-sm uppercase tracking-widest transition-colors w-full"

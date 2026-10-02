@@ -21,7 +21,9 @@ function OdemeBasariliContent() {
 
     // PayTR iframe içerisindeyse ana pencereyi başarı sayfasına yönlendir
     if (typeof window !== 'undefined' && window.self !== window.top) {
-      window.top!.location.href = window.location.href
+      try {
+        window.top!.location.href = window.location.href
+      } catch {}
     }
   }, [])
 

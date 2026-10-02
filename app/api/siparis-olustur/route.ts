@@ -71,14 +71,14 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Döviz kurlarını al
-    let dolarKuru = 32.5
-    let euroKuru = 35.2
+    let dolarKuru = 48.40
+    let euroKuru = 56.20
     try {
       const kurRes = await fetch(`${req.nextUrl.origin}/api/kur`)
       if (kurRes.ok) {
         const kurData = await kurRes.json()
-        dolarKuru = kurData.USD || 32.5
-        euroKuru = kurData.EUR || 35.2
+        dolarKuru = kurData.USD || 48.40
+        euroKuru = kurData.EUR || 56.20
       }
     } catch {}
 

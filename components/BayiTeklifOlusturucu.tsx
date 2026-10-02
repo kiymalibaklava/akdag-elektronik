@@ -11,6 +11,7 @@ import { dovizToTL } from '@/lib/kur'
 
 interface CartItem {
   id: string
+  slug?: string
   ad: string
   fiyat: number
   bayi_fiyati?: number | null
@@ -217,8 +218,10 @@ export default function BayiTeklifOlusturucu({ bayiId }: { bayiId: string }) {
           urunler: items.map(i => {
             const unitPrice = calculateItemPrice(i)
             return {
+              id: i.id,
+              slug: (i as any).slug || '',
               ad: i.ad,
-              marka: i.marka || 'Akdağ',
+              marka: i.marka || (i.ad ? i.ad.trim().split(' ')[0] : 'Akdağ'),
               kod: i.model_kodu || '',
               gorsel: i.fotograf || '',
               miktar: i.adet,
@@ -262,13 +265,14 @@ export default function BayiTeklifOlusturucu({ bayiId }: { bayiId: string }) {
         ...items,
         {
           id: p.id,
+          slug: p.slug || '',
           ad: p.ad,
           fiyat: priceInTl,
           bayi_fiyati: priceInTl, // Direkt TL fiyatı atıyoruz
           adet: 1,
           fotograf: p.fotograflar?.[0] || '',
           kategori: p.kategori || '',
-          marka: p.marka || 'Akdağ',
+          marka: p.marka || (p.ad ? p.ad.trim().split(' ')[0] : 'Akdağ'),
           model_kodu: p.model_kodu || '',
           para_birimi: 'TRY'
         }

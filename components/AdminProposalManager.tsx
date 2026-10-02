@@ -11,6 +11,7 @@ interface ProposalItem {
   ad: string
   marka: string
   kod: string
+  slug?: string
   gorsel: string
   miktar: number
   fiyat_doviz: number
@@ -325,9 +326,10 @@ export default function AdminProposalManager() {
     } else {
       setItems([...items, {
         id: product.id,
+        slug: product.slug || '',
         ad: product.ad,
-        marka: product.marka || '',
-        kod: product.model_kodu || product.slug || '',
+        marka: product.marka || (product.ad ? product.ad.trim().split(' ')[0] : ''),
+        kod: product.model_kodu || '',
         gorsel: product.fotograflar?.[0] || '',
         miktar: 1,
         fiyat_doviz: price,
@@ -752,24 +754,58 @@ export default function AdminProposalManager() {
             {items.map((i,idx) => {
               const k = i.para_birimi==='USD' ? kur.USD : i.para_birimi==='EUR' ? kur.EUR : 1
               const birim_tl = i.fiyat_doviz * k
+              const productUrl = i.slug
+                ? `/urun/${i.slug}`
+                : (i.kod && i.kod !== 'SERVİS' && i.kod !== 'MANUEL' && i.kod !== '-' && !i.kod.startsWith('manual-'))
+                  ? `/urun/${i.kod}`
+                  : (i.id && !String(i.id).startsWith('manual-'))
+                    ? `/urun/${i.id}`
+                    : null
+              const markaText = (i.marka && i.marka !== '-' && i.marka.trim())
+                ? i.marka.trim()
+                : (i.ad ? i.ad.trim().split(' ')[0] : '-')
+
               return (
                 <tr key={idx} className="border-b border-black/10">
                   <td className="p-2 border border-black/10 text-center align-top">
-                    <img 
-                      src={i.gorsel} 
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="10" fill="%239ca3af">Görsel Yok</text></svg>';
-                      }}
-                      className="w-9 h-9 object-contain mx-auto" 
-                    />
+                    {productUrl ? (
+                      <a href={productUrl} target="_blank" rel="noopener noreferrer" className="block">
+                        <img 
+                          src={i.gorsel} 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="10" fill="%239ca3af">Görsel Yok</text></svg>';
+                          }}
+                          className="w-9 h-9 object-contain mx-auto" 
+                        />
+                      </a>
+                    ) : (
+                      <img 
+                        src={i.gorsel} 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="10" fill="%239ca3af">Görsel Yok</text></svg>';
+                        }}
+                        className="w-9 h-9 object-contain mx-auto" 
+                      />
+                    )}
                   </td>
                   <td className="p-2 border border-black/10 font-bold text-center align-top">{i.miktar} Adet</td>
                   <td className="p-2 border border-black/10 align-top">
-                    <div className="font-black text-[8px] uppercase leading-tight">{i.marka}</div>
-                    {i.kod && <div className="text-[6.5px] text-black/40 font-semibold mt-0.5 leading-tight tracking-wide">{i.kod}</div>}
+                    <div className="font-black text-[8px] uppercase leading-tight">{markaText}</div>
                   </td>
                   <td className="p-2 border border-black/10 align-top">
-                    <div className="text-[9px] leading-snug font-medium">{i.ad}</div>
+                    {productUrl ? (
+                      <a
+                        href={productUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[9px] leading-snug font-medium text-black hover:text-brand-red transition-colors block"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        {i.ad}
+                      </a>
+                    ) : (
+                      <div className="text-[9px] leading-snug font-medium text-black">{i.ad}</div>
+                    )}
                   </td>
                   <td className="p-2 border border-black/10 text-right font-medium align-top">{formatMoney(i.fiyat_doviz)} {i.para_birimi === 'USD' ? '$' : i.para_birimi === 'EUR' ? '€' : '₺'}</td>
                   <td className="p-2 border border-black/10 text-right align-top">{formatMoney(birim_tl)} ₺</td>

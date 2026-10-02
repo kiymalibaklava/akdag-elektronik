@@ -244,7 +244,7 @@ export const ProductCard = memo(function ProductCard({
     e.preventDefault()
     e.stopPropagation()
     window.open(
-      `https://wa.me/905323934370?text=${encodeURIComponent(`Merhaba, ${product.ad} ürünü hakkında fiyat bilgisi almak istiyorum.`)}`,
+      `https://wa.me/903522316915?text=${encodeURIComponent(`Merhaba, ${product.ad} ürünü hakkında fiyat bilgisi almak istiyorum.`)}`,
       '_blank'
     )
   }
