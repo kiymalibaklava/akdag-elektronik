@@ -207,8 +207,13 @@ html[data-theme="light"] .bg-\[\#0A0A0A\]  { background-color: #F0F2F5 !importan
 html[data-theme="light"] .bg-\[\#0F0F0F\]  { background-color: #FFFFFF !important; }
 html[data-theme="light"] .bg-\[\#111\]     { background-color: #EDEEF1 !important; }
 html[data-theme="light"] .bg-\[\#111111\]  { background-color: #EDEEF1 !important; }
+html[data-theme="light"] .bg-\[\#131313\]  { background-color: #FFFFFF !important; }
 html[data-theme="light"] .bg-\[\#141414\]  { background-color: #FFFFFF !important; }
-html[data-theme="light"] .bg-\[\#1A1A1A\]  { background-color: #E5E7EB !important; }
+html[data-theme="light"] .bg-\[\#161616\]  { background-color: #F8FAFC !important; }
+html[data-theme="light"] .bg-\[\#181818\]  { background-color: #F1F5F9 !important; }
+html[data-theme="light"] .bg-\[\#181818\]\/80 { background-color: #F1F5F9 !important; }
+html[data-theme="light"] .bg-\[\#1A1A1A\]  { background-color: #F1F5F9 !important; }
+html[data-theme="light"] .bg-\[\#0D0D0D\]  { background-color: #FFFFFF !important; }
 
 /* Opaklıklı navbar varyantları */
 html[data-theme="light"] .bg-\[\#0F0F0F\]\/95       { background-color: rgba(255,255,255,0.97) !important; }

@@ -326,3 +326,55 @@ export function getBreadcrumbs(ana?: string | null, alt?: string | null, detay?:
   }
   return crumbs
 }
+
+export interface FlattenedCategory {
+  name: string
+  slug: string
+  path: string
+  hierarchyText: string
+  level: 1 | 2 | 3
+}
+
+/**
+ * Arama ve filtreleme için tüm kategori hiyerarşisini düz liste olarak döner.
+ */
+export function getAllFlattenedCategories(): FlattenedCategory[] {
+  const result: FlattenedCategory[] = []
+  
+  for (const ana of HIERARCHY_DATA) {
+    result.push({
+      name: ana.name,
+      slug: ana.slug,
+      path: `/urunler/${ana.slug}`,
+      hierarchyText: ana.name,
+      level: 1,
+    })
+    
+    if (ana.children) {
+      for (const alt of ana.children) {
+        result.push({
+          name: alt.name,
+          slug: alt.slug,
+          path: `/urunler/${ana.slug}/${alt.slug}`,
+          hierarchyText: `${ana.name} > ${alt.name}`,
+          level: 2,
+        })
+        
+        if (alt.children) {
+          for (const detay of alt.children) {
+            result.push({
+              name: detay.name,
+              slug: detay.slug,
+              path: `/urunler/${ana.slug}/${alt.slug}/${detay.slug}`,
+              hierarchyText: `${ana.name} > ${alt.name} > ${detay.name}`,
+              level: 3,
+            })
+          }
+        }
+      }
+    }
+  }
+  
+  return result
+}
+

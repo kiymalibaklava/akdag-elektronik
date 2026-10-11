@@ -2,7 +2,25 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Trash2, Package, Pencil, X, Check, Search, Upload, Download, Star } from 'lucide-react'
+import {
+  Trash2,
+  Package,
+  Pencil,
+  X,
+  Check,
+  Search,
+  Upload,
+  Download,
+  Star,
+  Layers,
+  Coins,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  ImageIcon,
+} from 'lucide-react'
 import { PARA_BIRIMLERI } from '@/lib/kur'
 import { createClient } from '@/lib/supabase'
 import { KATEGORILER, KATEGORI_HIYERARSI } from '@/lib/categories'
@@ -36,7 +54,7 @@ interface Product {
 
 interface Props {
   onDeleted?: () => void
-  refreshTrigger?: number // Liste yenileme sinyali
+  refreshTrigger?: number
 }
 
 const ITEMS_PER_PAGE = 20
@@ -114,20 +132,19 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
     const { error } = await supabase.from('urunler').update({ is_featured: newValue }).eq('id', product.id)
     if (!error) {
       setProducts(products.map(p => p.id === product.id ? { ...p, is_featured: newValue } : p))
-      // Ana sayfa cache'ini yenile ki yeni öne çıkanlar hemen görünsün
       await triggerRevalidate('/')
     }
   }
 
   useEffect(() => {
     loadProducts()
-  }, [currentPage, searchQuery, refreshTrigger]) // refreshTrigger değişince de yükle
+  }, [currentPage, searchQuery, refreshTrigger])
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchQuery(search)
       setCurrentPage(0)
-    }, 500)
+    }, 450)
     return () => clearTimeout(timer)
   }, [search])
 
@@ -185,8 +202,6 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
     const fiyatDegisti = editFiyat !== editProduct.fiyat?.toString() || editBayiF !== editProduct.bayi_fiyati?.toString()
     const stokAdedi = Math.max(0, parseInt(editStokAdedi || '0'))
     const kritikStok = Math.max(0, parseInt(editKritikStok || '0'))
-    // Siparişe Göre veya Tükendi admin tarafından bilinçli seçilmişse koru
-    // Sadece 'stokta' seçilip adedi 0 ise otomatik 'tukendi' yap
     const stokDurumu = editStok !== 'stokta' ? editStok : (stokAdedi <= 0 ? 'tukendi' : 'stokta')
     const yeniUrls: string[] = []
     for (const entry of newPhotos) {
@@ -221,7 +236,7 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
     triggerRevalidate('/')
     setSaving(false)
     setSaveSuccess(true)
-    setTimeout(() => { setEditProduct(null); loadProducts() }, 800)
+    setTimeout(() => { setEditProduct(null); loadProducts() }, 700)
   }
 
   const handleDelete = async (id: string) => {
@@ -232,16 +247,17 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
     setDeleting(null)
     triggerRevalidate('/')
     loadProducts()
+    onDeleted?.()
   }
 
   const handleNewFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || [])
-    const totalCount = editFotograflar.length + newPhotos.length
-    for (const file of selected.slice(0, 10 - totalCount)) {
+    const currentTotal = editFotograflar.length + newPhotos.length
+    for (const file of selected.slice(0, 10 - currentTotal)) {
       const preview = URL.createObjectURL(file)
       setNewPhotos(p => [...p, { file, preview, compressing: true }])
       const compressed = await compressImage(file)
-      setNewPhotos(p => p.map(e => e.preview === preview ? { ...e, file: compressed, compressing: false } : e))
+      setNewPhotos(p => p.map(entry => entry.preview === preview ? { ...entry, file: compressed, compressing: false } : entry))
     }
     e.target.value = ''
   }
@@ -252,8 +268,8 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
 
   const removeNewPhoto = (preview: string) => {
     setNewPhotos(p => {
-      const e = p.find(x => x.preview === preview)
-      if (e) URL.revokeObjectURL(e.preview)
+      const entry = p.find(x => x.preview === preview)
+      if (entry) URL.revokeObjectURL(entry.preview)
       return p.filter(x => x.preview !== preview)
     })
   }
@@ -332,239 +348,530 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
   }
 
   return (
-    <>
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+    <div className="space-y-4">
+      {/* ── ÜST ARAÇ ÇUBUĞU (ARAMA & EXCEL ENTEGRASYONU) ─── */}
+      <div className="bg-[#141414] border border-white/10 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        {/* Arama Input */}
         <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-red" />
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-red" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder={`${totalCount} ürün içinde ara...`}
-            className="input-dark pl-10 pr-10"
+            placeholder={`${totalCount.toLocaleString('tr-TR')} ürün içinde ara...`}
+            className="input-dark rounded-xl pl-10 pr-10"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors">
-              <X size={14} />
+            <button 
+              type="button"
+              onClick={() => setSearch('')} 
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
+              title="Aramayı Temizle"
+            >
+              <X size={15} />
             </button>
           )}
         </div>
+
+        {/* Excel Aksiyon Butonları */}
         <div className="flex items-center gap-2">
-          <label className={`cursor-pointer bg-blue-600/10 border border-blue-600/20 text-blue-500 px-4 py-2 rounded-sm text-[10px] font-bold uppercase hover:bg-blue-600/20 transition-all flex items-center gap-2 whitespace-nowrap ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
-            <Upload size={12} /> {importing ? 'YÜKLENİYOR...' : 'EXCEL YÜKLE'}
+          {/* Excel Yükle */}
+          <label className={`cursor-pointer bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/25 text-sky-500 dark:text-sky-400 px-3.5 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider flex items-center gap-2 transition-all whitespace-nowrap ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+            {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+            <span>{importing ? 'Yükleniyor...' : 'Excel Yükle'}</span>
             <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} />
           </label>
-          <button onClick={exportToExcel} className="bg-green-600/10 border border-green-600/20 text-green-500 px-4 py-2 rounded-sm text-[10px] font-bold uppercase hover:bg-green-600/20 transition-all flex items-center gap-2 whitespace-nowrap">
-            <Download size={12} /> Excel'e Aktar
+
+          {/* Excel'e Aktar */}
+          <button 
+            type="button"
+            onClick={exportToExcel} 
+            className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 px-3.5 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider flex items-center gap-2 transition-all whitespace-nowrap"
+          >
+            <Download size={14} />
+            <span>Excel İndir</span>
           </button>
         </div>
       </div>
 
+      {/* ── ÜRÜN LİSTESİ ALANI ───────────────────────────── */}
       {loading ? (
-        <div className="border border-white/5 bg-[#141414] p-20 flex flex-col items-center justify-center space-y-4">
-          <div className="w-8 h-8 border-2 border-white/10 border-t-brand-red rounded-full animate-spin" />
-          <p className="font-display font-bold text-[10px] tracking-[0.2em] uppercase text-white/20">Ürünler Yükleniyor...</p>
+        <div className="bg-[#141414] border border-white/10 rounded-2xl p-16 flex flex-col items-center justify-center space-y-3 shadow-sm">
+          <Loader2 size={28} className="text-brand-red animate-spin" />
+          <p className="font-display font-semibold text-xs tracking-widest uppercase text-white/40">
+            Ürün Kataloğu Yükleniyor...
+          </p>
         </div>
       ) : products.length === 0 ? (
-        <div className="border border-white/5 bg-[#141414] p-10 text-center">
-          <Search size={40} className="text-white/5 mx-auto mb-4" />
-          <p className="font-display font-bold text-sm uppercase text-white/20 tracking-widest">
-            {search ? `"${search}" için sonuç bulunamadı` : "Henüz ürün eklenmemiş"}
+        <div className="bg-[#141414] border border-white/10 rounded-2xl p-14 text-center shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-3 text-white/30">
+            <Search size={24} />
+          </div>
+          <p className="font-display font-bold text-sm uppercase text-white/70 tracking-wider">
+            {search ? `"${search}" için ürün bulunamadı` : 'Katalogda henüz ürün bulunmuyor'}
+          </p>
+          <p className="text-xs text-white/40 mt-1">
+            {search ? 'Arama terimini değiştirebilir veya filtreyi temizleyebilirsiniz.' : 'Sol taraftaki formdan hemen yeni ürün ekleyebilirsiniz.'}
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="max-h-[calc(100vh-320px)] overflow-y-auto pr-2 custom-scrollbar space-y-1">
-            {products.map((product) => (
-              <div key={product.id} className="bg-[#141414] border border-white/5 p-3 flex items-center gap-4 hover:border-white/10 transition-colors group">
-                <div className="w-12 h-12 bg-black border border-white/5 flex-shrink-0 relative overflow-hidden">
-                  {product.fotograflar?.[0] ? (
-                    <Image src={product.fotograflar[0]} alt={product.ad} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white/5"><Package size={20} /></div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-display font-bold text-sm uppercase text-white truncate tracking-wide">{product.ad}</div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                    <span className="font-body text-white/40 text-[10px] uppercase tracking-wider">{product.kategori}</span>
-                    {product.fiyat && (
-                      <span className="font-display font-bold text-[10px] text-brand-red">
-                        {PARA_BIRIMLERI.find(p => p.value === product.para_birimi)?.symbol || ''} {product.fiyat.toLocaleString('tr-TR')} {product.para_birimi || 'TL'}
-                        {product.bayi_fiyati && (
-                          <span className="text-green-400/60 ml-1">
-                            / Bayi: {PARA_BIRIMLERI.find(p => p.value === product.bayi_para_birimi)?.symbol || ''} {product.bayi_fiyati.toLocaleString('tr-TR')} {product.bayi_para_birimi || 'TL'}
+        <div className="space-y-3">
+          {/* Ürün Kartları Listesi */}
+          <div className="space-y-2.5 max-h-[calc(100vh-280px)] overflow-y-auto pr-1.5 custom-scrollbar">
+            {products.map((product) => {
+              const paraSimge = PARA_BIRIMLERI.find(p => p.value === product.para_birimi)?.symbol || ''
+              const bayiParaSimge = PARA_BIRIMLERI.find(p => p.value === product.bayi_para_birimi)?.symbol || ''
+              const modelKod = (product as any).model_kodu
+
+              return (
+                <div 
+                  key={product.id} 
+                  className="bg-[#141414] hover:bg-[#1A1A1A] border border-white/10 hover:border-white/20 rounded-xl p-3.5 transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 group shadow-sm"
+                >
+                  {/* Sol Taraf: Görsel ve Ürün Bilgisi */}
+                  <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                    {/* Görsel */}
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white/5 border border-white/10 flex-shrink-0 relative overflow-hidden">
+                      {product.fotograflar?.[0] ? (
+                        <Image 
+                          src={product.fotograflar[0]} 
+                          alt={product.ad} 
+                          fill 
+                          sizes="64px"
+                          className="object-cover group-hover:scale-105 transition-transform duration-300" 
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/20">
+                          <Package size={22} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Metin & Rozetler */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-display font-bold text-sm sm:text-base uppercase text-white truncate tracking-wide">
+                          {product.ad}
+                        </span>
+                        {product.is_featured && (
+                          <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                            Öne Çıkan
                           </span>
                         )}
-                      </span>
-                    )}
+                      </div>
+
+                      {/* Etiketler (Marka, Model Kodu, Kategori) */}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        {product.marka && (
+                          <span className="bg-white/5 text-white/80 border border-white/10 px-2 py-0.5 rounded text-[11px] font-medium">
+                            {product.marka}
+                          </span>
+                        )}
+                        {modelKod && (
+                          <span className="font-mono text-[11px] text-white/60 bg-white/5 border border-white/10 px-2 py-0.5 rounded">
+                            {modelKod}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-white/40 truncate">
+                          {product.kategori}
+                        </span>
+                      </div>
+
+                      {/* Fiyat ve Stok Durumu */}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 pt-1 border-t border-white/5">
+                        {product.fiyat !== undefined && product.fiyat !== null ? (
+                          <span className="font-display font-bold text-xs text-brand-red">
+                            {paraSimge} {product.fiyat.toLocaleString('tr-TR')} {product.para_birimi || 'TL'}
+                          </span>
+                        ) : null}
+
+                        {product.bayi_fiyati ? (
+                          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded font-medium">
+                            Bayi: {bayiParaSimge} {product.bayi_fiyati.toLocaleString('tr-TR')} {product.bayi_para_birimi || 'TL'}
+                          </span>
+                        ) : null}
+
+                        {/* Stok Rozeti */}
+                        {product.stok_durumu === 'stokta' ? (
+                          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Stokta ({product.stok_adedi ?? 0} Adet)
+                          </span>
+                        ) : product.stok_durumu === 'tukendi' ? (
+                          <span className="text-[11px] text-rose-500 flex items-center gap-1 font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                            Tükendi
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-amber-500 flex items-center gap-1 font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            Siparişe Göre
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sağ Taraf: Aksiyon Butonları */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0 self-end sm:self-center">
+                    {/* Öne Çıkar Butonu */}
+                    <button 
+                      type="button"
+                      onClick={() => toggleFeatured(product)} 
+                      className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all ${
+                        product.is_featured 
+                          ? 'border-amber-500/40 text-amber-500 bg-amber-500/15 shadow-sm' 
+                          : 'border-white/10 text-white/30 hover:border-amber-500/40 hover:text-amber-500 hover:bg-amber-500/10'
+                      }`} 
+                      title={product.is_featured ? "Öne Çıkanlardan Kaldır" : "Öne Çıkar"}
+                    >
+                      <Star size={14} fill={product.is_featured ? "currentColor" : "none"} />
+                    </button>
+
+                    {/* Düzenle Butonu */}
+                    <button 
+                      type="button"
+                      onClick={() => openEdit(product)} 
+                      className="w-9 h-9 rounded-xl border border-white/10 bg-white/5 hover:border-brand-red/40 hover:text-brand-red flex items-center justify-center text-white/50 transition-all"
+                      title="Ürünü Düzenle"
+                    >
+                      <Pencil size={14} />
+                    </button>
+
+                    {/* Sil Butonu */}
+                    <button 
+                      type="button"
+                      onClick={() => handleDelete(product.id)} 
+                      disabled={deleting === product.id} 
+                      className="w-9 h-9 rounded-xl border border-white/10 bg-white/5 hover:bg-rose-500/10 flex items-center justify-center text-white/40 hover:text-rose-500 hover:border-rose-500/30 transition-all disabled:opacity-40"
+                      title="Ürünü Sil"
+                    >
+                      {deleting === product.id ? (
+                        <Loader2 size={14} className="animate-spin text-rose-500" />
+                      ) : (
+                        <Trash2 size={14} />
+                      )}
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button onClick={() => toggleFeatured(product)} className={`w-9 h-9 border flex items-center justify-center transition-all ${product.is_featured ? 'border-yellow-500/50 text-yellow-500 bg-yellow-500/10' : 'border-white/10 text-white/20 hover:border-yellow-500/40 hover:text-yellow-500'}`} title={product.is_featured ? "Öne Çıkanlardan Kaldır" : "Öne Çıkar"}>
-                    <Star size={13} fill={product.is_featured ? "currentColor" : "none"} />
-                  </button>
-                  <button onClick={() => openEdit(product)} className="w-9 h-9 border border-white/10 flex items-center justify-center text-white/20 hover:border-brand-red/40 hover:text-brand-red transition-all"><Pencil size={13} /></button>
-                  <button onClick={() => handleDelete(product.id)} disabled={deleting === product.id} className="w-9 h-9 border border-white/10 flex items-center justify-center text-white/20 hover:border-red-500/40 hover:text-red-500 transition-all disabled:opacity-40">
-                    {deleting === product.id ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" /> : <Trash2 size={13} />}
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
+          {/* Sayfalama (Pagination) */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-4 border-t border-white/5">
-              <div className="text-[10px] font-display font-bold text-white/20 uppercase tracking-widest">
-                Sayfa {currentPage + 1} / {totalPages} — Toplam {totalCount} Ürün
+            <div className="bg-[#141414] border border-white/10 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+              <div className="text-xs text-white/50 font-medium">
+                Sayfa <span className="text-white font-bold">{currentPage + 1}</span> / {totalPages} — Toplam <span className="text-white font-bold">{totalCount}</span> Ürün
               </div>
-              <div className="flex gap-2">
-                <button disabled={currentPage === 0 || loading} onClick={() => setCurrentPage(prev => prev - 1)} className="px-4 py-2 bg-white/5 border border-white/10 text-white/40 text-[10px] font-bold uppercase hover:bg-white/10 hover:text-white transition-all disabled:opacity-20">Önceki</button>
-                <button disabled={currentPage >= totalPages - 1 || loading} onClick={() => setCurrentPage(prev => prev + 1)} className="px-4 py-2 bg-white/5 border border-white/10 text-white/40 text-[10px] font-bold uppercase hover:bg-white/10 hover:text-white transition-all disabled:opacity-20">Sonraki</button>
+              <div className="flex items-center gap-2">
+                <button 
+                  type="button"
+                  disabled={currentPage === 0 || loading} 
+                  onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))} 
+                  className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-all disabled:opacity-20 disabled:pointer-events-none"
+                >
+                  <ChevronLeft size={14} />
+                  <span>Önceki</span>
+                </button>
+                <button 
+                  type="button"
+                  disabled={currentPage >= totalPages - 1 || loading} 
+                  onClick={() => setCurrentPage(prev => prev + 1)} 
+                  className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-all disabled:opacity-20 disabled:pointer-events-none"
+                >
+                  <span>Sonraki</span>
+                  <ChevronRight size={14} />
+                </button>
               </div>
             </div>
           )}
         </div>
       )}
 
+      {/* ── ÜRÜN DÜZENLE MODAL (EDIT MODAL) ──────────────── */}
       {editProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#141414] border border-white/10 w-full max-w-lg flex flex-col" style={{ clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%)', maxHeight: 'calc(100vh - 80px)' }}>
-            <div className="flex items-center justify-between p-6 border-b border-white/5 flex-shrink-0">
-              <div>
-                <div className="font-display font-black text-lg uppercase text-white">Ürün Düzenle</div>
-                <div className="font-body text-white/30 text-xs mt-0.5 truncate max-w-xs">{editProduct.ad}</div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="bg-[#141414] border border-white/10 rounded-2xl w-full max-w-2xl flex flex-col shadow-2xl overflow-hidden max-h-[90vh]">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-white/10 bg-[#1A1A1A] flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-brand-red/15 border border-brand-red/25 flex items-center justify-center text-brand-red">
+                  <Pencil size={15} />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-sm uppercase tracking-wider text-white">Ürün Düzenle</h3>
+                  <p className="text-xs text-white/50 truncate max-w-sm sm:max-w-md">{editProduct.ad}</p>
+                </div>
               </div>
-              <button onClick={() => setEditProduct(null)} className="text-white/20 hover:text-white transition-colors p-1"><X size={20} /></button>
+              <button 
+                type="button"
+                onClick={() => setEditProduct(null)} 
+                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-colors"
+              >
+                <X size={16} />
+              </button>
             </div>
-            <div className="p-6 pb-32 space-y-4 overflow-y-auto flex-1">
+
+            {/* Modal Scrollable İçerik */}
+            <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
               {editLoading ? (
-                <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                  <div className="w-10 h-10 border-4 border-white/10 border-t-brand-red rounded-full animate-spin" />
-                  <p className="font-display font-bold text-xs uppercase text-white/30 tracking-widest">Detaylar Yükleniyor...</p>
+                <div className="flex flex-col items-center justify-center py-20 space-y-3">
+                  <Loader2 size={32} className="text-brand-red animate-spin" />
+                  <p className="font-display font-semibold text-xs uppercase text-white/40 tracking-widest">
+                    Ürün Detayları Getiriliyor...
+                  </p>
                 </div>
               ) : (
                 <>
+                  {/* Ürün Adı */}
                   <div>
-                    <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Ürün Adı *</label>
-                    <input type="text" value={editAd} onChange={e => setEditAd(e.target.value)} className="input-dark" />
+                    <label className="text-xs font-medium text-white/70 block mb-1.5">
+                      Ürün Adı <span className="text-brand-red">*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      value={editAd} 
+                      onChange={e => setEditAd(e.target.value)} 
+                      className="input-dark rounded-xl" 
+                    />
                   </div>
-                  <div className="border border-white/5 bg-[#1A1A1A] p-3 space-y-2">
-                    <span className="font-display font-semibold text-xs tracking-widest uppercase text-white/40">Kategori Hiyerarşisi</span>
-                    <div className="grid grid-cols-3 gap-2">
+
+                  {/* Kategori Hiyerarşisi */}
+                  <div className="bg-[#1A1A1A] border border-white/5 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Layers size={13} className="text-brand-red" />
+                      <span className="text-xs font-semibold text-white/80 uppercase tracking-wider">Kategori Hiyerarşisi</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                       <div>
-                        <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1">Ana</label>
-                        <select value={editKategori} onChange={e => { setEditKategori(e.target.value); setEditAltKategori(''); setEditUrunTipi('') }} className="input-dark appearance-none cursor-pointer text-sm">
+                        <label className="text-[10px] uppercase font-semibold text-white/50 block mb-1">Ana Kategori</label>
+                        <select 
+                          value={editKategori} 
+                          onChange={e => { setEditKategori(e.target.value); setEditAltKategori(''); setEditUrunTipi('') }} 
+                          className="input-dark rounded-lg text-xs"
+                        >
                           {KATEGORILER.map(k => <option key={k} value={k}>{k}</option>)}
                         </select>
                       </div>
                       <div>
-                        <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1">Alt</label>
-                        <select value={editAltKategori} onChange={e => { setEditAltKategori(e.target.value); setEditUrunTipi('') }} className="input-dark appearance-none cursor-pointer text-sm">
-                          <option value="">—</option>
+                        <label className="text-[10px] uppercase font-semibold text-white/50 block mb-1">Alt Kategori</label>
+                        <select 
+                          value={editAltKategori} 
+                          onChange={e => { setEditAltKategori(e.target.value); setEditUrunTipi('') }} 
+                          className="input-dark rounded-lg text-xs"
+                        >
+                          <option value="">— Yok / Seçiniz —</option>
                           {(KATEGORI_HIYERARSI.find(k => k.label === editKategori)?.altKategoriler || []).map(a => <option key={a.label} value={a.label}>{a.label}</option>)}
                         </select>
                       </div>
                       <div>
-                        <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-brand-red/60 block mb-1">Tip</label>
-                        <select value={editUrunTipi} onChange={e => setEditUrunTipi(e.target.value)} className="input-dark appearance-none cursor-pointer text-sm">
-                          <option value="">—</option>
+                        <label className="text-[10px] uppercase font-semibold text-white/50 block mb-1">3. Seviye Tip</label>
+                        <select 
+                          value={editUrunTipi} 
+                          onChange={e => setEditUrunTipi(e.target.value)} 
+                          className="input-dark rounded-lg text-xs"
+                        >
+                          <option value="">— Yok / Seçiniz —</option>
                           {(KATEGORI_HIYERARSI.find(k => k.label === editKategori)?.altKategoriler.find(a => a.label === editAltKategori)?.detaylar || []).map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
                       </div>
                     </div>
                   </div>
+
+                  {/* Açıklama */}
                   <div>
-                    <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Açıklama *</label>
-                    <textarea value={editAciklama} onChange={e => setEditAciklama(e.target.value)} rows={4} className="input-dark resize-none" />
+                    <label className="text-xs font-medium text-white/70 block mb-1.5">
+                      Ürün Açıklaması <span className="text-brand-red">*</span>
+                    </label>
+                    <textarea 
+                      value={editAciklama} 
+                      onChange={e => setEditAciklama(e.target.value)} 
+                      rows={4} 
+                      className="input-dark rounded-xl resize-none" 
+                    />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="relative">
-                      <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Fiyat</label>
-                      <input type="number" step="0.01" value={editFiyat} onChange={e => setEditFiyat(e.target.value)} className="input-dark" />
-                      <select value={editParaBirimi} onChange={e => setEditParaBirimi(e.target.value)} className="absolute right-2 top-7 bg-transparent text-white/40 border-none outline-none text-xs">
-                        {PARA_BIRIMLERI.map(p => <option key={p.value} value={p.value}>{p.value}</option>)}
+
+                  {/* Fiyatlar Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-medium text-white/70 block mb-1.5">Satış Fiyatı</label>
+                      <div className="flex">
+                        <select 
+                          value={editParaBirimi} 
+                          onChange={e => setEditParaBirimi(e.target.value)} 
+                          className="input-dark rounded-l-xl rounded-r-none border-r-0 w-24 flex-shrink-0 cursor-pointer text-xs"
+                        >
+                          {PARA_BIRIMLERI.map(p => <option key={p.value} value={p.value}>{p.symbol} {p.value}</option>)}
+                        </select>
+                        <input 
+                          type="number" 
+                          step="0.01" 
+                          value={editFiyat} 
+                          onChange={e => setEditFiyat(e.target.value)} 
+                          className="input-dark rounded-r-xl rounded-l-none text-sm" 
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium text-white/70 block mb-1.5">Bayi Fiyatı</label>
+                      <div className="flex">
+                        <select 
+                          value={editBayiParaBirimi} 
+                          onChange={e => setEditBayiParaBirimi(e.target.value)} 
+                          className="input-dark rounded-l-xl rounded-r-none border-r-0 w-24 flex-shrink-0 cursor-pointer text-xs border-emerald-500/20"
+                        >
+                          {PARA_BIRIMLERI.map(p => <option key={p.value} value={p.value}>{p.symbol} {p.value}</option>)}
+                        </select>
+                        <input 
+                          type="number" 
+                          step="0.01" 
+                          value={editBayiF} 
+                          onChange={e => setEditBayiF(e.target.value)} 
+                          className="input-dark rounded-r-xl rounded-l-none text-sm border-emerald-500/20" 
+                          placeholder="Opsiyonel" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stok & Durum */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-white/70 block mb-1.5">Stok Durumu</label>
+                      <select 
+                        value={editStok} 
+                        onChange={e => setEditStok(e.target.value)} 
+                        className="input-dark rounded-xl cursor-pointer text-xs"
+                      >
+                        <option value="stokta">Stokta Var</option>
+                        <option value="tukendi">Tükendi</option>
+                        <option value="siparise_gore">Siparişe Göre Temin</option>
                       </select>
                     </div>
-                    <div className="relative">
-                      <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-green-500/40 block mb-1">Bayi Fiyatı</label>
-                      <input type="number" step="0.01" value={editBayiF} onChange={e => setEditBayiF(e.target.value)} className="input-dark border-green-500/10 focus:border-green-500/40" />
-                      <select value={editBayiParaBirimi} onChange={e => setEditBayiParaBirimi(e.target.value)} className="absolute right-2 top-7 bg-transparent text-white/40 border-none outline-none text-xs">
-                        {PARA_BIRIMLERI.map(p => <option key={p.value} value={p.value}>{p.value}</option>)}
-                      </select>
+
+                    <div>
+                      <label className="text-xs font-medium text-white/70 block mb-1.5">Stok Adedi</label>
+                      <input 
+                        type="number" 
+                        value={editStokAdedi} 
+                        onChange={e => setEditStokAdedi(e.target.value)} 
+                        className="input-dark rounded-xl text-sm" 
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium text-white/70 block mb-1.5">Kritik Eşik</label>
+                      <input 
+                        type="number" 
+                        value={editKritikStok} 
+                        onChange={e => setEditKritikStok(e.target.value)} 
+                        className="input-dark rounded-xl text-sm" 
+                      />
                     </div>
                   </div>
-                  {/* Stok Durumu — admin bilinçli seçim yapabilsin */}
-                  <div>
-                    <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Stok Durumu</label>
-                    <select value={editStok} onChange={e => setEditStok(e.target.value)} className="input-dark appearance-none cursor-pointer">
-                      <option value="stokta">Stokta</option>
-                      <option value="tukendi">Tükendi</option>
-                      <option value="siparise_gore">Siparişe Göre</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="relative">
-                      <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Stok Adedi</label>
-                      <input type="number" value={editStokAdedi} onChange={e => setEditStokAdedi(e.target.value)} className="input-dark" />
+
+                  {/* Model Kodu, Marka, Alan */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-white/70 block mb-1.5">Model / Stok Kodu</label>
+                      <input 
+                        type="text" 
+                        value={editModelKodu} 
+                        onChange={e => setEditModelKodu(e.target.value)} 
+                        className="input-dark rounded-xl font-mono text-sm" 
+                        placeholder="Örn: M7CL-48" 
+                      />
                     </div>
+
                     <div className="relative">
-                      <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Kritik Stok</label>
-                      <input type="number" value={editKritikStok} onChange={e => setEditKritikStok(e.target.value)} className="input-dark" />
-                    </div>
-                  </div>
-                  {/* Model Kodu (Stok Kodu) */}
-                  <div>
-                    <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block mb-2">Model Kodu / Stok Kodu</label>
-                    <input type="text" value={editModelKodu} onChange={e => setEditModelKodu(e.target.value)} className="input-dark" placeholder="Örn: M7CL-48" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="relative">
-                      <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Marka</label>
-                      <input type="text" value={editMarka} onChange={e => { setEditMarka(e.target.value); fetchMarkaSuggestions(e.target.value) }} onFocus={() => setShowMarkaSuggestions(true)} onBlur={() => setTimeout(() => setShowMarkaSuggestions(false), 200)} className="input-dark" />
+                      <label className="text-xs font-medium text-white/70 block mb-1.5">Marka</label>
+                      <input 
+                        type="text" 
+                        value={editMarka} 
+                        onChange={e => { setEditMarka(e.target.value); fetchMarkaSuggestions(e.target.value) }} 
+                        onFocus={() => setShowMarkaSuggestions(true)} 
+                        onBlur={() => setTimeout(() => setShowMarkaSuggestions(false), 200)} 
+                        className="input-dark rounded-xl text-sm" 
+                      />
                       {showMarkaSuggestions && existingMarkalar.length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-[#1A1A1A] border border-white/10 max-h-32 overflow-y-auto">
+                        <div className="absolute z-20 w-full mt-1 bg-[#141414] border border-white/10 rounded-xl max-h-32 overflow-y-auto shadow-2xl py-1">
                           {existingMarkalar.filter(m => m.toLowerCase().includes(editMarka.toLowerCase())).map(m => (
-                            <button key={m} onClick={() => setEditMarka(m)} className="w-full text-left px-3 py-2 text-xs text-white/60 hover:bg-white/5">{m}</button>
+                            <button key={m} type="button" onClick={() => setEditMarka(m)} className="w-full text-left px-3 py-1.5 text-xs text-white/70 hover:bg-white/10">{m}</button>
                           ))}
                         </div>
                       )}
                     </div>
+
                     <div className="relative">
-                      <label className="font-display font-semibold text-[10px] tracking-widest uppercase text-white/20 block mb-1">Kullanım Alanı</label>
-                      <input type="text" value={editKullanim} onChange={e => { setEditKullanim(e.target.value); fetchAlanSuggestions(e.target.value) }} onFocus={() => setShowAlanSuggestions(true)} onBlur={() => setTimeout(() => setShowAlanSuggestions(false), 200)} className="input-dark" />
+                      <label className="text-xs font-medium text-white/70 block mb-1.5">Kullanım Alanı</label>
+                      <input 
+                        type="text" 
+                        value={editKullanim} 
+                        onChange={e => { setEditKullanim(e.target.value); fetchAlanSuggestions(e.target.value) }} 
+                        onFocus={() => setShowAlanSuggestions(true)} 
+                        onBlur={() => setTimeout(() => setShowAlanSuggestions(false), 200)} 
+                        className="input-dark rounded-xl text-sm" 
+                      />
                       {showAlanSuggestions && existingAlanlar.length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-[#1A1A1A] border border-white/10 max-h-32 overflow-y-auto">
+                        <div className="absolute z-20 w-full mt-1 bg-[#141414] border border-white/10 rounded-xl max-h-32 overflow-y-auto shadow-2xl py-1">
                           {existingAlanlar.filter(a => a.toLowerCase().includes(editKullanim.toLowerCase())).map(a => (
-                            <button key={a} onClick={() => setEditKullanim(a)} className="w-full text-left px-3 py-2 text-xs text-white/60 hover:bg-white/5">{a}</button>
+                            <button key={a} type="button" onClick={() => setEditKullanim(a)} className="w-full text-left px-3 py-1.5 text-xs text-white/70 hover:bg-white/10">{a}</button>
                           ))}
                         </div>
                       )}
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <label className="font-display font-semibold text-xs tracking-widest uppercase text-white/40 block">Fotoğraflar (En fazla 10)</label>
-                    <div className="grid grid-cols-5 gap-2">
+
+                  {/* Fotoğraflar Yönetimi */}
+                  <div className="space-y-2.5 pt-1">
+                    <label className="text-xs font-medium text-white/70 block">
+                      Ürün Fotoğrafları <span className="text-white/40">({editFotograflar.length + newPhotos.length}/10)</span>
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {/* Mevcut Kayıtlı Fotoğraflar */}
                       {editFotograflar.map((url, i) => (
-                        <div key={i} className="aspect-square relative group bg-black border border-white/5">
-                          <Image src={url} alt="" fill className="object-cover" />
-                          <button onClick={() => removeExistingPhoto(url)} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
+                        <div key={i} className="aspect-square relative group bg-white/5 rounded-xl border border-white/10 overflow-hidden shadow-sm">
+                          <Image src={url} alt="" fill sizes="90px" className="object-cover" />
+                          <button 
+                            type="button"
+                            onClick={() => removeExistingPhoto(url)} 
+                            className="absolute top-1 right-1 w-5 h-5 bg-rose-600 text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                            title="Fotoğrafı Kaldır"
+                          >
+                            <X size={11} />
+                          </button>
                         </div>
                       ))}
+
+                      {/* Yeni Eklenen Fotoğraflar */}
                       {newPhotos.map((p, i) => (
-                        <div key={i} className="aspect-square relative group bg-black border border-white/10">
-                          <Image src={p.preview} alt="" fill className={`object-cover ${p.compressing ? 'opacity-30' : ''}`} />
+                        <div key={i} className="aspect-square relative group bg-white/5 rounded-xl border border-white/10 overflow-hidden shadow-sm">
+                          <Image src={p.preview} alt="" fill sizes="90px" className={`object-cover ${p.compressing ? 'opacity-30' : ''}`} />
                           {p.compressing ? (
-                            <div className="absolute inset-0 flex items-center justify-center"><div className="w-4 h-4 border-2 border-white/10 border-t-white rounded-full animate-spin" /></div>
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                              <Loader2 size={16} className="animate-spin text-brand-red" />
+                            </div>
                           ) : (
-                            <button onClick={() => removeNewPhoto(p.preview)} className="absolute -top-1 -right-1 w-5 h-5 bg-brand-red text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
+                            <button 
+                              type="button"
+                              onClick={() => removeNewPhoto(p.preview)} 
+                              className="absolute top-1 right-1 w-5 h-5 bg-brand-red text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                              title="Fotoğrafı Kaldır"
+                            >
+                              <X size={11} />
+                            </button>
                           )}
                         </div>
                       ))}
+
+                      {/* Fotoğraf Ekleme Butonu */}
                       {editFotograflar.length + newPhotos.length < 10 && (
-                        <label className="aspect-square flex flex-col items-center justify-center gap-2 border border-dashed border-white/10 hover:border-brand-red/40 cursor-pointer transition-colors">
-                          <Upload size={16} className="text-white/20" />
-                          <span className="font-display font-bold text-[8px] uppercase text-white/20">EKLE</span>
+                        <label className="aspect-square flex flex-col items-center justify-center gap-1 border-2 border-dashed border-white/15 hover:border-brand-red/50 rounded-xl cursor-pointer transition-colors bg-white/5">
+                          <Upload size={16} className="text-white/40" />
+                          <span className="font-display font-bold text-[9px] uppercase tracking-wider text-white/50">Ekle</span>
                           <input type="file" multiple accept="image/*" className="hidden" onChange={handleNewFiles} />
                         </label>
                       )}
@@ -573,16 +880,44 @@ export default function AdminProductList({ onDeleted, refreshTrigger }: Props) {
                 </>
               )}
             </div>
-            <div className="flex gap-3 px-6 pb-6 pt-3 border-t border-white/5 flex-shrink-0 bg-[#141414]">
-              <button onClick={handleSave} disabled={saving || !editAd || !editAciklama || newPhotos.some(n => n.compressing)} className={`btn-primary flex-1 justify-center text-sm disabled:opacity-40 ${saveSuccess ? '!bg-green-600' : ''}`}>
-                {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : saveSuccess ? <Check size={15} /> : null}
-                {saving ? 'Kaydediliyor...' : saveSuccess ? 'Kaydedildi!' : 'Kaydet'}
+
+            {/* Modal Sticky Footer */}
+            <div className="flex items-center justify-end gap-3 p-4 sm:p-5 border-t border-white/10 bg-[#1A1A1A] flex-shrink-0">
+              <button 
+                type="button"
+                onClick={() => setEditProduct(null)} 
+                className="px-5 py-2.5 rounded-xl border border-white/10 text-xs font-semibold text-white/70 hover:text-white hover:bg-white/5 transition-all"
+              >
+                İptal
               </button>
-              <button onClick={() => setEditProduct(null)} className="btn-outline text-sm px-5">İptal</button>
+              <button 
+                type="button"
+                onClick={handleSave} 
+                disabled={saving || !editAd || !editAciklama || newPhotos.some(n => n.compressing)} 
+                className={`px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2 transition-all shadow-md ${
+                  saveSuccess 
+                    ? '!bg-emerald-600' 
+                    : 'bg-brand-red hover:bg-brand-red-dark active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed shadow-brand-red/20'
+                }`}
+              >
+                {saving ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>Kaydediliyor...</span>
+                  </>
+                ) : saveSuccess ? (
+                  <>
+                    <Check size={15} />
+                    <span>Kaydedildi!</span>
+                  </>
+                ) : (
+                  <span>Değişiklikleri Kaydet</span>
+                )}
+              </button>
             </div>
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }

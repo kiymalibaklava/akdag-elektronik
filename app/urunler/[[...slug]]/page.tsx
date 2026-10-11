@@ -5,7 +5,7 @@ import ProductGrid from '@/components/ProductGrid'
 import Pagination from '@/components/Pagination'
 import { TUM_KATEGORILER, KATEGORI_HIYERARSI, NEW_KATEGORI_HIYERARSI, findCategoryBySlug, type CategoryNode } from '@/lib/categories'
 import { notFound } from 'next/navigation'
-import { Filter, SlidersHorizontal, ChevronRight, X } from 'lucide-react'
+import { Filter, SlidersHorizontal, ChevronRight, X, RotateCcw, FolderTree } from 'lucide-react'
 import { getActiveBanners } from '@/lib/banner-service'
 import BannerCarousel from '@/components/BannerCarousel'
 
@@ -196,6 +196,24 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
   const baseParams = new URLSearchParams()
   Object.entries(searchParams).forEach(([k, v]) => { if (v && k !== 'sayfa') baseParams.set(k, v) })
 
+  const hasActiveFilters = Boolean(
+    (searchParams.marka && searchParams.marka !== 'tum') ||
+    (searchParams.kullanim && searchParams.kullanim !== 'tum') ||
+    (searchParams.stok && searchParams.stok !== 'tum') ||
+    searchParams.min ||
+    searchParams.max ||
+    (searchParams.sirala && searchParams.sirala !== 'yeni') ||
+    searchParams.q
+  )
+  let activeFilterCount = 0
+  if (searchParams.marka && searchParams.marka !== 'tum') activeFilterCount++
+  if (searchParams.kullanim && searchParams.kullanim !== 'tum') activeFilterCount++
+  if (searchParams.stok && searchParams.stok !== 'tum') activeFilterCount++
+  if (searchParams.min) activeFilterCount++
+  if (searchParams.max) activeFilterCount++
+  if (searchParams.sirala && searchParams.sirala !== 'yeni') activeFilterCount++
+  if (searchParams.q) activeFilterCount++
+
   // JSON-LD ItemList for SEO
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -222,133 +240,174 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
       {/* Kampanya / Banner Alanı */}
       <BannerCarousel banners={banners} />
 
-      {/* Başlık + Arama — Banner’ın hemen altında, aktarımlı geçiş */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-[2px] bg-brand-red" />
-          <span className="font-display font-black text-[10px] tracking-[0.4em] uppercase text-brand-red">
+      {/* Başlık + Arama — Banner’ın hemen altında */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-8 h-[2px] bg-brand-red" />
+          <span className="font-display font-bold text-[10px] tracking-[0.3em] uppercase text-brand-red">
             {activeCategory ? 'Kategori Kataloğu' : 'Tüm Ürünler'}
           </span>
         </div>
-        <div className="flex flex-col md:flex-row md:items-end gap-6 md:gap-12">
-          <h1 className="font-display font-black text-4xl md:text-6xl uppercase text-white tracking-tighter leading-none flex-shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <h1 className="font-display font-black text-3xl sm:text-4xl md:text-5xl uppercase text-white tracking-tight leading-none">
             {activeCategory ? activeCategory.name : 'ÜRÜN KATALOĞU'}
           </h1>
-          <div className="flex-1 max-w-xl">
+          <div className="w-full md:w-[480px]">
             <ProductSearch fullPage />
           </div>
         </div>
       </div>
       
-      <div className="max-w-7xl mx-auto px-6 pt-16">
-        {/* Akıllı Filtre Paneli (Madde 3) - Mobil Uyumlu */}
-        <div className="bg-[#111111] border border-white/5 mb-12">
-          {/* Mobil Toggle Checkbox (Sadece mobilde çalışacak şekilde ayarlandı) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        {/* Akıllı Filtre Paneli */}
+        <div className="bg-[#141414] border border-white/10 rounded-2xl shadow-sm mb-8 overflow-hidden">
+          {/* Mobil Toggle Checkbox */}
           <input type="checkbox" id="mobile-filter-toggle" className="peer hidden" />
           
-          <label htmlFor="mobile-filter-toggle" className="p-4 sm:p-6 flex items-center justify-between cursor-pointer sm:cursor-default sm:pointer-events-none">
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal size={14} className="text-brand-red" />
-              <span className="font-display font-bold text-[10px] tracking-[0.2em] uppercase text-white/40 peer-checked:text-brand-red transition-colors">
-                FİLTRELEME SEÇENEKLERİ
-              </span>
-            </div>
-            <span className="text-brand-red sm:hidden text-xs font-display uppercase tracking-widest peer-checked:hidden">Göster</span>
-            <span className="text-white/40 sm:hidden text-xs font-display uppercase tracking-widest hidden peer-checked:block">Gizle</span>
-          </label>
-
-          {/* Mobilde gizli, checked olunca görünür. Masaüstünde hep görünür. */}
-          <div className="hidden peer-checked:block sm:block px-4 pb-4 sm:px-6 sm:pb-6 border-t border-white/5 pt-4 sm:border-none sm:pt-0">
-            <form className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-            <div className="space-y-2">
-              {searchParams.q && <input type="hidden" name="q" value={searchParams.q} />}
-              <label className="block text-[9px] font-display font-bold uppercase text-white/20 tracking-widest">Marka</label>
-              <select name="marka" defaultValue={searchParams.marka || 'tum'} className="input-dark text-xs py-3 border-white/10 hover:border-brand-red/30 transition-colors appearance-none cursor-pointer">
-                <option value="tum">TÜM MARKALAR</option>
-                {markalar.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}
-              </select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="block text-[9px] font-display font-bold uppercase text-white/20 tracking-widest">Kullanım Alanı</label>
-              <select name="kullanim" defaultValue={searchParams.kullanim || 'tum'} className="input-dark text-xs py-3 border-white/10 hover:border-brand-red/30 transition-colors appearance-none cursor-pointer">
-                <option value="tum">TÜM ALANLAR</option>
-                {kullanimAlanlari.map((k) => <option key={k} value={k}>{k.toUpperCase()}</option>)}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-[9px] font-display font-bold uppercase text-white/20 tracking-widest">Stok Durumu</label>
-              <select name="stok" defaultValue={searchParams.stok || 'tum'} className="input-dark text-xs py-3 border-white/10 hover:border-brand-red/30 transition-colors appearance-none cursor-pointer">
-                <option value="tum">TÜM STOKLAR</option>
-                <option value="stokta">STOKTA MEVCUT</option>
-                <option value="siparise_gore">SİPARİŞE GÖRE</option>
-                <option value="tukendi">TÜKENDİ</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-[9px] font-display font-bold uppercase text-white/20 tracking-widest">Fiyat Aralığı (TL)</label>
-              <div className="grid grid-cols-2 gap-2">
-                <input name="min" type="number" min="0" defaultValue={searchParams.min || ''} className="input-dark text-xs py-3 border-white/10" placeholder="MİN" />
-                <input name="max" type="number" min="0" defaultValue={searchParams.max || ''} className="input-dark text-xs py-3 border-white/10" placeholder="MAX" />
+          <div className="p-4 sm:p-5 flex items-center justify-between border-b border-white/10 bg-white/[0.03]">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-brand-red/10 border border-brand-red/20 flex items-center justify-center text-brand-red">
+                <SlidersHorizontal size={15} />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-display font-bold text-xs uppercase tracking-wider text-white">
+                  Filtreleme Seçenekleri
+                </span>
+                {activeFilterCount > 0 && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-brand-red/15 text-brand-red border border-brand-red/30 px-2 py-0.5 rounded-full">
+                    {activeFilterCount} Filtre Aktif
+                  </span>
+                )}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-[9px] font-display font-bold uppercase text-white/20 tracking-widest">Sıralama</label>
-              <select name="sirala" defaultValue={searchParams.sirala || 'yeni'} className="input-dark text-xs py-3 border-white/10 hover:border-brand-red/30 transition-colors appearance-none cursor-pointer">
-                <option value="yeni">EN YENİLER</option>
-                <option value="fiyat_artan">FİYAT: DÜŞÜKTEN YÜKSEĞE</option>
-                <option value="fiyat_azalan">FİYAT: YÜKSEKTEN DÜŞÜĞE</option>
-                <option value="ad_asc">İSİM: A-Z</option>
-              </select>
-            </div>
-
-            <div className="flex items-end gap-2 xl:col-span-1 sm:col-span-2">
-              <button className="btn-primary flex-1 justify-center text-xs py-3.5 tracking-[0.2em]" type="submit">
-                <Filter size={14} className="mr-2" /> UYGULA
-              </button>
-              {(searchParams.marka || searchParams.kullanim || searchParams.stok || searchParams.min || searchParams.max || searchParams.q) && (
-                <a href={slugArray.length > 0 ? `/urunler/${slugArray.join('/')}` : '/urunler'} 
-                   className="w-12 h-12 flex items-center justify-center border border-white/10 text-white/40 hover:border-brand-red/40 hover:text-brand-red transition-all"
-                   title="Filtreleri Temizle">
-                  <X size={16} />
+            <div className="flex items-center gap-2">
+              {hasActiveFilters && (
+                <a
+                  href={slugArray.length > 0 ? `/urunler/${slugArray.join('/')}` : '/urunler'}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 hover:border-brand-red/40 hover:text-brand-red text-white/60 text-xs font-semibold transition-all"
+                  title="Filtreleri Sıfırla"
+                >
+                  <RotateCcw size={12} />
+                  <span className="hidden sm:inline">Temizle</span>
                 </a>
               )}
+              <label 
+                htmlFor="mobile-filter-toggle" 
+                className="sm:hidden px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 text-xs font-semibold text-white/80 cursor-pointer"
+              >
+                <span className="peer-checked:hidden">Filtreler</span>
+                <span className="hidden peer-checked:block">Gizle</span>
+              </label>
             </div>
-          </form>
+          </div>
+
+          {/* Form Alanı (Masaüstünde açık, mobilde peer-checked ile açılır) */}
+          <div className="hidden peer-checked:block sm:block p-4 sm:p-5">
+            <form className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+              {searchParams.q && <input type="hidden" name="q" value={searchParams.q} />}
+              
+              {/* Marka */}
+              <div className="space-y-1">
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/60">Marka</label>
+                <select name="marka" defaultValue={searchParams.marka || 'tum'} className="input-dark text-xs py-2.5 rounded-xl cursor-pointer">
+                  <option value="tum">Tüm Markalar</option>
+                  {markalar.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+
+              {/* Kullanım Alanı */}
+              <div className="space-y-1">
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/60">Kullanım Alanı</label>
+                <select name="kullanim" defaultValue={searchParams.kullanim || 'tum'} className="input-dark text-xs py-2.5 rounded-xl cursor-pointer">
+                  <option value="tum">Tüm Alanlar</option>
+                  {kullanimAlanlari.map((k) => <option key={k} value={k}>{k}</option>)}
+                </select>
+              </div>
+
+              {/* Stok Durumu */}
+              <div className="space-y-1">
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/60">Stok Durumu</label>
+                <select name="stok" defaultValue={searchParams.stok || 'tum'} className="input-dark text-xs py-2.5 rounded-xl cursor-pointer">
+                  <option value="tum">Tüm Stoklar</option>
+                  <option value="stokta">Stokta Mevcut</option>
+                  <option value="siparise_gore">Siparişe Göre</option>
+                  <option value="tukendi">Tükendi</option>
+                </select>
+              </div>
+
+              {/* Fiyat Aralığı (TL) */}
+              <div className="space-y-1">
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/60">Fiyat Aralığı (₺)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input name="min" type="number" min="0" defaultValue={searchParams.min || ''} className="input-dark text-xs py-2.5 rounded-xl" placeholder="Min ₺" />
+                  <input name="max" type="number" min="0" defaultValue={searchParams.max || ''} className="input-dark text-xs py-2.5 rounded-xl" placeholder="Max ₺" />
+                </div>
+              </div>
+
+              {/* Sıralama */}
+              <div className="space-y-1">
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/60">Sıralama</label>
+                <select name="sirala" defaultValue={searchParams.sirala || 'yeni'} className="input-dark text-xs py-2.5 rounded-xl cursor-pointer">
+                  <option value="yeni">En Yeniler</option>
+                  <option value="fiyat_artan">Fiyat: Düşükten Yükseğe</option>
+                  <option value="fiyat_azalan">Fiyat: Yüksekten Düşüğe</option>
+                  <option value="ad_asc">İsim: A-Z</option>
+                </select>
+              </div>
+
+              {/* Butonlar */}
+              <div className="flex items-end gap-2 pt-1 sm:pt-0">
+                <button className="w-full py-2.5 px-4 rounded-xl bg-brand-red hover:bg-brand-red-dark text-white font-display font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md active:scale-95" type="submit">
+                  <Filter size={13} />
+                  <span>Uygula</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 
         {/* Dinamik Kategori Gezgini */}
-        <div className="mb-12">
+        <div className="mb-10">
           {!activeCategory ? (
-            <div className="flex flex-wrap gap-2">
-              {NEW_KATEGORI_HIYERARSI.map((kat) => (
-                <a
-                  key={kat.slug}
-                  href={`/urunler/${kat.slug}`}
-                  className="font-display font-bold text-[10px] tracking-widest uppercase px-6 py-3 border border-white/5 bg-[#141414] text-white/30 hover:border-brand-red/40 hover:text-white transition-all duration-300"
-                >
-                  {kat.name}
-                </a>
-              ))}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-white/50 text-[11px] font-display font-bold uppercase tracking-wider">
+                <FolderTree size={13} className="text-brand-red" />
+                <span>Kategorilere Göre İnceleyin</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {NEW_KATEGORI_HIYERARSI.map((kat) => (
+                  <a
+                    key={kat.slug}
+                    href={`/urunler/${kat.slug}`}
+                    className="font-display font-semibold text-xs tracking-wider uppercase px-4 py-2.5 rounded-xl border border-white/10 bg-[#141414] hover:bg-brand-red/5 hover:border-brand-red/40 text-white/80 hover:text-brand-red transition-all duration-200 shadow-sm flex items-center gap-2 group"
+                  >
+                    <span>{kat.name}</span>
+                    <ChevronRight size={13} className="text-white/20 group-hover:text-brand-red group-hover:translate-x-0.5 transition-all" />
+                  </a>
+                ))}
+              </div>
             </div>
           ) : activeCategory.children && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 text-white/20">
-                <span className="font-display font-bold text-[9px] uppercase tracking-[0.3em] whitespace-nowrap">ALT KATEGORİLER</span>
-                <div className="h-px bg-white/5 flex-1" />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-white/50 text-[11px] font-display font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2">
+                  <FolderTree size={13} className="text-brand-red" />
+                  <span>Alt Kategoriler ({activeCategory.name})</span>
+                </div>
+                <a href="/urunler" className="text-brand-red hover:underline text-[11px] font-normal normal-case">
+                  ← Tüm Kategorileri Göster
+                </a>
               </div>
               <div className="flex flex-wrap gap-2">
                 {activeCategory.children.map((child: any) => (
                   <a
                     key={child.slug}
                     href={`/urunler/${slugArray.join('/')}/${child.slug}`}
-                    className="font-display font-bold text-[10px] tracking-widest uppercase px-5 py-2.5 border border-brand-red/10 bg-brand-red/[0.02] text-brand-red/50 hover:bg-brand-red hover:text-white transition-all"
+                    className="font-display font-semibold text-xs tracking-wider uppercase px-4 py-2 rounded-xl border border-brand-red/20 bg-brand-red/5 hover:bg-brand-red text-brand-red hover:text-white transition-all shadow-sm flex items-center gap-1.5"
                   >
-                    {child.name}
+                    <span>{child.name}</span>
+                    <ChevronRight size={12} className="opacity-60" />
                   </a>
                 ))}
               </div>
@@ -357,12 +416,13 @@ export default async function UrunlerPage({ params, searchParams }: Props) {
         </div>
 
         {/* Sonuç Sayacı */}
-        <div className="flex items-center justify-between mb-10 pb-6 border-b border-white/5">
-          <div className="font-display font-bold text-[11px] tracking-widest text-white/20 uppercase">
-             TOPLAM <span className="text-white ml-1">{count || 0}</span> ÜRÜN LİSTELENİYOR
+        <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
+          <div className="font-display font-bold text-xs tracking-wider text-white/60 uppercase flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>TOPLAM <strong className="text-white font-extrabold">{count || 0}</strong> ÜRÜN LİSTELENİYOR</span>
           </div>
           {count && count > 0 && (
-            <div className="font-body text-xs text-white/20">
+            <div className="font-body text-xs text-white/40">
               SAYFA {sayfa} / {totalPages}
             </div>
           )}

@@ -237,15 +237,21 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
         {activeTab === 'siparisler' && <AdminSiparisler />}
 
         {activeTab === 'urunler' && (
-          <div className="grid lg:grid-cols-3 gap-12">
-            <div className="lg:col-span-1">
-              <h2 className="font-display font-bold text-xl uppercase tracking-wide text-white mb-6 red-line">Yeni Ürün Ekle</h2>
+          <div className="grid lg:grid-cols-12 gap-8 items-start">
+            <div className="lg:col-span-5 xl:col-span-5">
+              <div className="flex items-center gap-2.5 mb-4">
+                <h2 className="font-display font-bold text-lg sm:text-xl uppercase tracking-wider text-white">Yeni Ürün Ekle</h2>
+                <span className="text-[10px] font-semibold uppercase tracking-widest bg-brand-red/15 text-brand-red border border-brand-red/30 px-2 py-0.5 rounded-full">Katalog</span>
+              </div>
               <AdminAddProduct onAdded={() => setRefreshTrigger(prev => prev + 1)} />
             </div>
-            <div className="lg:col-span-2">
-              <h2 className="font-display font-bold text-xl uppercase tracking-wide text-white mb-6 red-line">
-                Mevcut Ürünler
-              </h2>
+            <div className="lg:col-span-7 xl:col-span-7">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-display font-bold text-lg sm:text-xl uppercase tracking-wider text-white">
+                  Mevcut Ürünler
+                </h2>
+                <span className="text-xs text-white/40">Katalog Yönetimi</span>
+              </div>
               <AdminProductList refreshTrigger={refreshTrigger} />
             </div>
           </div>
