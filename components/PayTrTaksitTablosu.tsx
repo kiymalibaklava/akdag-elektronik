@@ -5,6 +5,7 @@ import { CreditCard, X, ShieldCheck, Loader2 } from 'lucide-react'
 import { dovizToTL, type KurData } from '@/lib/kur'
 import { getKurClient } from '@/lib/kur-client'
 import { createClient } from '@/lib/supabase'
+import { getBayiStatus } from '@/lib/bayi-client'
 
 interface Props {
   urunId?: string
@@ -48,29 +49,23 @@ export default function PayTrTaksitTablosu({
 
     // İstemci taraflı oturum & onaylı bayi kontrolü
     const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }: { data: any }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }: { data: any }) => {
       if (session?.user) {
-        supabase
-          .from('bayiler')
-          .select('onaylandi')
-          .eq('user_id', session.user.id)
-          .maybeSingle()
-          .then(async ({ data }: { data: any }) => {
-            if (data?.onaylandi) {
-              setIsBayiAuth(true)
-              if (urunId && !bayiFiyati) {
-                const { data: p } = await supabase
-                  .from('urunler')
-                  .select('bayi_fiyati, bayi_para_birimi')
-                  .eq('id', urunId)
-                  .maybeSingle()
-                if (p?.bayi_fiyati) {
-                  setLiveBayiFiyati(p.bayi_fiyati)
-                  if (p.bayi_para_birimi) setLiveBayiPb(p.bayi_para_birimi)
-                }
-              }
+        const approved = await getBayiStatus(supabase, session.user.id)
+        if (approved) {
+          setIsBayiAuth(true)
+          if (urunId && !bayiFiyati) {
+            const { data: p } = await supabase
+              .from('urunler')
+              .select('bayi_fiyati, bayi_para_birimi')
+              .eq('id', urunId)
+              .maybeSingle()
+            if (p?.bayi_fiyati) {
+              setLiveBayiFiyati(p.bayi_fiyati)
+              if (p.bayi_para_birimi) setLiveBayiPb(p.bayi_para_birimi)
             }
-          })
+          }
+        }
       }
     })
   }, [isBayi, urunId, bayiFiyati])

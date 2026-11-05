@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { ProductCard } from '@/components/ProductGrid'
 import { getKurClient } from '@/lib/kur-client'
 import { createClient } from '@/lib/supabase'
+import { getBayiStatus } from '@/lib/bayi-client'
 import type { KurData } from '@/lib/kur'
 
 export default function FeaturedCarousel({ products }: { products: any[] }) {
@@ -21,8 +22,7 @@ export default function FeaturedCarousel({ products }: { products: any[] }) {
     supabase.auth.getSession().then(async (res: any) => {
       const session = res.data?.session
       if (session?.user) {
-        const { data } = await supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
-        const isBayi = !!data?.onaylandi
+        const isBayi = await getBayiStatus(supabase, session.user.id)
         setIsBayiAuth(isBayi)
         setShowPrice(isBayi)
 

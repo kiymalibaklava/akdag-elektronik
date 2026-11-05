@@ -57,7 +57,7 @@ export async function GET(request: Request) {
 
   let query = supabaseAdmin
     .from('wolvox_taslak')
-    .select('*', { count: 'exact' })
+    .select('id, stok_kodu, stok_adi, aciklama, fiyat_doviz, doviz_tipi, stok_miktari, yil, is_processed, updated_at', { count: 'exact' })
     .or('is_processed.eq.false,is_processed.is.null')
     .order('updated_at', { ascending: false })
     .range(from, to)

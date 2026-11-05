@@ -36,7 +36,11 @@ export const getProductBySlug = unstable_cache(
 export const getAllProductSlugs = unstable_cache(
   async () => {
     const supabase = await createServerSupabaseClient()
-    const { data } = await supabase.from('urunler').select('id, slug')
+    const { data } = await supabase
+      .from('urunler')
+      .select('id, slug')
+      .order('created_at', { ascending: false })
+      .limit(5000)
     return data || []
   },
   ['all-product-slugs'],

@@ -12,6 +12,7 @@ import {
   type SavedProduct,
 } from '@/lib/product-lists'
 import { createClient } from '@/lib/supabase'
+import { getBayiStatus } from '@/lib/bayi-client'
 
 interface Product {
   id: string
@@ -61,8 +62,8 @@ export default function ProductGrid({ products, suggested, searchQuery, isBayi =
     supabase.auth.getSession().then(async (res: any) => {
       const session = res.data?.session
       if (session?.user) {
-        const { data: b } = await supabase.from('bayiler').select('onaylandi').eq('user_id', session.user.id).maybeSingle()
-        if (b?.onaylandi) {
+        const approved = await getBayiStatus(supabase, session.user.id)
+        if (approved) {
           setIsBayiAuth(true)
           const allItems = [...products, ...(suggested || [])]
           const pIds = Array.from(new Set(allItems.map(p => p.id))).filter(Boolean)

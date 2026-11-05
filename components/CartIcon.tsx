@@ -6,6 +6,7 @@ import { ShoppingCart } from 'lucide-react'
 import { getCartCount } from '@/lib/cart'
 
 import { createClient } from '@/lib/supabase'
+import { getBayiStatus } from '@/lib/bayi-client'
 
 export default function CartIcon() {
   const [count, setCount] = useState(0)
@@ -13,16 +14,10 @@ export default function CartIcon() {
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }: any) => {
+    supabase.auth.getSession().then(async ({ data: { session } }: any) => {
       if (session?.user) {
-        supabase
-          .from('bayiler')
-          .select('onaylandi')
-          .eq('user_id', session.user.id)
-          .maybeSingle()
-          .then(({ data }: any) => {
-            setIsBayi(!!data?.onaylandi)
-          })
+        const approved = await getBayiStatus(supabase, session.user.id)
+        setIsBayi(approved)
       } else {
         setIsBayi(false)
       }

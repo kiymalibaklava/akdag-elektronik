@@ -119,10 +119,10 @@ export default function AdminClient({ onSuccess }: AdminClientProps) {
   }, [onSuccess])
 
   const loadCounts = async () => {
-    const { count: siparisCount } = await supabase.from('siparisler').select('*', { count: 'exact', head: true }).eq('durum', 'beklemede')
+    const { count: siparisCount } = await supabase.from('siparisler').select('id', { count: 'exact', head: true }).eq('durum', 'beklemede')
     setBekleyenSiparis(siparisCount || 0)
 
-    const { count: projeCount } = await supabase.from('proje_talepleri').select('*', { count: 'exact', head: true }).eq('durum', 'yeni')
+    const { count: projeCount } = await supabase.from('proje_talepleri').select('id', { count: 'exact', head: true }).eq('durum', 'yeni')
     setBekleyenProje(projeCount || 0)
   }
 

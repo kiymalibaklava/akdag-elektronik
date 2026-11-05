@@ -45,7 +45,7 @@ export default function AdminDashboard() {
           .neq('durum', 'taslak')
           .order('created_at', { ascending: false })
           .limit(100),
-        supabase.from('bayiler').select('*', { count: 'exact', head: true }).eq('onaylandi', true)
+        supabase.from('bayiler').select('id', { count: 'exact', head: true }).eq('onaylandi', true)
       ])
       setSiparisler(sData || [])
       setBayiCount(bCount || 0)

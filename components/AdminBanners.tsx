@@ -62,17 +62,18 @@ export default function AdminBanners({ supabase }: { supabase: any }) {
     // Load banners
     const { data: bData } = await supabase
       .from('store_banners')
-      .select('*')
+      .select('id, title, subtitle, image_url, link_url, is_active, sort_order, created_at')
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: false })
       
     if (bData) setBanners(bData)
       
-    // Load products for the dropdown
+    // Load products for the dropdown (Maks 300 rn ile snrlandrlarak gereksiz egress engellendi)
     const { data: pData } = await supabase
       .from('urunler')
       .select('id, ad, slug')
       .order('ad', { ascending: true })
+      .limit(300)
       
     if (pData) setProducts(pData)
       

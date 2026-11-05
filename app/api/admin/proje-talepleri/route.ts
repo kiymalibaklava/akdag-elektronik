@@ -33,8 +33,9 @@ export async function GET(req: NextRequest) {
   const adminClient = createAdminClient()
   const { data, error } = await adminClient
     .from('proje_talepleri')
-    .select('*')
+    .select('id, ad_soyad, telefon, email, firma, mekan_tipi, mekan_adi, sehir, alan_m2, kapasite, mesaj, dosyalar, durum, created_at')
     .order('created_at', { ascending: false })
+    .limit(200)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json(data || [])

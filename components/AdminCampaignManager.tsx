@@ -48,7 +48,7 @@ export default function AdminCampaignManager() {
     setLoading(true)
     const { data } = await supabase
       .from('kampanya_gecmisi')
-      .select('*')
+      .select('id, konu, baslik, hedef_kitle, gonderilen_kisi_sayisi, created_at')
       .order('created_at', { ascending: false })
       .limit(50)
     

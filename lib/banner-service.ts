@@ -16,7 +16,7 @@ export async function getActiveBanners(): Promise<StoreBanner[]> {
   
   const { data, error } = await supabase
     .from('store_banners')
-    .select('*')
+    .select('id, title, subtitle, image_url, link_url, is_active, sort_order, created_at')
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false })
@@ -32,7 +32,7 @@ export async function getActiveBanners(): Promise<StoreBanner[]> {
 export async function getAllBannersAdmin(supabase: any): Promise<StoreBanner[]> {
   const { data, error } = await supabase
     .from('store_banners')
-    .select('*')
+    .select('id, title, subtitle, image_url, link_url, is_active, sort_order, created_at')
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false })
 

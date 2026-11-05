@@ -12,6 +12,7 @@ import { NEW_KATEGORI_HIYERARSI, type CategoryNode } from '@/lib/categories'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import { pullCartFromSupabase, setCartUserId, clearCart } from '@/lib/cart'
+import { getBayiStatus } from '@/lib/bayi-client'
 import ThemeToggle from './ThemeToggle'
 
 const navLinks = [
@@ -44,12 +45,7 @@ export default function Navbar() {
     setUser(sessionUser)
     setCartUserId(sessionUser?.id ?? null)
     if (sessionUser) {
-      const { data } = await supabase
-        .from('bayiler')
-        .select('onaylandi')
-        .eq('user_id', sessionUser.id)
-        .maybeSingle()
-      const approved = !!data?.onaylandi
+      const approved = await getBayiStatus(supabase, sessionUser.id)
       setIsBayi(approved)
       if (approved) {
         pullCartFromSupabase()
