@@ -185,17 +185,30 @@ interface Props {
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const isAllProducts = !params.slug || params.slug.length === 0
   const category = !isAllProducts ? findCategoryBySlug(params.slug || []) : null
+  const hasFilterParams = !!(
+    searchParams?.min ||
+    searchParams?.max ||
+    searchParams?.stok ||
+    searchParams?.sirala ||
+    searchParams?.kullanim ||
+    searchParams?.q ||
+    (searchParams?.sayfa && Number(searchParams.sayfa) > 1)
+  )
+  const robots = hasFilterParams
+    ? { index: false, follow: true }
+    : { index: true, follow: true }
 
   if (searchParams?.marka && isAllProducts) {
     const marka = searchParams.marka
-    const title = `${marka} Ürünleri ve Modelleri | Akdağ Elektronik`
+    const title = `${marka} Ürünleri ve Modelleri`
     const description = `Tüm orijinal ${marka} profesyonel ses, sahne ve stüdyo ekipmanları yetkili satış ve teknik servis güvencesiyle Akdağ Elektronik'te.`
     const canonicalUrl = `${getSiteUrl()}/urunler?marka=${encodeURIComponent(marka)}`
     return {
       title,
       description,
+      robots,
       alternates: { canonical: canonicalUrl },
-      openGraph: { title, description, url: canonicalUrl, siteName: 'Akdağ Elektronik', type: 'website', locale: 'tr_TR' },
+      openGraph: { title: `${title} | Akdağ Elektronik`, description, url: canonicalUrl, siteName: 'Akdağ Elektronik', type: 'website', locale: 'tr_TR', images: [{ url: '/og-image.jpg', width: 1200, height: 630 }] },
     }
   }
 
@@ -203,7 +216,9 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     ? 'Tüm Ürünler ve Profesyonel Ses Sistemleri'
     : `${category?.name || 'Ürünler'}`
 
-  title = title.length > 38 ? `${title.substring(0, 38)}... | Akdağ Elektronik` : `${title} | Akdağ Elektronik`
+  if (title.length > 44) {
+    title = `${title.substring(0, 44)}...`
+  }
 
   const baseDesc = isAllProducts
     ? 'Profesyonel ses, ışık, görüntü ve sahne sistemlerinde aradığınız tüm ekipmanlar.'
@@ -218,14 +233,16 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return {
     title,
     description,
+    robots,
     alternates: { canonical: canonicalUrl },
     openGraph: {
-      title,
+      title: `${title} | Akdağ Elektronik`,
       description,
       url: canonicalUrl,
       siteName: 'Akdağ Elektronik',
       type: 'website',
       locale: 'tr_TR',
+      images: [{ url: '/og-image.jpg', width: 1200, height: 630 }],
     },
   }
 }

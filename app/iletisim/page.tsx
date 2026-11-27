@@ -3,7 +3,7 @@ import IletisimForm from '@/components/IletisimForm'
 import type { Metadata } from 'next'
 import { getSiteUrl } from '@/lib/site-url'
 
-const title = 'İletişim | Akdağ Elektronik'
+const title = 'İletişim'
 const description = 'Akdağ Elektronik iletişim bilgileri. Kayseri\'de profesyonel ses, ışık ve görüntü sistemleri projeleriniz için bize ulaşın.'
 const url = `${getSiteUrl()}/iletisim`
 

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft, Phone, Mail, Shield, Eye, Lock, Database, UserCheck, Trash2 } from 'lucide-react'
 
 export const metadata = {
-  title: 'KVKK ve Gizlilik Politikası | Akdağ Elektronik',
+  title: 'KVKK ve Gizlilik Politikası',
   description: 'Akdağ Elektronik kişisel verilerin korunması ve gizlilik politikası — KVKK aydınlatma metni.',
 }
 

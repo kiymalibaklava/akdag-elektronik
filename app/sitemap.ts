@@ -6,6 +6,24 @@ import { NEW_KATEGORI_HIYERARSI, CategoryNode } from '@/lib/categories'
 // Sitemap 24 saat boyunca Vercel Edge CDN'de önbelleklenir (0 CPU)
 export const revalidate = 86400
 
+const FEATURED_BRANDS = [
+  'SHURE',
+  'SOUNDCRAFT',
+  'BEHRINGER',
+  'AKG',
+  'YAMAHA',
+  'JBL',
+  'RCF',
+  'SENNHEISER',
+  'MACKIE',
+  'DB TECHNOLOGIES',
+  'AUDAC',
+  'ALLEN&HEATH',
+  'ALTO',
+  'LD SYSTEMS',
+  'MARTIN AUDIO',
+]
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const rawUrl = getSiteUrl()
   const baseUrl = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl
@@ -13,18 +31,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${baseUrl}`, lastModified: new Date(), changeFrequency: 'daily', priority: 1.0 },
     { url: `${baseUrl}/urunler`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
+    { url: `${baseUrl}/proje-talebi`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${baseUrl}/bayi/basvuru`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
     { url: `${baseUrl}/hakkimizda`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
     { url: `${baseUrl}/iletisim`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
   ]
 
+  const brandPages: MetadataRoute.Sitemap = FEATURED_BRANDS.map((brand) => ({
+    url: `${baseUrl}/urunler?marka=${encodeURIComponent(brand)}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly',
+    priority: 0.75,
+  }))
+
   try {
     const supabase = await createServerSupabaseClient()
-    
+
     const { data: urunler } = await supabase
       .from('urunler')
       .select('id, slug, created_at')
       .order('created_at', { ascending: false })
-      .limit(5000) 
+      .limit(5000)
 
     const urunPages: MetadataRoute.Sitemap = (urunler || []).map((urun) => ({
       url: `${baseUrl}/urun/${urun.slug || urun.id}`,
@@ -47,12 +74,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${baseUrl}/urunler/${path}`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
-      priority: 0.8,
+      priority: 0.85,
     }))
 
-    return [...staticPages, ...categoryPages, ...urunPages]
+    return [...staticPages, ...categoryPages, ...brandPages, ...urunPages]
   } catch (error) {
     console.error('Sitemap urunleri cekerken hata:', error)
-    return staticPages
+    return [...staticPages, ...brandPages]
   }
 }

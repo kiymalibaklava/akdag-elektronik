@@ -1,6 +1,6 @@
 import { permanentRedirect } from 'next/navigation'
 
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://akdagelektronik.com.tr'
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://akdagelektronik.com'
 
 /**
  * Ensures the URL is absolute, uses https, and has no trailing slash (unless root).

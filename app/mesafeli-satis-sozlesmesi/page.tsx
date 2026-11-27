@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft, FileText, Phone, Mail, MapPin } from 'lucide-react'
 
 export const metadata = {
-  title: 'Mesafeli Satış Sözleşmesi | Akdağ Elektronik',
+  title: 'Mesafeli Satış Sözleşmesi',
   description: 'Akdağ Elektronik mesafeli satış sözleşmesi — alıcı ve satıcı hakları, ürün teslimat koşulları.',
 }
 

@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 
 import { getSiteUrl } from '@/lib/site-url'
 
-const title = 'Hakkımızda | Akdağ Elektronik'
+const title = 'Hakkımızda'
 const description = 'Akdağ Elektronik hakkında bilgi edinin. Kayseri\'de 1976\'dan beri 50 yıllık tecrübeyle ses, ışık ve görüntü sistemleri uzmanı.'
 const url = `${getSiteUrl()}/hakkimizda`
 

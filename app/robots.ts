@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next'
 import { getSiteUrl } from '@/lib/site-url'
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = getSiteUrl()
-  
+  const baseUrl = getSiteUrl().replace(/\/$/, '')
+
   return {
     rules: [
       {
@@ -12,13 +12,17 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           '/admin/',
           '/api/',
-          '/bayi/',
+          '/bayi/panel',
+          '/bayi/hizli-siparis',
+          '/bayi/sifrele',
+          '/bayi/sifre-sifirla',
           '/hesabim/',
           '/sepet/',
           '/teklif/',
         ],
       },
       {
+        // Agresif SEO & scraping botları (AI arama motorlarına izin verilir)
         userAgent: [
           'AhrefsBot',
           'SemrushBot',
@@ -27,14 +31,8 @@ export default function robots(): MetadataRoute.Robots {
           'MJ12bot',
           'BLEXBot',
           'DataForSeoBot',
-          'Amazonbot',
           'Bytespider',
-          'GPTBot',
-          'ChatGPT-User',
-          'ClaudeBot',
-          'anthropic-ai',
           'CCBot',
-          'PerplexityBot',
           'Scrapy',
           'Diffbot',
         ],

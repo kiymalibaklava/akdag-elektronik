@@ -30,25 +30,28 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { data: product } = await getProductBySlug(params.slug)
-  if (!product) return { title: 'Ürün Bulunamadı | Akdağ Elektronik' }
+  if (!product) return { title: 'Ürün Bulunamadı' }
 
   const canonicalUrl = buildCanonicalUrl(`/urun/${product.slug || product.id}`)
   
-  // SEO: 55-60 Karakter Title Optimizasyonu
-  let seoTitle = `${product.marka ? product.marka + ' ' : ''}${product.ad}`.trim()
-  if (seoTitle.length > 35) {
-    seoTitle = `${seoTitle.substring(0, 35)}... | Akdağ Elektronik`
+  // SEO: 55-60 Karakter Title Optimizasyonu (layout.tsx template "| Akdağ Elektronik" ekler, marka tekrarı önlenir)
+  const adStartsWithBrand = product.marka && product.ad.toLowerCase().startsWith(product.marka.toLowerCase())
+  let seoTitle = (adStartsWithBrand ? product.ad : `${product.marka ? product.marka + ' ' : ''}${product.ad}`).replace(/\s+/g, ' ').trim()
+  if (seoTitle.length > 42) {
+    seoTitle = `${seoTitle.substring(0, 42)}...`
   } else {
-    seoTitle = `${seoTitle} Fiyatı ve Özellikleri | Akdağ Elektronik`
+    seoTitle = `${seoTitle} Fiyatı ve Özellikleri`
   }
+  const ogTitle = `${seoTitle} | Akdağ Elektronik`
   
   // SEO: 140-155 Karakter Description Optimizasyonu ve CTA
   const baseDesc = product.aciklama ? product.aciklama.replace(/<[^>]*>?/gm, '').trim() : ''
-  let description = `${product.marka ? product.marka + ' ' : ''}${product.ad} modeli profesyonel performanslar için stoklarımızda.`
+  const productLabel = (adStartsWithBrand ? product.ad : `${product.marka ? product.marka + ' ' : ''}${product.ad}`).replace(/\s+/g, ' ').trim()
+  let description = `${productLabel} modeli profesyonel performanslar için stoklarımızda.`
   if (baseDesc) {
     description = `${description} ${baseDesc}`.substring(0, 110)
   }
-  description = `${description}... En uygun fiyat ve teknik destek avantajıyla hemen inceleyin!`
+  description = `${description}... Resmi distribütör garantisi ve teknik destek avantajıyla inceleyin!`
 
   const image = product.fotograflar?.[0] || `${getSiteUrl()}/og-image.jpg`
 
@@ -60,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     keywords,
     alternates: { canonical: canonicalUrl },
     openGraph: {
-      title: seoTitle,
+      title: ogTitle,
       description,
       url: canonicalUrl,
       siteName: 'Akdağ Elektronik',
@@ -69,7 +72,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     twitter: {
       card: 'summary_large_image',
-      title: seoTitle,
+      title: ogTitle,
       description,
       images: [image],
     },
@@ -134,30 +137,71 @@ export default async function UrunDetayPage({ params }: Props) {
   // Breadcrumb hiyerarşisi
   const breadcrumbs = getBreadcrumbs(product.kategori, product.alt_kategori, product.urun_tipi)
 
+  const priceValidUntil = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
   const productJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.ad,
-    description: product.aciklama?.slice(0, 5000),
-    image: product.fotograflar?.length ? product.fotograflar : undefined,
-    sku: product.id,
+    description: product.aciklama ? product.aciklama.replace(/<[^>]*>?/gm, '').slice(0, 5000) : `${product.marka || ''} ${product.ad} profesyonel ekipman`.trim(),
+    image: product.fotograflar?.length ? product.fotograflar : [`${base}/og-image.jpg`],
+    sku: product.slug || product.id,
+    category: product.kategori || undefined,
+    brand: product.marka
+      ? {
+          '@type': 'Brand',
+          name: product.marka,
+        }
+      : {
+          '@type': 'Brand',
+          name: 'Akdağ Elektronik',
+        },
     offers: product.fiyat
       ? {
           '@type': 'Offer',
           price: product.fiyat,
           priceCurrency: currency,
+          priceValidUntil,
+          itemCondition: 'https://schema.org/NewCondition',
           availability:
             stok === 'tukendi'
               ? 'https://schema.org/OutOfStock'
-              : 'https://schema.org/InStock',
-          url: `${base}/urun/${product.slug}`,
+              : stok === 'siparise_gore'
+                ? 'https://schema.org/PreOrder'
+                : 'https://schema.org/InStock',
+          url: `${base}/urun/${product.slug || product.id}`,
+          seller: {
+            '@type': 'Organization',
+            name: 'Akdağ Elektronik',
+          },
         }
       : undefined,
+  }
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Ana Sayfa', item: base },
+      ...breadcrumbs.map((b, idx) => ({
+        '@type': 'ListItem',
+        position: idx + 2,
+        name: b.name,
+        item: `${base}${b.href}`,
+      })),
+      {
+        '@type': 'ListItem',
+        position: breadcrumbs.length + 2,
+        name: product.ad,
+        item: `${base}/urun/${product.slug || product.id}`,
+      },
+    ],
   }
 
   return (
     <div className="min-h-screen pt-8 pb-24">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <div className="max-w-7xl mx-auto px-6 py-12">
         
         {/* Tam Hiyerarşik Breadcrumb (Madde 1) */}

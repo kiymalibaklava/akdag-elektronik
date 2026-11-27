@@ -68,14 +68,24 @@ export const metadata: Metadata = {
   },
 }
 
+const siteBaseUrl = getSiteUrl()
+
 const orgJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'LocalBusiness',
+  '@id': `${siteBaseUrl}/#organization`,
   name: 'Akdağ Elektronik',
-  description: 'Kayseri profesyonel ses, ışık ve görüntü sistemleri firması. Cami, okul ve sahneler için ekipman satışı ve kurulumu.',
-  url: getSiteUrl(),
+  description: '1976\'dan beri Kayseri ve Türkiye genelinde profesyonel ses, ışık ve görüntü sistemleri tedarik, projelendirme, kurulum ve teknik servis firması.',
+  url: siteBaseUrl,
+  logo: `${siteBaseUrl}/logo.png`,
+  image: `${siteBaseUrl}/og-image.jpg`,
+  foundingDate: '1976',
   telephone: '+90-352-231-69-15',
   email: 'info@akdagelektronik.com.tr',
+  areaServed: {
+    '@type': 'Country',
+    name: 'Turkey',
+  },
   address: {
     '@type': 'PostalAddress',
     streetAddress: 'Cumhuriyet Mah. Sur Cad. No:17/A',
@@ -86,11 +96,27 @@ const orgJsonLd = {
   },
   geo: {
     '@type': 'GeoCoordinates',
-    latitude: '38.7176', // Temsili koordinatlar
-    longitude: '35.4839'
+    latitude: '38.7205',
+    longitude: '35.4894',
   },
   openingHours: 'Mo,Tu,We,Th,Fr,Sa 09:00-19:00',
-  priceRange: '$$'
+  priceRange: '$$',
+}
+
+const websiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  '@id': `${siteBaseUrl}/#website`,
+  name: 'Akdağ Elektronik',
+  url: siteBaseUrl,
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: `${siteBaseUrl}/urunler?q={search_term_string}`,
+    },
+    'query-input': 'required name=search_term_string',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -106,6 +132,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
         <Navbar />
         <main>{children}</main>

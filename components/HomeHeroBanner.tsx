@@ -61,6 +61,9 @@ export default function HomeHeroBanner({ banners }: HomeHeroBannerProps) {
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
+          <h1 className="sr-only">
+            Akdağ Elektronik — Profesyonel Ses, Işık ve Görüntü Sistemleri | Kayseri &amp; Türkiye Geneli
+          </h1>
           <div className="max-w-7xl mx-auto">
             {/* Carousel Container: 16/6 veya 21/9 oranında, kristal netliğinde görsel */}
             <div
