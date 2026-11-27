@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X, Search, Phone, Heart, GitCompare, ChevronRight, ChevronDown, Speaker, Lightbulb, Monitor, Box, Plug, Briefcase, Building } from 'lucide-react'
+import { Menu, X, Search, Phone, Heart, GitCompare, ChevronRight, ChevronDown, Speaker, Lightbulb, Monitor, Headphones, Disc3, Mic2, Box, Plug, Briefcase, Building } from 'lucide-react'
 import AdLogo from './AdLogo'
 import CartIcon from './CartIcon'
 import KurGostergesi from './KurGostergesi'
@@ -23,7 +23,7 @@ const navLinks = [
   { href: '/iletisim', label: 'İletişim' },
 ]
 
-const KATEGORI_IKONLARI = [Speaker, Lightbulb, Monitor, Box, Plug, Briefcase]
+const KATEGORI_IKONLARI = [Speaker, Lightbulb, Monitor, Headphones, Disc3, Mic2, Box, Plug, Briefcase]
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)

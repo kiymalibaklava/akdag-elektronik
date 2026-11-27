@@ -214,6 +214,8 @@ html[data-theme="light"] .bg-\[\#181818\]  { background-color: #F1F5F9 !importan
 html[data-theme="light"] .bg-\[\#181818\]\/80 { background-color: #F1F5F9 !important; }
 html[data-theme="light"] .bg-\[\#1A1A1A\]  { background-color: #F1F5F9 !important; }
 html[data-theme="light"] .bg-\[\#0D0D0D\]  { background-color: #FFFFFF !important; }
+html[data-theme="light"] .bg-\[\#121212\]  { background-color: #FFFFFF !important; }
+html[data-theme="light"] .bg-\[\#0E0E0E\]  { background-color: #F8FAFC !important; }
 
 /* Opaklıklı navbar varyantları */
 html[data-theme="light"] .bg-\[\#0F0F0F\]\/95       { background-color: rgba(255,255,255,0.97) !important; }
@@ -362,6 +364,21 @@ html[data-theme="light"] .stat-value { color: #0F172A !important; }
 /* ── scroll indicator gradient (via taşması) ── */
 html[data-theme="light"] .bg-gradient-to-b.from-white\/20 {
   background-image: linear-gradient(to bottom, rgba(15,23,42,0.15), transparent) !important;
+}
+
+/* ── Marquee fade mask & kırmızı/yeşil buton beyaz metin koruması ── */
+html[data-theme="light"] .from-\[\#0A0A0A\] {
+  --tw-gradient-from: #F0F2F5 var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(240 242 245 / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+html[data-theme="light"] .bg-brand-red.text-white,
+html[data-theme="light"] .bg-brand-red .text-white,
+html[data-theme="light"] .bg-green-600.text-white,
+html[data-theme="light"] .bg-green-600 .text-white,
+html[data-theme="light"] .bg-emerald-600.text-white,
+html[data-theme="light"] .hover\:bg-brand-red:hover.hover\:text-white:hover {
+  color: #FFFFFF !important;
 }
 
 /* ── Global Yazdırma & PDF Çıktısı Sıfırlaması ── */
